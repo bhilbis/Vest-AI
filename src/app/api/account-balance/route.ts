@@ -6,22 +6,35 @@ import { authOptions } from "@/lib/auth";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json([], { status: 401 });
+  if (!session?.user?.id)
+    return new Response("Unauthorized", { status: 401 });
 
-  const accounts = await prisma.accountBalance.findMany({
-    where: { userId: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      balance: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100, // Limit results to prevent unbounded queries
+  const userId = session.user.id;
+
+  // Cek apakah sudah ada CASH
+  let cash = await prisma.accountBalance.findFirst({
+    where: { userId, type: "cash" },
   });
 
-  return NextResponse.json(accounts);
+  // Jika belum ada → buat otomatis
+  if (!cash) {
+    cash = await prisma.accountBalance.create({
+      data: {
+        name: "Cash",
+        type: "cash",
+        balance: 0,
+        userId,
+      },
+    });
+  }
+
+  // Ambil semua account termasuk cash
+  const accounts = await prisma.accountBalance.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return Response.json(accounts);
 }
 
 export async function POST(req: Request) {
@@ -36,6 +49,19 @@ export async function POST(req: Request) {
       { error: "Nama dan tipe wajib diisi" },
       { status: 400 }
     );
+
+  if (type === "cash") {
+    const existingCash = await prisma.accountBalance.findFirst({
+      where: { userId: session?.user?.id, type: "cash" }
+    });
+  
+    if (existingCash) {
+      return new Response(
+        JSON.stringify({ error: "Akun cash sudah ada. Tidak boleh lebih dari 1." }),
+        { status: 400 }
+      );
+    }
+  }
 
   const account = await prisma.accountBalance.create({
     data: {

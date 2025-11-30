@@ -24,6 +24,7 @@ model User {
   expenses      Expense[]
   incomes       Income[]
   accountBalances AccountBalance[]
+  accountTransfers AccountTransfer[]
   createdAt     DateTime @default(now())
 }
 
@@ -81,6 +82,8 @@ model AccountBalance {
 
   expenses  Expense[]
   incomes   Income[]
+  fromTransfers AccountTransfer[] @relation("FromAccount")
+  toTransfers   AccountTransfer[] @relation("ToAccount")
 
   @@index([userId, name, type])
 }
@@ -112,6 +115,24 @@ model Expense {
   user        User     @relation(fields: [userId], references: [id])
   accountId String               // ← sumber saldo
   account   AccountBalance @relation(fields: [accountId], references: [id])
+}
+
+model AccountTransfer {
+  id          String   @id @default(cuid())
+  amount      Float
+  note        String?
+  date        DateTime @default(now())
+
+  fromAccountId String
+  toAccountId   String
+
+  fromAccount   AccountBalance @relation("FromAccount", fields: [fromAccountId], references: [id])
+  toAccount     AccountBalance @relation("ToAccount", fields: [toAccountId], references: [id])
+
+  userId       String
+  user         User @relation(fields: [userId], references: [id])
+
+  createdAt    DateTime @default(now())
 }
 
 model Session {

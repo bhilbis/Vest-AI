@@ -1,12 +1,27 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { PlusIcon, XIcon } from 'lucide-react';
-import Image from 'next/image';
+"use client";
+
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { PlusIcon, XIcon } from "lucide-react";
+import Image from "next/image";
 
 interface FormData {
   title: string;
@@ -16,7 +31,14 @@ interface FormData {
   date: string;
   photo: File | null;
   photoPreview: string | null;
-  accountId: string;
+  accountId: string; // 🔥 NEW
+}
+
+interface AccountData {
+  id: string;
+  name: string;
+  type: string;
+  balance: number;
 }
 
 interface ExpenseFormDialogProps {
@@ -29,7 +51,7 @@ interface ExpenseFormDialogProps {
   onRemovePhoto: () => void;
   isEditing: boolean;
   categories: Array<{ value: string; label: string }>;
-  accounts: Array<{ id: string; name: string; balance: number }>;
+  accounts: AccountData[]; // 🔥 NEW
   existingPhotoUrl?: string | null;
 }
 
@@ -58,21 +80,19 @@ export function ExpenseFormDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">
-            {isEditing ? 'Edit Pengeluaran' : 'Tambah Pengeluaran Baru'}
+            {isEditing ? "Edit Pengeluaran" : "Tambah Pengeluaran Baru"}
           </DialogTitle>
           <DialogDescription>
-            Tambahkan detail pengeluaran Anda beserta foto jika diperlukan.
+            Tambahkan detail pengeluaran Anda beserta foto jika diperlukan
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-6">
-
-          {/* Title + Amount */}
+          {/* Judul + Amount */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Judul *</Label>
-              <Input 
-                id="title"
+              <Label>Judul *</Label>
+              <Input
                 value={formData.title}
                 onChange={(e) => onFormDataChange({ title: e.target.value })}
                 required
@@ -80,9 +100,8 @@ export function ExpenseFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Jumlah (Rp) *</Label>
+              <Label>Jumlah (Rp) *</Label>
               <Input
-                id="amount"
                 type="number"
                 value={formData.amount}
                 onChange={(e) => onFormDataChange({ amount: e.target.value })}
@@ -98,21 +117,23 @@ export function ExpenseFormDialog({
               <Label>Kategori</Label>
               <Select
                 value={formData.category}
-                onValueChange={(v) => onFormDataChange({ category: v })}
+                onValueChange={(value) => onFormDataChange({ category: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih kategori" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Tanggal</Label>
+              <Label>Tanggal *</Label>
               <Input
                 type="date"
                 value={formData.date}
@@ -122,7 +143,7 @@ export function ExpenseFormDialog({
             </div>
           </div>
 
-          {/* Source / Account */}
+          {/* Sumber Dana / Account */}
           <div className="space-y-2">
             <Label>Sumber Dana *</Label>
             <Select
@@ -130,12 +151,12 @@ export function ExpenseFormDialog({
               onValueChange={(value) => onFormDataChange({ accountId: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih akun" />
+                <SelectValue placeholder="Pilih akun sumber dana" />
               </SelectTrigger>
               <SelectContent>
                 {accounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
-                    {acc.name} — Rp {acc.balance.toLocaleString('id-ID')}
+                    {acc.name} — Rp {acc.balance.toLocaleString()}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -146,9 +167,9 @@ export function ExpenseFormDialog({
           <div className="space-y-2">
             <Label>Deskripsi</Label>
             <Textarea
+              rows={3}
               value={formData.description}
               onChange={(e) => onFormDataChange({ description: e.target.value })}
-              rows={3}
             />
           </div>
 
@@ -158,44 +179,45 @@ export function ExpenseFormDialog({
             <Input type="file" accept="image/*" onChange={onPhotoChange} />
 
             {formData.photoPreview && (
-              <div className="relative w-32 h-32 mt-2 rounded-lg overflow-hidden border">
-                <Image 
+              <div className="relative w-32 h-32 rounded-lg overflow-hidden mt-2 border">
+                <Image
                   src={formData.photoPreview}
-                  alt="Preview"
+                  alt="preview"
                   fill
                   className="object-cover"
+                  unoptimized
                 />
                 <Button
+                  type="button"
                   variant="destructive"
                   size="sm"
-                  className="absolute top-2 right-2"
-                  type="button"
+                  className="absolute top-2 right-2 h-7 w-7 p-0"
                   onClick={onRemovePhoto}
                 >
-                  <XIcon className="w-4 h-4" />
+                  <XIcon className="h-4 w-4" />
                 </Button>
               </div>
             )}
 
             {isEditing && existingPhotoUrl && !formData.photoPreview && (
-              <div className="relative w-32 h-32 rounded-lg overflow-hidden border">
-                <Image 
+              <div className="relative w-32 h-32 rounded-lg overflow-hidden mt-2 border">
+                <Image
                   src={existingPhotoUrl}
-                  alt="Existing"
+                  alt="photo"
                   fill
                   className="object-cover"
+                  unoptimized
                 />
               </div>
             )}
           </div>
 
-          {/* Footer buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button type="submit">
-              {isEditing ? 'Update' : 'Simpan'}
+            <Button className="bg-linear-to-r from-blue-600 to-purple-600">
+              {isEditing ? "Update" : "Simpan"}
             </Button>
           </div>
         </form>

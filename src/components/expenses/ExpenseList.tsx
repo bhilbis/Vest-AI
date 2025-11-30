@@ -1,10 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { ExpenseCard } from './ExpenseCard';
+import { TransferCard } from './TransferCard';
 
-interface Expense {
+export type HistoryItem = {
   id: string;
+  type: "expense" | "transfer";
   title: string;
   amount: number;
   category: string | null;
@@ -12,12 +15,13 @@ interface Expense {
   photoUrl: string | null;
   date: string;
   createdAt: string;
-}
+  accountId?: string | null;
+};
 
 interface ExpenseListProps {
-  expenses: Expense[];
+  expenses: HistoryItem[];
   loading: boolean;
-  onEdit: (expense: Expense) => void;
+  onEdit: (expense: any) => void;
   onDelete: (id: string) => void;
   formatCurrency: (value: number) => string;
   getCategoryLabel: (category: string | null) => string;
@@ -47,24 +51,9 @@ export function ExpenseList({
       <Card className="border-dashed border-2">
         <CardContent className="py-16 text-center">
           <div className="max-w-md mx-auto">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Belum ada pengeluaran</h3>
+            <h3 className="text-lg font-semibold mb-2">Belum ada transaksi</h3>
             <p className="text-muted-foreground">
-              Tambahkan pengeluaran pertama Anda dengan menekan tombol "Tambah Pengeluaran" di atas.
+              Tambahkan data pertama Anda.
             </p>
           </div>
         </CardContent>
@@ -72,18 +61,37 @@ export function ExpenseList({
     );
   }
 
+  const expenseItems = expenses.filter((item) => item.type === "expense");
+  const transferItems = expenses.filter((item) => item.type === "transfer");
+
   return (
-    <div className="grid gap-4">
-      {expenses.map((expense) => (
-        <ExpenseCard
-          key={expense.id}
-          expense={expense}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          formatCurrency={formatCurrency}
-          getCategoryLabel={getCategoryLabel}
-        />
-      ))}
+    <div className="space-y-4">
+      {expenseItems.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          {expenseItems.map((item) => (
+            <ExpenseCard
+              key={item.id}
+              expense={item as any}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              formatCurrency={formatCurrency}
+              getCategoryLabel={getCategoryLabel}
+            />
+          ))}
+        </div>
+      )}
+      
+      {transferItems.length > 0 && (
+        <div className="space-y-4">
+          {transferItems.map((item) => (
+            <TransferCard
+              key={item.id}
+              item={item}
+              formatCurrency={formatCurrency}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

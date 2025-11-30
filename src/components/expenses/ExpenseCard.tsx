@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { EditIcon, TrashIcon } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { Expense } from '@/types/types';
 
@@ -23,21 +23,16 @@ export function ExpenseCard({
 }: ExpenseCardProps) {
   const formattedDate = new Date(expense.date).toLocaleDateString('id-ID', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   });
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500 group">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4">
-        {expense.account && (
-          <p className="text-xs text-blue-500">
-            Dari akun: {expense.account.name}
-          </p>
-        )}
+    <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
           {expense.photoUrl && (
-            <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-gray-200 shrink-0 group-hover:scale-105 transition-transform duration-300">
+            <div className="relative w-16 h-16 rounded-md overflow-hidden border border-gray-200 shrink-0">
               <Image
                 src={expense.photoUrl}
                 alt={expense.title}
@@ -49,50 +44,56 @@ export function ExpenseCard({
           )}
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-2 text-gray-900 dark:text-gray-100">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-sm mb-1 text-gray-900 dark:text-gray-100 truncate">
                   {expense.title}
                 </h3>
                 
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <Badge variant="secondary" className="font-medium">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <Badge variant="secondary" className="text-xs py-0 h-5">
                     {getCategoryLabel(expense.category)}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formattedDate}
                   </span>
                 </div>
                 
+                {expense.account && (
+                  <p className="text-xs text-blue-500 mb-1">
+                    {expense.account.name}
+                  </p>
+                )}
+                
                 {expense.description && (
-                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                  <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
                     {expense.description}
                   </p>
                 )}
                 
-                <div className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <div className="text-base font-bold text-blue-600">
                   {formatCurrency(expense.amount)}
                 </div>
               </div>
               
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-1 shrink-0">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 hover:bg-blue-50 hover:text-blue-600"
                   onClick={() => onEdit(expense)}
-                  className="hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                  title="Edit pengeluaran"
+                  title="Edit"
                 >
-                  <EditIcon className="h-4 w-4" />
+                  <Edit className="h-3.5 w-3.5" />
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 hover:bg-red-50 hover:text-red-600"
                   onClick={() => onDelete(expense.id)}
-                  className="hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
-                  title="Hapus pengeluaran"
+                  title="Hapus"
                 >
-                  <TrashIcon className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
