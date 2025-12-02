@@ -35,15 +35,10 @@ interface NavbarProps {
 // Additional navbar items
 const additionalItems = [
   {
-    title: 'Expenses',
+    title: 'Financial',
     icon: Receipt,
-    url: '/tracker/expenses'
+    url: '/financial-overview'
   },
-  {
-    title: 'Balance Type',
-    icon: CreditCard,
-    url: '/balance-type'
-  }
 ];
 
 export function Navbar({ position, onPositionChange, onOpenMessages, userData, activeMessage }: NavbarProps) {
