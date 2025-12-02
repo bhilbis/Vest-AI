@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  Plus,
-  ChevronDown,
-  Receipt,
-  CreditCard
-} from 'lucide-react';
+import { Plus, ChevronDown, Receipt } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -36,20 +32,40 @@ interface NavbarProps {
 const additionalItems = [
   {
     title: 'Financial',
-    icon: Receipt,
+    icon: Receipt, // Use existing icon or import Receipt
     url: '/financial-overview'
   },
 ];
+
+// Custom hook for mobile detection
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // 768px = md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
 
 export function Navbar({ position, onPositionChange, onOpenMessages, userData, activeMessage }: NavbarProps) {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const isMobile = useIsMobile();
 
-  const isVertical = position === 'left' || position === 'right';
+  // Force bottom position on mobile
+  const effectivePosition = isMobile ? 'bottom' : position;
+  const isVertical = effectivePosition === 'left' || effectivePosition === 'right';
   const isDashboard = pathname === '/tracker';
 
-  // Combine navbar items - hanya tampilkan Assets jika di dashboard
+  // Combine navbar items - only show Assets if on dashboard
   const allNavItems = useMemo(() => {
     if (isDashboard) {
       return [...NavbarItems, ...additionalItems];
@@ -60,8 +76,11 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
   const containerClasses = useMemo(() => ({
     left: 'fixed left-4 top-1/2 -translate-y-1/2 flex-col h-auto',
     right: 'fixed right-4 top-1/2 -translate-y-1/2 flex-col h-auto',
-    bottom: 'fixed bottom-4 left-1/2 -translate-x-1/2 flex-row w-auto',
+    bottom: 'fixed left-1/2 -translate-x-1/2 flex-row w-auto',
   }), []);
+
+  // Mobile-specific bottom positioning with safe area
+  const mobileBottomClass = isMobile ? 'bottom-6' : 'bottom-4';
 
   const handleAddAsset = async (assetType: string) => {
     try {
@@ -103,11 +122,11 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
   const isActive = (item: any) => {
     if (item.title === "Messages") return activeMessage;
     if (item.url) {
-      // Exact match untuk dashboard/tracker
+      // Exact match for dashboard/tracker
       if (item.url === '/tracker') {
         return pathname === '/tracker';
       }
-      // Untuk URL lain, gunakan startsWith
+      // For other URLs, use startsWith
       return pathname.startsWith(item.url);
     }
     return false;
@@ -117,15 +136,19 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
     <Tooltip>
       <TooltipTrigger asChild>
         <motion.div
-          whileHover={{ y: isVertical ? 0 : -2, x: isVertical ? (position === 'left' ? 2 : -2) : 0, scale: 1.05 }}
+          whileHover={{ 
+            y: isVertical ? 0 : -2, 
+            x: isVertical ? (effectivePosition === 'left' ? 2 : -2) : 0, 
+            scale: 1.05 
+          }}
           whileTap={{ scale: 0.95 }}
           className="relative"
         >
           {children}
         </motion.div>
       </TooltipTrigger>
-      {isVertical && (
-        <TooltipContent side={position === 'left' ? 'right' : 'left'}>
+      {isVertical && !isMobile && (
+        <TooltipContent side={effectivePosition === 'left' ? 'right' : 'left'}>
           <p>{item.title}</p>
         </TooltipContent>
       )}
@@ -138,16 +161,23 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
         initial={{ opacity: 0, scale: 0.9, y: isVertical ? 0 : 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className={`${containerClasses[position]} flex z-50`}
+        className={`
+          ${containerClasses[effectivePosition]} 
+          ${mobileBottomClass}
+          flex z-50
+        `}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
         <motion.div 
           className={`
             backdrop-blur-xl bg-linear-to-br from-white/25 to-white/10 dark:from-black/25 dark:to-black/10
-            border border-white/30 dark:border-white/20 rounded-3xl p-2.5 shadow-2xl
-            ${isVertical ? 'flex-col' : 'flex-row'} flex gap-1.5
+            border border-white/30 dark:border-white/20 rounded-3xl shadow-2xl
+            ${isVertical ? 'flex-col' : 'flex-row'}
+            ${isMobile ? 'px-4 py-3' : 'p-2.5'}
+            flex gap-1.5
             relative overflow-hidden
+            max-w-[calc(100vw-2rem)]
           `}
           whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}
         >
@@ -168,10 +198,15 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                       <TooltipTrigger asChild>
                         <DropdownMenuTrigger asChild>
                           <motion.button
-                            whileHover={{ y: isVertical ? 0 : -2, x: isVertical ? (position === 'left' ? 2 : -2) : 0, scale: 1.05 }}
+                            whileHover={{ 
+                              y: isVertical ? 0 : -2, 
+                              x: isVertical ? (effectivePosition === 'left' ? 2 : -2) : 0, 
+                              scale: 1.05 
+                            }}
                             whileTap={{ scale: 0.95 }}
                             className={`
-                              relative p-2.5 rounded-2xl transition-all duration-300
+                              relative rounded-2xl transition-all duration-300
+                              ${isMobile ? 'p-3' : 'p-2.5'}
                               ${dropdownOpen
                                 ? 'bg-linear-to-br from-blue-500/30 to-purple-500/30 text-primary shadow-lg backdrop-blur-sm' 
                                 : 'hover:bg-white/20 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground'
@@ -179,8 +214,8 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                               group flex items-center gap-2
                             `}
                           >
-                            <item.icon size={20} strokeWidth={2.5} />
-                            {!isVertical && (
+                            <item.icon size={isMobile ? 22 : 20} strokeWidth={2.5} />
+                            {!isVertical && !isMobile && (
                               <>
                                 <span className="text-sm font-medium">{item.title}</span>
                                 <motion.div
@@ -194,14 +229,14 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                           </motion.button>
                         </DropdownMenuTrigger>
                       </TooltipTrigger>
-                      {isVertical && (
-                        <TooltipContent side={position === 'left' ? 'right' : 'left'}>
+                      {isVertical && !isMobile && (
+                        <TooltipContent side={effectivePosition === 'left' ? 'right' : 'left'}>
                           <p>{item.title}</p>
                         </TooltipContent>
                       )}
                     </Tooltip>
                     <DropdownMenuContent 
-                      side={position === 'bottom' ? 'top' : 'right'}
+                      side={effectivePosition === 'bottom' ? 'top' : 'right'}
                       align="start"
                       className="backdrop-blur-xl bg-white/95 dark:bg-black/95 border-white/30 rounded-2xl shadow-2xl min-w-[200px]"
                     >
@@ -228,7 +263,8 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                     <Link href={item.url}>
                       <motion.span
                         className={`
-                          relative p-2.5 rounded-2xl transition-all duration-300
+                          relative rounded-2xl transition-all duration-300
+                          ${isMobile ? 'p-3' : 'p-2.5'}
                           ${isActive(item)
                             ? 'bg-linear-to-br from-blue-500/30 to-purple-500/30 text-primary shadow-lg backdrop-blur-sm' 
                             : 'hover:bg-white/20 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground'
@@ -236,8 +272,8 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                           group flex items-center gap-2
                         `}
                       >
-                        <item.icon size={20} strokeWidth={2.5} />
-                        {!isVertical && <span className="text-sm font-medium">{item.title}</span>}
+                        <item.icon size={isMobile ? 22 : 20} strokeWidth={2.5} />
+                        {!isVertical && !isMobile && <span className="text-sm font-medium">{item.title}</span>}
                         
                         {/* Active indicator */}
                         <AnimatePresence>
@@ -260,7 +296,8 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                     <motion.button
                       onClick={onOpenMessages}
                       className={`
-                        relative p-2.5 rounded-2xl transition-all duration-300
+                        relative rounded-2xl transition-all duration-300
+                        ${isMobile ? 'p-3' : 'p-2.5'}
                         ${isActive(item)
                           ? "bg-linear-to-br from-blue-500/30 to-purple-500/30 text-primary shadow-lg backdrop-blur-sm"
                           : "hover:bg-white/20 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground"
@@ -268,8 +305,8 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                         group flex items-center gap-2
                       `}
                     >
-                      <item.icon size={20} strokeWidth={2.5} />
-                      {!isVertical && <span className="text-sm font-medium">{item.title}</span>}
+                      <item.icon size={isMobile ? 22 : 20} strokeWidth={2.5} />
+                      {!isVertical && !isMobile && <span className="text-sm font-medium">{item.title}</span>}
                       
                       <AnimatePresence>
                         {isActive(item) && (
@@ -307,8 +344,21 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                   whileTap={{ scale: 0.95 }}
                   className="relative group cursor-pointer"
                 >
-                  <Avatar className="h-10 w-10 border-2 border-white/30 shadow-lg ring-2 ring-white/10 transition-all group-hover:ring-white/30">
-                    <AvatarImage src={userData?.user?.image || ""} />
+                  <Avatar className={`
+                    ${isMobile ? 'h-11 w-11' : 'h-10 w-10'}
+                    border-2 border-white/30 shadow-lg ring-2 ring-white/10 transition-all group-hover:ring-white/30
+                  `}>
+                    {userData?.user?.image && (
+                      <AvatarImage asChild>
+                        <Image 
+                          src={userData.user.image} 
+                          alt={userData.user.name || 'User'} 
+                          width={44}
+                          height={44}
+                          className="object-cover"
+                        />
+                      </AvatarImage>
+                    )}
                     <AvatarFallback className="bg-linear-to-br from-blue-500 to-purple-500 text-white font-semibold">
                       {userData?.user?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
@@ -323,43 +373,45 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
                   />
                 </motion.div>
               </TooltipTrigger>
-              <TooltipContent side={isVertical ? (position === 'left' ? 'right' : 'left') : 'top'}>
+              <TooltipContent side={isVertical ? (effectivePosition === 'left' ? 'right' : 'left') : 'top'}>
                 <p className="font-medium">{userData?.user?.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground">{userData?.user?.email || ''}</p>
               </TooltipContent>
             </Tooltip>
           </div>
           
-          {/* Position Controls */}
-          <motion.div 
-            className={`${isVertical ? 'flex-col' : 'flex-row'} flex gap-1 mt-1.5 pt-1.5 border-t border-white/20 relative z-10`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            {(['left', 'bottom', 'right'] as const).map((pos) => (
-              <Tooltip key={pos}>
-                <TooltipTrigger asChild>
-                  <motion.button
-                    onClick={() => onPositionChange(pos)}
-                    aria-label={`Move navbar to ${pos}`}
-                    whileHover={{ scale: 1.15 }}
-                    whileTap={{ scale: 0.9 }}
-                    className={`
-                      w-5 h-5 rounded-lg border-2 transition-all duration-300
-                      ${position === pos 
-                        ? 'bg-linear-to-br from-blue-500/50 to-purple-500/50 border-blue-400/60 shadow-lg shadow-blue-500/20' 
-                        : 'bg-white/10 dark:bg-white/5 border-white/20 hover:bg-white/20 hover:border-white/30'
-                      }
-                    `}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side={isVertical ? 'right' : 'top'}>
-                  <p className="capitalize">Move to {pos}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </motion.div>
+          {/* Position Controls - Hidden on Mobile */}
+          {!isMobile && (
+            <motion.div 
+              className={`${isVertical ? 'flex-col' : 'flex-row'} flex gap-1 mt-1.5 pt-1.5 border-t border-white/20 relative z-10`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              {(['left', 'bottom', 'right'] as const).map((pos) => (
+                <Tooltip key={pos}>
+                  <TooltipTrigger asChild>
+                    <motion.button
+                      onClick={() => onPositionChange(pos)}
+                      aria-label={`Move navbar to ${pos}`}
+                      whileHover={{ scale: 1.15 }}
+                      whileTap={{ scale: 0.9 }}
+                      className={`
+                        w-5 h-5 rounded-lg border-2 transition-all duration-300
+                        ${position === pos 
+                          ? 'bg-linear-to-br from-blue-500/50 to-purple-500/50 border-blue-400/60 shadow-lg shadow-blue-500/20' 
+                          : 'bg-white/10 dark:bg-white/5 border-white/20 hover:bg-white/20 hover:border-white/30'
+                        }
+                      `}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side={isVertical ? 'right' : 'top'}>
+                    <p className="capitalize">Move to {pos}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </motion.div>
+          )}
         </motion.div>
       </motion.div>
     </TooltipProvider>
