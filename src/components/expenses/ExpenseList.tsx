@@ -14,7 +14,7 @@ export type HistoryItem = {
   description: string | null;
   photoUrl: string | null;
   date: string;
-  createdAt: string;
+  createdAt?: string;
   accountId?: string | null;
 };
 
