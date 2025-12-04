@@ -13,20 +13,21 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  session       Session[]
-  assets        Asset[]
-  expenses      Expense[]
-  incomes       Income[]
-  accountBalances AccountBalance[]
-  accountTransfers AccountTransfer[]
-  createdAt     DateTime @default(now())
+  id                String   @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  password          String?
+  emailVerified     DateTime?
+  image             String?
+  accounts          Account[]
+  session           Session[]
+  assets            Asset[]
+  expenses          Expense[]
+  incomes           Income[]
+  accountBalances   AccountBalance[]
+  accountTransfers  AccountTransfer[]
+  budgets           Budget[]
+  createdAt         DateTime @default(now())
 }
 
 model Account {
@@ -69,6 +70,24 @@ model Analysis {
   assets    Json
   userId    String
   createdAt DateTime @default(now())
+}
+
+model Budget {
+  id        String   @id @default(cuid())
+  name      String
+  category  String?
+  limit     Float
+  month     DateTime          // store the first day of the month for this budget
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User    @relation(fields: [userId], references: [id])
+
+  expenses Expense[]
+
+  @@index([userId, month, name])
 }
 
 model AccountBalance {
@@ -114,8 +133,14 @@ model Expense {
   createdAt   DateTime @default(now())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  accountId String               // ← sumber saldo
-  account   AccountBalance @relation(fields: [accountId], references: [id])
+  accountId   String               // ← sumber saldo
+  account     AccountBalance @relation(fields: [accountId], references: [id])
+
+  budgetId    String?
+  budget      Budget?   @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([budgetId])
 }
 
 model AccountTransfer {

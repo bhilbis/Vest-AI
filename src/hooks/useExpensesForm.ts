@@ -10,6 +10,7 @@ interface FormData {
   photo: File | null;
   photoPreview: string | null;
   accountId: string; // 🔥 NEW
+  budgetId: string;
 }
 
 const initialFormData: FormData = {
@@ -21,6 +22,7 @@ const initialFormData: FormData = {
   photo: null,
   photoPreview: null,
   accountId: '', // 🔥 NEW
+  budgetId: '',
 };
 
 export function useExpenseForm() {
@@ -65,6 +67,7 @@ export function useExpenseForm() {
       photo: null,
       photoPreview: expense.photoUrl,
       accountId: expense.accountId ?? '', // 🔥 NEW
+      budgetId: expense.budgetId ?? '',
     });
 
     setRemovePhoto(false);

@@ -22,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { PlusIcon, XIcon } from "lucide-react";
 import Image from "next/image";
+import { Budget } from "@/types/types";
 
 interface FormData {
   title: string;
@@ -32,6 +33,7 @@ interface FormData {
   photo: File | null;
   photoPreview: string | null;
   accountId: string; // 🔥 NEW
+  budgetId: string;
 }
 
 interface AccountData {
@@ -52,6 +54,7 @@ interface ExpenseFormDialogProps {
   isEditing: boolean;
   categories: Array<{ value: string; label: string }>;
   accounts: AccountData[]; // 🔥 NEW
+  budgets?: Budget[];
   existingPhotoUrl?: string | null;
 }
 
@@ -66,8 +69,12 @@ export function ExpenseFormDialog({
   isEditing,
   categories,
   accounts,
+  budgets = [],
   existingPhotoUrl,
 }: ExpenseFormDialogProps) {
+  const formatCompactCurrency = (value: number) =>
+    new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(value);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -157,6 +164,31 @@ export function ExpenseFormDialog({
                 {accounts.map((acc) => (
                   <SelectItem key={acc.id} value={acc.id}>
                     {acc.name} — Rp {acc.balance.toLocaleString()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Budget */}
+          <div className="space-y-2">
+            <Label>Anggarkan ke Budget</Label>
+            <Select
+              value={formData.budgetId}
+              onValueChange={(value) => onFormDataChange({ budgetId: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tidak menggunakan budget" />
+              </SelectTrigger>
+              <SelectContent>
+                {budgets.map((budget) => (
+                  <SelectItem key={budget.id} value={budget.id}>
+                    {budget.name} — Rp {formatCompactCurrency(budget.limit)}
+                    {typeof budget.spent === "number" && (
+                      <span className="text-muted-foreground text-xs ml-1">
+                        (Sisa Rp {formatCompactCurrency(Math.max(budget.limit - (budget.spent ?? 0), 0))})
+                      </span>
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>

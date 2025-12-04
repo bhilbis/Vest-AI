@@ -21,8 +21,8 @@ import {
 import { assetTypes, NavbarItems } from '@/app/api/data';
 
 interface NavbarProps {
-  position: 'left' | 'right' | 'bottom';
-  onPositionChange: (position: 'left' | 'right' | 'bottom') => void;
+  position: 'left' | 'right' | 'bottom' | 'top';
+  onPositionChange: (position: 'left' | 'right' | 'bottom' | 'top') => void;
   userData: any;
   onOpenMessages: () => void;
   activeMessage?: boolean;
@@ -77,6 +77,7 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
     left: 'fixed left-4 top-1/2 -translate-y-1/2 flex-col h-auto',
     right: 'fixed right-4 top-1/2 -translate-y-1/2 flex-col h-auto',
     bottom: 'fixed left-1/2 -translate-x-1/2 flex-row w-auto',
+    top: 'fixed left-1/2 -translate-x-1/2 top-3 flex-row h-fit',
   }), []);
 
   // Mobile-specific bottom positioning with safe area
@@ -388,7 +389,7 @@ export function Navbar({ position, onPositionChange, onOpenMessages, userData, a
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              {(['left', 'bottom', 'right'] as const).map((pos) => (
+              {(['top','left', 'bottom', 'right'] as const).map((pos) => (
                 <Tooltip key={pos}>
                   <TooltipTrigger asChild>
                     <motion.button

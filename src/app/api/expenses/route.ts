@@ -6,6 +6,9 @@ import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 
+const isSameMonth = (a: Date, b: Date) =>
+  a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth();
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json([], { status: 401 });
@@ -31,6 +34,11 @@ export async function GET(req: Request) {
   const expenses = await prisma.expense.findMany({
     where,
     orderBy: { date: "desc" },
+    include: {
+      budget: {
+        select: { id: true, name: true },
+      },
+    },
   });
 
   return NextResponse.json(expenses);
@@ -48,8 +56,31 @@ export async function POST(req: Request) {
   const date = new Date(formData.get("date") as string);
   const accountId = formData.get("accountId") as string;
   const photo = formData.get("photo") as File | null;
+  const budgetField = formData.get("budgetId");
+  const budgetId = typeof budgetField === "string" && budgetField.trim() !== ""
+    ? budgetField
+    : null;
 
   if (!accountId) return NextResponse.json({ error: "Account required" }, { status: 400 });
+
+  let validatedBudgetId: string | null = null;
+  if (budgetId) {
+    const budget = await prisma.budget.findFirst({
+      where: { id: budgetId, userId: session.user.id },
+    });
+
+    if (!budget)
+      return NextResponse.json({ error: "Budget tidak ditemukan" }, { status: 404 });
+
+    if (!isSameMonth(date, budget.month)) {
+      return NextResponse.json(
+        { error: "Tanggal pengeluaran harus berada di bulan yang sama dengan budget" },
+        { status: 400 }
+      );
+    }
+
+    validatedBudgetId = budget.id;
+  }
 
   let photoUrl: string | null = null;
 
@@ -76,6 +107,7 @@ export async function POST(req: Request) {
       date,
       userId: session.user.id,
       photoUrl,
+      budgetId: validatedBudgetId,
     },
   });
 
