@@ -23,6 +23,9 @@ COPY . .
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
 # ENV NEXT_TELEMETRY_DISABLED=1
+
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 # Generate Prisma client
 RUN bunx prisma generate
 # Build the project
