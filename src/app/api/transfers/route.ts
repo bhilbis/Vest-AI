@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     }
 
     // 🔥 Jalankan transfer dalam 1 Transaksi
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       await tx.accountBalance.update({
         where: { id: fromAccountId },
         data: { balance: { decrement: amount } },

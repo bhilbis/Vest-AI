@@ -13,29 +13,18 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
-
-interface Asset {
-  id: string;
-  type: string;
-  name: string;
-  category: string;
-  color: string;
-  position: { x: number; y: number };
-  lots: number;
-  buyPrice: number;
-  currentPrice: number;
-}
+import { AssetProps } from '@/app/(protected)/tracker/page';
 
 interface AssetDetailModalProps {
-  asset: Asset | null;
+  asset: AssetProps;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: (asset: Asset) => void;
+  onUpdate: (asset: AssetProps) => void;
   onDelete: (assetId: string) => void;
 }
 
 export function AssetDetailModal({ asset, isOpen, onClose, onUpdate, onDelete }: AssetDetailModalProps) {
-  const [editData, setEditData] = useState<Asset | null>(null);
+  const [editData, setEditData] = useState<AssetProps | null>(null);
 
   React.useEffect(() => {
     if (asset) {
@@ -99,8 +88,8 @@ export function AssetDetailModal({ asset, isOpen, onClose, onUpdate, onDelete }:
 
 const handleNumericInput = (
   e: React.ChangeEvent<HTMLInputElement>,
-  setState: React.Dispatch<React.SetStateAction<Asset | null>>,
-  field: keyof Asset
+  setState: React.Dispatch<React.SetStateAction<AssetProps | null>>,
+  field: keyof AssetProps
 ) => {
   const val = e.target.value;
 

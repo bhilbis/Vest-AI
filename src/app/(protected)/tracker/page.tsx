@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
-interface Asset {
+export interface AssetProps {
   id: string;
   type: string;
   name: string;
@@ -44,15 +44,15 @@ const HEIGHT_CLASS_MAP: Record<number, string> = {
 }
 
 interface UsePortfolioAssetsResult {
-  assets: Asset[];
+  assets: AssetProps[];
   loading: boolean;
   error: string | null;
   reload: () => void;
-  setAssets: React.Dispatch<React.SetStateAction<Asset[]>>;
+  setAssets: React.Dispatch<React.SetStateAction<AssetProps[]>>;
 }
 
 function usePortfolioAssets(): UsePortfolioAssetsResult {
-  const [assets, setAssets] = useState<Asset[]>([])
+  const [assets, setAssets] = useState<AssetProps[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -68,7 +68,7 @@ function usePortfolioAssets(): UsePortfolioAssetsResult {
 
       const data = await res.json()
 
-      const formattedAssets: Asset[] = data.map((asset: any) => ({
+      const formattedAssets: AssetProps[] = data.map((asset: any) => ({
         ...asset,
         position:
           asset.positionX != null && asset.positionY != null
@@ -94,7 +94,7 @@ function usePortfolioAssets(): UsePortfolioAssetsResult {
 
           const priceData = await priceRes.json()
 
-          formattedAssets.forEach((asset: Asset) => {
+          formattedAssets.forEach((asset: AssetProps) => {
             if (asset.coinId && priceData[asset.coinId]) {
               asset.currentPrice = priceData[asset.coinId].idr
             }
@@ -137,7 +137,7 @@ function usePortfolioAssets(): UsePortfolioAssetsResult {
 
 export default function TrackerPage() {
   const { assets, setAssets, loading, error, reload } = usePortfolioAssets()
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AssetProps | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const constraintsRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(2);
@@ -193,7 +193,7 @@ export default function TrackerPage() {
     }
   };
 
-  const handleUpdate = async (updatedAsset: Asset) => {
+  const handleUpdate = async (updatedAsset: AssetProps) => {
     try {
       const response = await fetch(`/api/assets/${updatedAsset.id}`, {
         method: 'PUT',
@@ -222,7 +222,7 @@ export default function TrackerPage() {
   };
 
 
-  const handleAssetClick = (asset: Asset) => {
+  const handleAssetClick = (asset: AssetProps) => {
     setSelectedAsset(asset);
     setIsDetailModalOpen(true);
   };
@@ -340,7 +340,7 @@ export default function TrackerPage() {
       <Card className="relative overflow-hidden border-dashed border-border/60 bg-accent/10">
         <div 
           ref={constraintsRef}
-          className={`relative ${heightClass} min-h-[480px] overflow-auto rounded-xl bg-gradient-to-b from-background/60 via-accent/20 to-background/80`}
+          className={`relative ${heightClass} min-h-[480px] overflow-auto rounded-xl bg-linear-to-b from-background/60 via-accent/20 to-background/80`}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/40 bg-background/80 px-4 py-3 backdrop-blur-sm">
             <div>
@@ -371,11 +371,11 @@ export default function TrackerPage() {
             </div>
           )}
 
-          {assets.map((asset, index) => (
+          {assets.map((asset: AssetProps, index: number) => (
             <AssetCard
               key={asset.id}
               index={index}
-              asset={asset}
+              asset={asset as AssetProps}
               onUpdate={handleUpdate}
               onClick={handleAssetClick}
               constraints={constraintsRef}
@@ -403,7 +403,7 @@ export default function TrackerPage() {
       </Card>
 
       <AssetDetailModal
-        asset={selectedAsset}
+        asset={selectedAsset as AssetProps}
         isOpen={isDetailModalOpen}
         onClose={() => {
           setIsDetailModalOpen(false);

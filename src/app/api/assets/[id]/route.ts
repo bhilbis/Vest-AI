@@ -6,15 +6,13 @@ import { authOptions } from "@/lib/auth"
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  id: any
 ) {
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  const id = params.id
 
   try {
     // Verifikasi apakah aset milik user yang sedang login
@@ -38,15 +36,14 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  id: any
 ) {
   const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
-
-  const { id } = await context.params;
+  
   const body = await req.json()
   const { name, amount, buyPrice, type, category, color, coinId } = body
 

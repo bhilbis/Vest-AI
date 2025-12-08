@@ -1,12 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/account-balance/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+// interface BalanceProps {
+//   id?: any;
+//   name?: string;
+//   type?: any;
+//   balance?: any;
+// }
+
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  id: any
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
@@ -22,7 +30,7 @@ export async function PUT(
 
   const updated = await prisma.accountBalance.update({
     where: {
-      id: params.id,
+      id: id,
     },
     data: {
       name,
@@ -36,7 +44,7 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  id: any
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
@@ -44,7 +52,7 @@ export async function DELETE(
 
   // Cek apakah dipakai income / expense
   const used = await prisma.expense.findFirst({
-    where: { accountId: params.id },
+    where: { accountId: id },
   });
 
   if (used)
@@ -57,7 +65,7 @@ export async function DELETE(
     );
 
   const usedIncome = await prisma.income.findFirst({
-    where: { accountId: params.id },
+    where: { accountId: id },
   });
 
   if (usedIncome)
@@ -71,7 +79,7 @@ export async function DELETE(
 
   // Bisa dihapus
   await prisma.accountBalance.delete({
-    where: { id: params.id },
+    where: { id: id },
   });
 
   return NextResponse.json({ success: true });

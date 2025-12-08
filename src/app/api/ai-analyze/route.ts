@@ -11,13 +11,13 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
    try { 
-    const { assets, marketPrices, message, model = 'deepseek/deepseek-v3-base' } = await req.json()
+    const { assets, marketPrices, message, model = 'deepseek/deepseek-v3' } = await req.json()
 
     if (!assets || assets.length === 0) {
       return NextResponse.json({ message: "No asset data provided." }, { status: 400 })
     }
 
-    const modelConfig = AI_MODELS[model as keyof typeof AI_MODELS] || AI_MODELS['deepseek/deepseek-v3-base'];
+    const modelConfig = AI_MODELS[model as keyof typeof AI_MODELS] || AI_MODELS['deepseek/deepseek-v3'];
 
     let formattedAssets = "No asset data available."
     if (Array.isArray(assets)) {

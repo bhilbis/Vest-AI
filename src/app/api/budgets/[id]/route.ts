@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -23,7 +24,7 @@ const withErrorHandling = async <T>(fn: () => Promise<T>) => {
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  id: any
 ) {
   return withErrorHandling(async () => {
     const session = await getServerSession(authOptions);
@@ -31,7 +32,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const budget = await prisma.budget.findFirst({
-      where: { id: params.id, userId: session.user.id },
+      where: { id: id, userId: session.user.id },
     });
 
     if (!budget) return NextResponse.json({ error: "Budget tidak ditemukan" }, { status: 404 });
@@ -52,6 +53,7 @@ export async function PUT(
     try {
       monthStart = toMonthStart(body.month as string | null, budget.month);
     } catch (error) {
+      console.error("Error message: ",error)
       return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
     }
 
@@ -72,7 +74,7 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  id: any
 ) {
   return withErrorHandling(async () => {
     const session = await getServerSession(authOptions);
@@ -80,7 +82,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const budget = await prisma.budget.findFirst({
-      where: { id: params.id, userId: session.user.id },
+      where: { id: id, userId: session.user.id },
     });
 
     if (!budget) return NextResponse.json({ error: "Budget tidak ditemukan" }, { status: 404 });

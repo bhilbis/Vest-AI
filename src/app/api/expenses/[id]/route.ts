@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/expenses/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -13,11 +14,10 @@ function isSamePayrollMonth(expenseDate: Date, budgetMonth: Date): boolean {
   );
 }
 
-export async function PUT(req: Request, context: { params: { id: string } }) {
+export async function PUT(req: Request, id: any) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = context.params;
   const old = await prisma.expense.findUnique({ where: { id } });
   if (!old) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (old.userId !== session.user.id)
@@ -67,7 +67,7 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
     validatedBudgetId = budget.id;
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: any) => {
       // Balikin saldo lama
       await tx.accountBalance.update({
         where: { id: old.accountId },
@@ -130,11 +130,9 @@ export async function PUT(req: Request, context: { params: { id: string } }) {
   return NextResponse.json(result);
 }
 
-export async function DELETE(req: Request, context: { params: { id: string } }) {
+export async function DELETE(req: Request, id: any) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { id } = context.params;
 
   const old = await prisma.expense.findUnique({ where: { id } });
   if (!old) return NextResponse.json({ error: "Not found" }, { status: 404 });

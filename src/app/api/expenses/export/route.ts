@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/expenses/export/route.ts
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
     { header: "Date", key: "date", width: 15 },
   ];
 
-  items.forEach((e) =>
+  items.forEach((e: any) =>
     sheet.addRow({
       title: e.title,
       amount: e.amount,

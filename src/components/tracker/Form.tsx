@@ -1,15 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { v4 as uuidv4 } from 'uuid'
+// import { v4 as uuidv4 } from 'uuid'
 import { Card, CardContent } from "../ui/card"
 import { Plus } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "../ui/command"
 import { useDebounce } from "use-debounce"
 import Image from "next/image"
+import { randomUUID } from "crypto"
 
 type Coin = {
     id: string
@@ -81,7 +83,7 @@ export function TrackerForm({onAdd}: { onAdd: (asset: Assets) => void}){
         }
 
         const assetData = {
-            id: uuidv4(),
+            id: randomUUID(),
             coinId: selectedCoin?.id,
             name: `${selectedCoin?.name} (${selectedCoin?.symbol.toUpperCase()})`,
             amount: parseCurrency(amount),
@@ -110,7 +112,7 @@ export function TrackerForm({onAdd}: { onAdd: (asset: Assets) => void}){
                 <h3 className="text-xl font-semibold text-gray-800">Tambah Asset Baru</h3>
                 <Button
                     onClick={() => setShowForm(!showForm)}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                     <Plus className="w-4 h-4 mr-2" />
                     {showForm ? 'Batal' : 'Tambah Asset'}
@@ -137,7 +139,7 @@ export function TrackerForm({onAdd}: { onAdd: (asset: Assets) => void}){
                                         <CommandItem
                                             key={coin.id}
                                             value={coin.id}
-                                            onSelect={(value) => {
+                                            onSelect={(value: string) => {
                                                 const coinSelected = coins.find(c => c.id === value)
                                             if (coinSelected) {
                                                 setSelectedCoin(coinSelected)
@@ -179,7 +181,7 @@ export function TrackerForm({onAdd}: { onAdd: (asset: Assets) => void}){
                     </div>
                     <Button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="w-full bg-linear-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Tambah ke Portfolio

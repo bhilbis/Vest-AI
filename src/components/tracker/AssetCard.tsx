@@ -10,23 +10,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-
-interface Asset {
-  id: string;
-  type: string;
-  name: string;
-  category: string;
-  color: string;
-  position: { x: number; y: number };
-  lots: number;
-  buyPrice: number;
-  currentPrice: number;
-}
+import { AssetProps } from '@/app/(protected)/tracker/page';
 
 interface AssetCardProps {
-  asset: Asset;
-  onUpdate: (asset: Asset) => void;
-  onClick: (asset: Asset) => void;
+  asset: AssetProps;
+  onUpdate: (asset: AssetProps) => void;
+  onClick: (asset: AssetProps) => void;
   constraints?: any;
   index: number;
   // layout helpers from parent
@@ -163,7 +152,7 @@ export function AssetCard({ asset, onUpdate, onClick, constraints, index, column
             <GripVertical 
               size={16} 
               className="text-muted-foreground cursor-grab active:cursor-grabbing"
-              onPointerDown={(e) => dragControls.start(e)}
+              onPointerDown={(e: any) => dragControls.start(e)}
             />
           </div>
         </div>

@@ -67,8 +67,8 @@ type MergedRecord = {
   id: string
   title: string
   amount: number
-  category: string
-  description: string
+  category?: string
+  description?: string
   photoUrl: string | null
   date: string
   accountId?: string
@@ -193,8 +193,8 @@ export default function FinancialOverviewPage() {
       id: ex.id,
       title: ex.title,
       amount: ex.amount,
-      category: ex.category,
-      description: ex.description,
+      category: ex.category || "",
+      description: ex.description || "",
       photoUrl: ex.photoUrl,
       date: ex.date,
       accountId: ex.accountId,
@@ -481,7 +481,7 @@ export default function FinancialOverviewPage() {
         </header>
 
         {/* ==================== TAB INTERFACE ==================== */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as "expenses" | "overview")} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex h-auto bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border border-slate-200 dark:border-slate-800 p-1">
             <TabsTrigger 
               value="overview" 

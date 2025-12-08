@@ -9,7 +9,7 @@ import { MessagesPanel } from "./messages-panel"
 
 export function SessionWrapper({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
-  const [navPosition, setNavPosition] = useState<'left' | 'right' | 'bottom'>('left');
+  const [navPosition, setNavPosition] = useState<'left' | 'right' | 'bottom' | 'top'>('left');
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [activeMessage, setActiveMessage] = useState(false);
   const router = useRouter()

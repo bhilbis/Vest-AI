@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
     try {
       monthStart = toMonthStart(searchParams.get("month"));
     } catch (error) {
+      console.error("Error message: ",error)
       return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
     }
 
@@ -71,16 +73,16 @@ export async function GET(req: Request) {
 
     const spentMap = new Map(
       spending
-        .filter((item) => item.budgetId)
-        .map((item) => [item.budgetId as string, item._sum.amount ?? 0])
+        .filter((item: any) => item.budgetId)
+        .map((item: any) => [item.budgetId as string, item._sum.amount ?? 0])
     );
 
-    const payload = budgets.map((budget) => {
+    const payload = budgets.map((budget: any) => {
       const spent = spentMap.get(budget.id) ?? 0;
       return {
         ...budget,
         spent,
-        remaining: Math.max(budget.limit - spent, 0),
+        remaining: Math.max(budget.limit - Number(spent), 0),
         monthKey: formatMonthParam(budget.month),
       };
     });
@@ -112,6 +114,7 @@ export async function POST(req: Request) {
     try {
       monthStart = toMonthStart(body.month as string | null);
     } catch (error) {
+      console.error("Error message: ",error)
       return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
     }
 

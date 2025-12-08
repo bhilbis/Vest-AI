@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import React from 'react';
@@ -6,40 +7,39 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useThemeStore } from '@/lib/themeToggle';
 import { useSession, signOut } from 'next-auth/react';
-import { User, Mail, Moon, Sun, Info, LogOut, Shield, Bell } from 'lucide-react';
+import { User, Mail, Moon, Sun, Info, LogOut, Shield } from 'lucide-react';
 
+const SettingItem = ({ icon: Icon, title, description, children }: any) => (
+  <div className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors">
+    <div className="flex items-start gap-4 flex-1">
+      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="flex-1">
+        <h4 className="font-medium mb-1">{title}</h4>
+        {description && (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        )}
+      </div>
+    </div>
+    <div className="flex items-center">
+      {children}
+    </div>
+  </div>
+);
+
+const SectionHeader = ({ title, description }: { title: string, description?: string }) => (
+  <div className="mb-4">
+    <h3 className="text-lg font-semibold mb-1">{title}</h3>
+    {description && (
+      <p className="text-sm text-muted-foreground">{description}</p>
+    )}
+  </div>
+);
 export default function Page() {
   const { data: session } = useSession();
   const { theme, setTheme } = useThemeStore();
   const isDarkMode = theme === 'dark';
-
-  const SettingItem = ({ icon: Icon, title, description, children }) => (
-    <div className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex items-start gap-4 flex-1">
-        <div className="p-2 rounded-lg bg-primary/10 text-primary">
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="flex-1">
-          <h4 className="font-medium mb-1">{title}</h4>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center">
-        {children}
-      </div>
-    </div>
-  );
-
-  const SectionHeader = ({ title, description }) => (
-    <div className="mb-4">
-      <h3 className="text-lg font-semibold mb-1">{title}</h3>
-      {description && (
-        <p className="text-sm text-muted-foreground">{description}</p>
-      )}
-    </div>
-  );
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
@@ -52,7 +52,7 @@ export default function Page() {
       {/* Account Section */}
       <Card className="overflow-hidden">
         <div className="p-6 border-b">
-          <SectionHeader 
+          <SectionHeader
             title="Akun" 
             description="Informasi profil dan keamanan akun Anda"
           />
