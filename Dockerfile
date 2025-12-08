@@ -3,8 +3,6 @@
 # For npm/pnpm or yarn, refer to the Dockerfile instead
 # -----------------------------------------------------------------------------
 
-ARG NODE_ENV=production
-
 # Use Bun's official image
 FROM oven/bun:1 AS base
 
@@ -37,12 +35,16 @@ WORKDIR /app
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED=1
 
-ENV NODE_ENV=$NODE_ENV \
+ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME="0.0.0.0"
 
-RUN addgroup --system --gid 1002 nodejs && \
-    adduser --system --uid 1002 nextjs
+#RUN addgroup --system --gid 1001 nodejs && \
+#    adduser --system --uid 1001 nextjs
+
+# Buat user non-root
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 
