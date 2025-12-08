@@ -45,3 +45,5 @@ jobs:
           tags: |
             your-dockerhub-username/nextjs-app:${{ github.ref_name }}
             your-dockerhub-username/nextjs-app:latest
+          build-args: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
