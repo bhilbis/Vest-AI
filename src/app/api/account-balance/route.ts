@@ -11,14 +11,22 @@ export async function GET() {
 
   const userId = session.user.id;
 
-  // Cek apakah sudah ada CASH
-  let cash = await prisma.accountBalance.findFirst({
-    where: { userId, type: "cash" },
-  });
+  // Optimize: Parallelize cash check and accounts fetch
+  // Since we need to check cash anyway, we can fetch all accounts and check in parallel
+  const [cash, allAccounts] = await Promise.all([
+    prisma.accountBalance.findFirst({
+      where: { userId, type: "cash" },
+    }),
+    prisma.accountBalance.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
-  // Jika belum ada → buat otomatis
+  // Jika belum ada cash → buat otomatis
   if (!cash) {
-    cash = await prisma.accountBalance.create({
+    // Create cash and immediately include it in response
+    const newCash = await prisma.accountBalance.create({
       data: {
         name: "Cash",
         type: "cash",
@@ -26,15 +34,17 @@ export async function GET() {
         userId,
       },
     });
+
+    // Return all accounts + newly created cash, sorted by createdAt
+    return Response.json(
+      [...allAccounts, newCash].sort(
+        (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+      )
+    );
   }
 
-  // Ambil semua account termasuk cash
-  const accounts = await prisma.accountBalance.findMany({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-  });
-
-  return Response.json(accounts);
+  // Cash exists, return all accounts
+  return Response.json(allAccounts);
 }
 
 export async function POST(req: Request) {

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, useDragControls } from 'motion/react';
 import { GripVertical, TrendingUp, TrendingDown, Edit3, Palette } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -40,36 +40,24 @@ const colorOptions = [
 
 const CARD_WIDTH = 288; // w-72 = 18rem = 288px
 
-export function AssetCard({ asset, onUpdate, onClick, constraints, index, columns, padding, gapX, stepY }: AssetCardProps) {
+function AssetCardComponent({ asset, onUpdate, onClick, constraints, index, columns, padding, gapX, stepY }: AssetCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(asset.name);
   const dragControls = useDragControls();
 
-  const profitLoss = (asset.currentPrice - asset.buyPrice) * asset.lots;
-  const profitPercentage = asset.buyPrice > 0 ? ((asset.currentPrice - asset.buyPrice) / asset.buyPrice) * 100 : 0;
-  const isProfit = profitLoss >= 0;
+  const profitLoss = useMemo(
+    () => (asset.currentPrice - asset.buyPrice) * asset.lots,
+    [asset.currentPrice, asset.buyPrice, asset.lots]
+  );
+  
+  const profitPercentage = useMemo(
+    () => asset.buyPrice > 0 ? ((asset.currentPrice - asset.buyPrice) / asset.buyPrice) * 100 : 0,
+    [asset.currentPrice, asset.buyPrice]
+  );
+  
+  const isProfit = useMemo(() => profitLoss >= 0, [profitLoss]);
 
-  const handleDragEnd = (event: any, info: any) => {
-    const fallback = getDefaultPosition(index);
-    const newPosition = {
-      x: (asset.position?.x ?? fallback.x) + info.offset.x,
-      y: (asset.position?.y ?? fallback.y) + info.offset.y,
-    };
-    onUpdate({ ...asset, position: newPosition });
-  };
-
-  const handleColorChange = (color: string) => {
-    onUpdate({ ...asset, color });
-  };
-
-  const handleNameSubmit = () => {
-    if (name.trim()) {
-      onUpdate({ ...asset, name: name.trim() });
-      setIsEditing(false);
-    }
-  };
-
-  function getDefaultPosition(i: number) {
+  const getDefaultPosition = useCallback((i: number) => {
     const cols = Math.max(1, columns || 1);
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -77,7 +65,52 @@ export function AssetCard({ asset, onUpdate, onClick, constraints, index, column
       x: padding + col * (CARD_WIDTH + gapX),
       y: padding + row * stepY,
     };
-  }
+  }, [columns, padding, gapX, stepY]);
+
+  const defaultPosition = useMemo(
+    () => getDefaultPosition(index),
+    [getDefaultPosition, index]
+  );
+
+  const handleDragEnd = useCallback((event: any, info: any) => {
+    const fallback = getDefaultPosition(index);
+    const newPosition = {
+      x: (asset.position?.x ?? fallback.x) + info.offset.x,
+      y: (asset.position?.y ?? fallback.y) + info.offset.y,
+    };
+    onUpdate({ ...asset, position: newPosition });
+  }, [asset, onUpdate, getDefaultPosition, index]);
+
+  const handleColorChange = useCallback((color: string) => {
+    onUpdate({ ...asset, color });
+  }, [asset, onUpdate]);
+
+  const handleNameSubmit = useCallback(() => {
+    if (name.trim()) {
+      onUpdate({ ...asset, name: name.trim() });
+      setIsEditing(false);
+    }
+  }, [name, asset, onUpdate]);
+
+  const handleClick = useCallback(() => {
+    onClick(asset);
+  }, [onClick, asset]);
+
+  const initialPosition = useMemo(
+    () => ({
+      x: asset.position?.x ?? defaultPosition.x,
+      y: asset.position?.y ?? defaultPosition.y,
+    }),
+    [asset.position, defaultPosition]
+  );
+
+  const animatePosition = useMemo(
+    () => ({
+      x: asset.position?.x ?? defaultPosition.x,
+      y: asset.position?.y ?? defaultPosition.y,
+    }),
+    [asset.position, defaultPosition]
+  );
 
 
   return (
@@ -87,14 +120,8 @@ export function AssetCard({ asset, onUpdate, onClick, constraints, index, column
       dragMomentum={false}
       dragElastic={0.1}
       dragConstraints={constraints}
-      initial={{ 
-        x: asset.position?.x ?? getDefaultPosition(index).x, 
-        y: asset.position?.y ?? getDefaultPosition(index).y,
-      }}
-      animate={{ 
-        x: asset.position?.x ?? getDefaultPosition(index).x, 
-        y: asset.position?.y ?? getDefaultPosition(index).y,
-      }}
+      initial={initialPosition}
+      animate={animatePosition}
       onDragEnd={handleDragEnd}
       className="absolute cursor-move"
       whileHover={{ scale: 1.02, zIndex: 10 }}
@@ -160,7 +187,7 @@ export function AssetCard({ asset, onUpdate, onClick, constraints, index, column
         {/* Card Content */}
         <div 
           className="p-3 pt-1 cursor-pointer"
-          onClick={() => onClick(asset)}
+          onClick={handleClick}
         >
           {isEditing ? (
             <input
@@ -224,3 +251,5 @@ export function AssetCard({ asset, onUpdate, onClick, constraints, index, column
     </motion.div>
   );
 }
+
+export const AssetCard = React.memo(AssetCardComponent);

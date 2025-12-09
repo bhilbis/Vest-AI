@@ -2,13 +2,41 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-  
+
+/*
+ * SUGGESTED PRISMA SCHEMA INDEXES:
+ * model Asset {
+ *   @@index([userId, type])  // For filtering by asset type per user
+ *   @@index([userId, createdAt])  // For ordering by creation date (already using orderBy)
+ * }
+ */
+
 // GET: Ambil semua aset
 export async function GET() {
   const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  // Optimize: Select only fields actually used by frontend
+  // Frontend uses: id, name, type, category, color, amount, buyPrice, coinId, positionX, positionY, createdAt
   const assets = await prisma.asset.findMany({
-    where: { userId: session?.user?.id },
+    where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      category: true,
+      color: true,
+      amount: true,
+      buyPrice: true,
+      coinId: true,
+      positionX: true,
+      positionY: true,
+      createdAt: true,
+      // Exclude userId as it's not needed in response
+    },
   })
   return NextResponse.json(assets)
 }

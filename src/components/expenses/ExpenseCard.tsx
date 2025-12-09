@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,18 +14,29 @@ interface ExpenseCardProps {
   getCategoryLabel: (category: string | null) => string;
 }
 
-export function ExpenseCard({
+function ExpenseCardComponent({
   expense,
   onEdit,
   onDelete,
   formatCurrency,
   getCategoryLabel,
 }: ExpenseCardProps) {
-  const formattedDate = new Date(expense.date).toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  const formattedDate = useMemo(
+    () => new Date(expense.date).toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }),
+    [expense.date]
+  );
+
+  const handleEdit = useCallback(() => {
+    onEdit(expense);
+  }, [onEdit, expense]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(expense.id);
+  }, [onDelete, expense.id]);
 
   return (
     <Card className="hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500">
@@ -81,7 +92,7 @@ export function ExpenseCard({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 hover:bg-blue-50 hover:text-blue-600"
-                  onClick={() => onEdit(expense)}
+                  onClick={handleEdit}
                   title="Edit"
                 >
                   <Edit className="h-3.5 w-3.5" />
@@ -90,7 +101,7 @@ export function ExpenseCard({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 hover:bg-red-50 hover:text-red-600"
-                  onClick={() => onDelete(expense.id)}
+                  onClick={handleDelete}
                   title="Hapus"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -103,3 +114,5 @@ export function ExpenseCard({
     </Card>
   );
 }
+
+export const ExpenseCard = React.memo(ExpenseCardComponent);

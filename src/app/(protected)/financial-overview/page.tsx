@@ -349,7 +349,7 @@ export default function FinancialOverviewPage() {
   }, [fetchAccounts, fetchExpenses, fetchTransfers, fetchBudgets])
 
   // ==================== EVENT HANDLERS ====================
-  const handleSubmitExpense = async (e: React.FormEvent) => {
+  const handleSubmitExpense = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
 
     try {
@@ -378,9 +378,9 @@ export default function FinancialOverviewPage() {
       console.error("Error saving expense:", error)
       alert("Gagal menyimpan pengeluaran")
     }
-  }
+  }, [formData, editingExpense, removePhoto, fetchExpenses, fetchBudgets, resetForm])
 
-  const handleDeleteExpense = async (id: string) => {
+  const handleDeleteExpense = useCallback(async (id: string) => {
     if (!confirm("Hapus pengeluaran ini?")) return
 
     try {
@@ -392,14 +392,14 @@ export default function FinancialOverviewPage() {
       console.error("Error deleting expense:", error)
       alert("Gagal menghapus pengeluaran")
     }
-  }
+  }, [fetchExpenses, fetchBudgets])
 
-  const handleEditExpense = (expense: Expense) => {
+  const handleEditExpense = useCallback((expense: Expense) => {
     handleEdit(expense)
     setDialogs((prev) => ({ ...prev, expense: true }))
-  }
+  }, [handleEdit])
 
-  const handleExportExpenses = async () => {
+  const handleExportExpenses = useCallback(async () => {
     try {
       const params = new URLSearchParams()
       if (filters.category !== "all") params.append("category", filters.category)
@@ -422,9 +422,9 @@ export default function FinancialOverviewPage() {
       console.error("Error exporting:", error)
       alert("Gagal mengekspor data")
     }
-  }
+  }, [filters.category, filters.startDate, filters.endDate])
 
-  const handleDeleteAccount = async (id: string) => {
+  const handleDeleteAccount = useCallback(async (id: string) => {
     if (!confirm("Hapus akun saldo ini?")) return
 
     try {
@@ -436,9 +436,9 @@ export default function FinancialOverviewPage() {
       console.error("Error deleting account:", error)
       alert("Gagal menghapus akun saldo")
     }
-  }
+  }, [fetchAccounts])
 
-  const handleDeleteBudget = async (id: string) => {
+  const handleDeleteBudget = useCallback(async (id: string) => {
     if (!confirm("Hapus budget ini?")) return
 
     try {
@@ -450,7 +450,7 @@ export default function FinancialOverviewPage() {
       console.error("Error deleting budget:", error)
       alert("Gagal menghapus budget")
     }
-  }
+  }, [fetchBudgets])
 
   // ==================== RENDER ====================
   return (

@@ -4,6 +4,16 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
+/*
+ * SUGGESTED PRISMA SCHEMA INDEXES:
+ * 
+ * Current indexes are good:
+ * - Budget: @@index([userId, month, name]) - already exists, perfect for this query
+ * 
+ * Consider adding if you filter by category:
+ * - Budget: @@index([userId, month, category])
+ */
+
 const toMonthStart = (input?: string | null) => {
   if (!input) {
     const now = new Date();
@@ -55,10 +65,23 @@ export async function GET(req: Request) {
 
     const { start, end } = getMonthRange(monthStart);
 
+    // Optimize: Select only fields needed by frontend
+    // Frontend uses: id, name, category, limit, notes, month, createdAt, updatedAt
     const [budgets, spending] = await Promise.all([
       prisma.budget.findMany({
         where: { userId: session.user.id, month: start },
         orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          limit: true,
+          notes: true,
+          month: true,
+          createdAt: true,
+          updatedAt: true,
+          // Exclude userId as it's not needed in response
+        },
       }),
       prisma.expense.groupBy({
         by: ["budgetId"],
@@ -118,6 +141,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
     }
 
+    // Optimize: Select only fields needed by frontend response
     const budget = await prisma.budget.create({
       data: {
         name,
@@ -126,6 +150,16 @@ export async function POST(req: Request) {
         notes,
         month: monthStart,
         userId: session.user.id,
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        limit: true,
+        notes: true,
+        month: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 

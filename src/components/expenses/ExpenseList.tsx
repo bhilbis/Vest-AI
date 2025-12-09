@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { ExpenseCard } from './ExpenseCard';
@@ -27,7 +27,7 @@ interface ExpenseListProps {
   getCategoryLabel: (category: string | null) => string;
 }
 
-export function ExpenseList({
+function ExpenseListComponent({
   expenses,
   loading,
   onEdit,
@@ -35,6 +35,16 @@ export function ExpenseList({
   formatCurrency,
   getCategoryLabel,
 }: ExpenseListProps) {
+  const expenseItems = useMemo(
+    () => expenses.filter((item) => item.type === "expense"),
+    [expenses]
+  );
+
+  const transferItems = useMemo(
+    () => expenses.filter((item) => item.type === "transfer"),
+    [expenses]
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -60,9 +70,6 @@ export function ExpenseList({
       </Card>
     );
   }
-
-  const expenseItems = expenses.filter((item) => item.type === "expense");
-  const transferItems = expenses.filter((item) => item.type === "transfer");
 
   return (
     <div className="space-y-4">
@@ -95,3 +102,5 @@ export function ExpenseList({
     </div>
   );
 }
+
+export const ExpenseList = React.memo(ExpenseListComponent);

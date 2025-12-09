@@ -43,6 +43,12 @@ const HEIGHT_CLASS_MAP: Record<number, string> = {
   3200: "h-[3200px]",
 }
 
+// Layout constants
+const PADDING = 36; // jarak dari atas/kiri/kanan/bawah
+const GAP_X = 20;   // jarak antar kolom
+const STEP_Y = 220; // jarak baris (kartu + gap)
+const CARD_WIDTH = 288; // w-72
+
 interface UsePortfolioAssetsResult {
   assets: AssetProps[];
   loading: boolean;
@@ -82,9 +88,11 @@ function usePortfolioAssets(): UsePortfolioAssetsResult {
         new Set(formattedAssets.map((a: any) => a.coinId).filter(Boolean))
       ) as string[]
 
+      // Fetch prices for all coinIds in parallel (already batched in single request)
       if (coinIds.length > 0) {
         try {
-          const priceRes = await fetch("/api/route", {
+          // Use correct endpoint: /api/price (batches all coinIds in one request)
+          const priceRes = await fetch("/api/price", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ coinIds }),
@@ -94,6 +102,7 @@ function usePortfolioAssets(): UsePortfolioAssetsResult {
 
           const priceData = await priceRes.json()
 
+          // Update asset prices (already batched - all prices in one response)
           formattedAssets.forEach((asset: AssetProps) => {
             if (asset.coinId && priceData[asset.coinId]) {
               asset.currentPrice = priceData[asset.coinId].idr
@@ -101,6 +110,7 @@ function usePortfolioAssets(): UsePortfolioAssetsResult {
           })
         } catch (err) {
           console.error("Gagal ambil harga:", err)
+          // Continue with default currentPrice: 0 if price fetch fails
         }
       }
 
@@ -142,12 +152,6 @@ export default function TrackerPage() {
   const constraintsRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(2);
 
-  // Layout constants
-  const PADDING = 36; // jarak dari atas/kiri/kanan/bawah
-  const GAP_X = 20;   // jarak antar kolom
-  const STEP_Y = 220; // jarak baris (kartu + gap)
-  const CARD_WIDTH = 288; // w-72
-
   // Responsive columns based on container width
   useEffect(() => {
     const el = constraintsRef.current;
@@ -170,7 +174,7 @@ export default function TrackerPage() {
     };
   }, []);
 
-  const handleRemoveAsset = async (id: string) => {
+  const handleRemoveAsset = useCallback(async (id: string) => {
     const confirmed = confirm("Apakah Anda yakin ingin menghapus aset ini?");
     if (!confirmed) return;
 
@@ -191,9 +195,9 @@ export default function TrackerPage() {
       console.error("Terjadi kesalahan saat menghapus aset:", error);
       alert("Terjadi kesalahan saat menghapus aset.");
     }
-  };
+  }, [setAssets]);
 
-  const handleUpdate = async (updatedAsset: AssetProps) => {
+  const handleUpdate = useCallback(async (updatedAsset: AssetProps) => {
     try {
       const response = await fetch(`/api/assets/${updatedAsset.id}`, {
         method: 'PUT',
@@ -219,13 +223,17 @@ export default function TrackerPage() {
     } catch (error) {
       console.error('Error updating asset:', error);
     }
-  };
+  }, [setAssets]);
 
-
-  const handleAssetClick = (asset: AssetProps) => {
+  const handleAssetClick = useCallback((asset: AssetProps) => {
     setSelectedAsset(asset);
     setIsDetailModalOpen(true);
-  };
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedAsset(null);
+  }, []);
 
   // Hitung tinggi canvas dinamis berdasarkan posisi aset atau fallback grid
   const canvasHeight = useMemo(() => {
@@ -405,10 +413,7 @@ export default function TrackerPage() {
       <AssetDetailModal
         asset={selectedAsset as AssetProps}
         isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedAsset(null);
-        }}
+        onClose={handleModalClose}
         onUpdate={handleUpdate}
         onDelete={handleRemoveAsset}
       />
