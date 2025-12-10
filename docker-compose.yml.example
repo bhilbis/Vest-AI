@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  container-name:
+    container_name: container-name
+    image: name-image
+    #ports:
+    #  - "3000:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production # Or production
+    # Add other environment variables as needed
+    networks:
+      - network-name
+
+networks:
+  network-name:
+    driver: bridge
