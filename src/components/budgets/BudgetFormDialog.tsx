@@ -90,8 +90,9 @@ export function BudgetFormDialog({
 
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
-      setError(err.message || "Gagal menyimpan budget");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Gagal menyimpan budget"
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

@@ -5,6 +5,14 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { toMonthStart } from "@/lib/constant";
+
+const getMonthRange = (monthStart: Date) => {
+  const start = new Date(monthStart);
+  const end = new Date(monthStart);
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  return { start, end };
+};
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -14,9 +22,18 @@ export async function GET(req: Request) {
 
   const where: any = { userId: session.user.id };
 
+  try {
+    const monthStart = toMonthStart(searchParams.get("month"));
+    const { start, end } = getMonthRange(monthStart);
+    where.date = { gte: start, lt: end };
+  } catch (err) {
+    console.error("Invalid month format in expenses export API:", err);
+    return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
+  }
+
   if (searchParams.get("category")) where.category = searchParams.get("category");
   if (searchParams.get("startDate"))
-    where.date = { gte: new Date(searchParams.get("startDate")!) };
+    where.date = { ...(where.date ?? {}), gte: new Date(searchParams.get("startDate")!) };
   if (searchParams.get("endDate")) {
     where.date = {
       ...(where.date ?? {}),

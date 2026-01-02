@@ -51,7 +51,7 @@ export const StatsCards = ({
               <ArrowUpIcon className="h-3 w-3" />
               {formatPercent(profitPercentage)}
             </span>
-            total profit
+            total profit : {formatCurrency(totalProfit)}
           </p>
         </CardContent>
       </Card>

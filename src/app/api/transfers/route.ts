@@ -3,13 +3,43 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
+import { toMonthStart } from "@/lib/constant";
 
-export async function GET() {
+const getMonthRange = (monthStart: Date) => {
+  const start = new Date(monthStart);
+  const end = new Date(monthStart);
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  return { start, end };
+};
+
+export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json([], { status: 200 });
+
+    const { searchParams } = new URL(req.url);
+    const monthParam = searchParams.get("month");
+
+    let dateRange: { start: Date; end: Date } | null = null;
+    try {
+      const monthStart = toMonthStart(monthParam);
+      dateRange = getMonthRange(monthStart);
+    } catch (err) {
+      console.error("Invalid month format in transfers API:", err);
+      return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
+    }
   
     const transfers = await prisma.accountTransfer.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        ...(dateRange
+          ? {
+              date: {
+                gte: dateRange.start,
+                lt: dateRange.end,
+              },
+            }
+          : {}),
+      },
       orderBy: { date: "desc" },
       include: {
         fromAccount: true,

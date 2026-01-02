@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
+import { toMonthStart } from "@/lib/constant";
 
 /*
  * SUGGESTED PRISMA SCHEMA INDEXES FOR OPTIMAL PERFORMANCE:
@@ -35,6 +36,13 @@ import path from "path";
 const isSameMonth = (a: Date, b: Date) =>
   a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth();
 
+const getMonthRange = (monthStart: Date) => {
+  const start = new Date(monthStart);
+  const end = new Date(monthStart);
+  end.setUTCMonth(end.getUTCMonth() + 1);
+  return { start, end };
+};
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json([], { status: 401 });
@@ -43,13 +51,21 @@ export async function GET(req: Request) {
   const category = searchParams.get("category");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
+  const monthParam = searchParams.get("month");
 
-  const where: any = {
-    userId: session.user.id,
-  };
+  const where: any = { userId: session.user.id };
+
+  try {
+    const monthStart = toMonthStart(monthParam);
+    const { start, end } = getMonthRange(monthStart);
+    where.date = { gte: start, lt: end };
+  } catch (err) {
+    console.error("Invalid month format in expenses API:", err);
+    return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
+  }
 
   if (category) where.category = category;
-  if (startDate) where.date = { gte: new Date(startDate) };
+  if (startDate) where.date = { ...(where.date ?? {}), gte: new Date(startDate) };
   if (endDate) {
     where.date = {
       ...(where.date ?? {}),

@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (modelConfig.streamable) {
-      let fullText = "";
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         async start(controller) {
@@ -37,7 +36,6 @@ export async function POST(req: NextRequest) {
             const content = chunk.choices?.[0]?.delta?.content;
             if (content) {
               controller.enqueue(encoder.encode(content));
-              fullText += content;
             }
           }
           controller.close();

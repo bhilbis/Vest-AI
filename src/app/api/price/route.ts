@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // In-memory cache with TTL support
+interface CoinGeckoPriceResponse {
+    [coinId: string]: {
+        idr: number
+    }
+}
+
 interface CacheEntry {
-    data: any;
-    timestamp: number;
+    data: CoinGeckoPriceResponse
+    timestamp: number
 }
 
 const priceCache = new Map<string, CacheEntry>();
@@ -14,7 +20,7 @@ function getCacheKey(coinIds: string[]): string {
     return [...coinIds].sort().join(",");
 }
 
-function getCachedData(cacheKey: string): any | null {
+function getCachedData(cacheKey: string): CoinGeckoPriceResponse | null {
     const entry = priceCache.get(cacheKey);
     if (!entry) return null;
 
@@ -31,7 +37,7 @@ function getCachedData(cacheKey: string): any | null {
     return null;
 }
 
-function setCachedData(cacheKey: string, data: any): void {
+function setCachedData(cacheKey: string, data: CoinGeckoPriceResponse): void {
     priceCache.set(cacheKey, {
         data,
         timestamp: Date.now(),
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const data = await res.json();
+        const data = (await res.json()) as CoinGeckoPriceResponse;
 
         // Store in cache before returning
         setCachedData(cacheKey, data);

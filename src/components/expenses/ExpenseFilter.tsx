@@ -12,6 +12,9 @@ interface ExpenseFiltersProps {
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   categories: Array<{ value: string; label: string }>;
+  month: string;
+  onMonthChange: (value: string) => void;
+  onResetMonth: () => void;
 }
 
 export function ExpenseFilters({
@@ -22,11 +25,33 @@ export function ExpenseFilters({
   onStartDateChange,
   onEndDateChange,
   categories,
+  month,
+  onMonthChange,
+  onResetMonth,
 }: ExpenseFiltersProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Filter Pengeluaran</CardTitle>
+    <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-slate-200 dark:border-slate-800">
+      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle className="text-lg">Filter & History</CardTitle>
+          <p className="text-sm text-muted-foreground">Pilih bulan untuk melihat riwayat atau sematkan filter tambahan.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Input
+            aria-label="Pilih bulan"
+            type="month"
+            value={month}
+            onChange={(e) => onMonthChange(e.target.value)}
+            className="w-36"
+          />
+          <button
+            type="button"
+            onClick={onResetMonth}
+            className="text-sm font-medium text-blue-600 hover:underline"
+          >
+            Bulan ini
+          </button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

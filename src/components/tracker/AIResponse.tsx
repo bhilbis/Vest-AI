@@ -83,6 +83,7 @@ export function AIResponse({ assets }: { assets: any[] }) {
             const cleaned = fullText.replace(/<think>[\s\S]*?<\/think>/g, "")
             setHistory(prev => [...prev, { role: "assistant", content: cleaned }])
         } catch (err) {
+            console.error("Error during AI analysis:", err)
             setHistory(prev => [...prev, { role: "assistant", content: "Terjadi kesalahan saat memproses." }])
         } finally {
             setLoading(false)
@@ -93,7 +94,7 @@ export function AIResponse({ assets }: { assets: any[] }) {
         <Card className="border-0 shadow-lg bg-white/70 backdrop-blur-sm">
             <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
+                    <div className="p-2 bg-linear-to-r from-purple-500 to-pink-600 rounded-lg">
                         <Bot className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="text-xl font-semibold text-gray-800">AI Analysis</h3>
@@ -113,7 +114,7 @@ export function AIResponse({ assets }: { assets: any[] }) {
                                         onChange={() => toggleId(asset.id)}
                                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                     />
-                                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                    <div className="w-8 h-8 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                                         <span className="text-white font-bold text-xs">
                                         {asset.name.charAt(0).toUpperCase()}
                                         </span>
@@ -143,7 +144,7 @@ export function AIResponse({ assets }: { assets: any[] }) {
                     <Button
                         onClick={handleAnalyze}
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="w-full bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                     {loading ? (
                         <span className="flex items-center gap-2">

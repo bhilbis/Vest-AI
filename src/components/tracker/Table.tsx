@@ -4,7 +4,21 @@ import { PieChart, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react
 import { Button } from "../ui/button"
 import { Card, CardContent } from "../ui/card"
 
-export function TrackerTable({data, onRemove}: {data: any[]; onRemove: (id: string) => void}) {
+type PortfolioAsset = {
+    id: string
+    name: string
+    amount: number
+    buyPrice: number
+    currentPrice?: number | null
+}
+
+export function TrackerTable({
+    data,
+    onRemove,
+}: {
+    data: PortfolioAsset[]
+    onRemove: (id: string) => void
+}) {
     const formatCurrency = (value: number) =>
         new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(value)
 

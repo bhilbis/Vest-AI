@@ -201,6 +201,8 @@ export default function MessagesPage() {
         return parsed.message;
       }
     } catch (e) {
+      // Not JSON, return raw
+      console.error("Failed to parse message content as JSON:", e);
     }
     return raw;
   };
@@ -220,7 +222,7 @@ export default function MessagesPage() {
         </Badge>
       </div>
       <div className="h-full flex flex-col">
-        <Card className="flex-1 flex flex-col !bg-transparent !border-none !shadow-none xl:px-20">
+        <Card className="flex-1 flex flex-col bg-transparent! border-none! shadow-none! xl:px-20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BotIcon className="h-5 w-5" />
@@ -250,7 +252,7 @@ export default function MessagesPage() {
                       <Button 
                         key={i} 
                         variant="outline" 
-                        className="justify-start h-auto py-3 px-4 text-left whitespace-normal break-words w-full"
+                        className="justify-start h-auto py-3 px-4 text-left whitespace-normal wrap-break-word w-full"
                         onClick={() => {
                           setNewMessage(suggestion);
                         }}
