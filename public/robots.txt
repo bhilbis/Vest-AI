@@ -1,0 +1,37 @@
+# Vest AI - Robots.txt Configuration
+# https://go-aoixsy.my.id/robots.txt
+
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow crawling of private/sensitive routes
+Disallow: /api/
+Disallow: /api/auth/
+Disallow: /_next/
+Disallow: /admin/
+
+# Crawl-delay (optional, use if needed)
+# Crawl-delay: 10
+
+# Sitemap location
+Sitemap: https://go-aoixsy.my.id/sitemap.xml
+
+# Popular search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: Yandex
+Allow: /
