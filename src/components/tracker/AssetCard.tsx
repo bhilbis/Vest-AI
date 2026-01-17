@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { AssetProps } from '@/app/(protected)/tracker/page';
+import { AssetProps } from '@/components/tracker/dashboard/types';
 
 interface AssetCardProps {
   asset: AssetProps;
@@ -127,7 +127,7 @@ function AssetCardComponent({ asset, onUpdate, onClick, constraints, index, colu
       whileHover={{ scale: 1.02, zIndex: 10 }}
       whileDrag={{ scale: 1.05, zIndex: 20 }}
     >
-      <Card className="w-72 bg-card/90 backdrop-blur-sm border border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
+      <Card className="w-72 bg-card/90 backdrop-blur-sm border border-border/60 shadow-sm ring-1 ring-border/60 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
         {/* Card Header with drag handle */}
         <div 
           className="flex items-center justify-between p-3 pb-2"

@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
-import { AssetProps } from '@/app/(protected)/tracker/page';
+import { AssetProps } from '@/components/tracker/dashboard/types';
 
 interface AssetDetailModalProps {
   asset: AssetProps;

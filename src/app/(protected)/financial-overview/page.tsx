@@ -323,6 +323,17 @@ export default function FinancialOverviewPage() {
     ? Math.min((budgetTotals.spent / budgetTotals.limit) * 100, 100)
     : 0
 
+  const topBudgets = useMemo(() => {
+    if (!data.budgets?.length) return [] as BudgetWithUsage[]
+    return [...data.budgets]
+      .sort((a, b) => {
+        const usageA = a.limit ? a.spent / a.limit : 0
+        const usageB = b.limit ? b.spent / b.limit : 0
+        return usageB - usageA
+      })
+      .slice(0, 3)
+  }, [data.budgets])
+
   // ==================== DATA FETCHING ====================
   const fetchAccounts = useCallback(async () => {
     try {
@@ -673,6 +684,81 @@ export default function FinancialOverviewPage() {
 
           {/* ==================== OVERVIEW TAB ==================== */}
           <TabsContent value="overview" className="space-y-8 animate-in fade-in-50 duration-300">
+            {/* QUICK ACTIONS */}
+            <section className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Quick actions</h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Tambah pengeluaran, transfer saldo, atau set budget tanpa berpindah tab.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    className="gap-2"
+                    style={{ backgroundImage: PALETTE.gradientSuccess, color: PALETTE.primaryFg }}
+                    onClick={() => setDialogs((prev) => ({ ...prev, expense: true }))}
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    Tambah pengeluaran
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setDialogs((prev) => ({ ...prev, transfer: true }))}
+                  >
+                    <ArrowLeftRight className="h-4 w-4" />
+                    Transfer saldo
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="gap-2"
+                    onClick={() => {
+                      setEditing((prev) => ({ ...prev, budget: null }))
+                      setDialogs((prev) => ({ ...prev, budget: true }))
+                    }}
+                  >
+                    <PieChart className="h-4 w-4" />
+                    Set budget
+                  </Button>
+                </div>
+              </div>
+
+              {topBudgets.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {topBudgets.map((budget) => {
+                    const usage = budget.limit ? Math.min((budget.spent / budget.limit) * 100, 100) : 0
+                    const isWarning = usage > 80
+                    const isDanger = usage > 100
+                    const usageColor = isDanger ? PALETTE.danger : isWarning ? PALETTE.warning : PALETTE.primary
+
+                    return (
+                      <Card key={budget.id} className="border backdrop-blur-sm" style={surfaceStyle}>
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <p className="text-xs text-muted-foreground capitalize">{budget.category || "Budget"}</p>
+                              <p className="text-sm font-semibold text-foreground line-clamp-1">{budget.name}</p>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className="text-[11px]"
+                              style={{ borderColor: usageColor, color: usageColor }}
+                            >
+                              {usage.toFixed(0)}%
+                            </Badge>
+                          </div>
+                          <Progress value={usage} className="h-2 rounded-full" style={{ backgroundColor: PALETTE.surfaceAlt }} />
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Sisa {formatCurrency(Math.max(budget.remaining, 0))}</span>
+                            <span className="tabular-nums">{formatCurrency(budget.limit)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+
             {/* MY ACCOUNTS SECTION */}
             <section className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
