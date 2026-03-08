@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SessionProviderWrapper } from "@/components/layout/session-provider";
+import { VestAIStructuredData } from "@/components/seo/JsonLd";
 import "katex/dist/katex.min.css";
 
 export const viewport: Viewport = {
@@ -99,10 +100,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="id">
       <body
         className={`${geistSans.variable} ${geistMono.variable} transform transition-transform duration-300 ease-in-out`}
       >
+        <VestAIStructuredData />
         <SessionProviderWrapper>{children}</SessionProviderWrapper>
       </body>
     </html>

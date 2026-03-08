@@ -161,15 +161,18 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const userMessage: string = body.message
-    const model: string = body.model || models[0]
+    // Default to the first model key if not provided
+    const modelKey: string = body.model || models[0]
 
     if (!userMessage || typeof userMessage !== "string") {
       return NextResponse.json({ error: "Message diperlukan" }, { status: 400 })
     }
 
-    if (!models.includes(model)) {
+    if (!models.includes(modelKey)) {
       return NextResponse.json({ error: "Model tidak diizinkan" }, { status: 400 })
     }
+
+    const apiModelId = modelKey
 
     const context = await buildUserContext(session.user.id)
 
@@ -179,7 +182,7 @@ export async function POST(req: NextRequest) {
     `
 
     const completion = await openai.chat.completions.create({
-      model,
+      model: apiModelId,
       stream: false,
       messages: [
         { role: "system", content: systemPrompt },

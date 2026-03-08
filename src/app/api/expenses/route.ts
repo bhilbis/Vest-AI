@@ -6,7 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
-import { toMonthStart } from "@/lib/constant";
+import { isSameMonth } from "@/lib/constant";
+import { getExpenses, createExpense } from "@/lib/services/expenseService";
 
 /*
  * SUGGESTED PRISMA SCHEMA INDEXES FOR OPTIMAL PERFORMANCE:
@@ -33,16 +34,6 @@ import { toMonthStart } from "@/lib/constant";
  * }
  */
 
-const isSameMonth = (a: Date, b: Date) =>
-  a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth();
-
-const getMonthRange = (monthStart: Date) => {
-  const start = new Date(monthStart);
-  const end = new Date(monthStart);
-  end.setUTCMonth(end.getUTCMonth() + 1);
-  return { start, end };
-};
-
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json([], { status: 401 });
@@ -53,53 +44,22 @@ export async function GET(req: Request) {
   const endDate = searchParams.get("endDate");
   const monthParam = searchParams.get("month");
 
-  const where: any = { userId: session.user.id };
-
   try {
-    const monthStart = toMonthStart(monthParam);
-    const { start, end } = getMonthRange(monthStart);
-    where.date = { gte: start, lt: end };
-  } catch (err) {
-    console.error("Invalid month format in expenses API:", err);
-    return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
+    const expenses = await getExpenses({
+      userId: session.user.id,
+      category,
+      startDate,
+      endDate,
+      monthParam,
+    });
+    return NextResponse.json(expenses);
+  } catch (err: any) {
+    console.error("Error fetching expenses:", err);
+    if (err.message === "Invalid month format" || err.message === "Invalid month value") {
+      return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-
-  if (category) where.category = category;
-  if (startDate) where.date = { ...(where.date ?? {}), gte: new Date(startDate) };
-  if (endDate) {
-    where.date = {
-      ...(where.date ?? {}),
-      lte: new Date(endDate + "T23:59:59"),
-    };
-  }
-
-  // Optimize: Select only fields actually used by frontend
-  // Frontend uses: id, title, amount, category, description, photoUrl, date, createdAt, accountId, budgetId
-  // Plus budget relation: id, name
-  const expenses = await prisma.expense.findMany({
-    where,
-    orderBy: { date: "desc" },
-    select: {
-      id: true,
-      title: true,
-      amount: true,
-      category: true,
-      description: true,
-      photoUrl: true,
-      date: true,
-      createdAt: true,
-      accountId: true,
-      budgetId: true,
-      budget: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
-
-  return NextResponse.json(expenses);
 }
 
 export async function POST(req: Request) {
@@ -165,43 +125,22 @@ export async function POST(req: Request) {
 
   photoUrl = photoUpload;
 
-  // Optimize: Use transaction to ensure data consistency
-  // Create expense and update account balance atomically
-  const result = await prisma.$transaction(async (tx) => {
-    const expense = await tx.expense.create({
-      data: {
-        title,
-        amount,
-        category,
-        description,
-        accountId,
-        date,
-        userId: session.user.id,
-        photoUrl,
-        budgetId: validatedBudgetId,
-      },
-      select: {
-        id: true,
-        title: true,
-        amount: true,
-        category: true,
-        description: true,
-        photoUrl: true,
-        date: true,
-        createdAt: true,
-        accountId: true,
-        budgetId: true,
-      },
+  try {
+    const result = await createExpense({
+      title,
+      amount,
+      category,
+      description,
+      date,
+      accountId,
+      userId: session.user.id,
+      photoUrl,
+      budgetId: validatedBudgetId,
     });
 
-    // Update account balance
-    await tx.accountBalance.update({
-      where: { id: accountId },
-      data: { balance: { decrement: amount } },
-    });
-
-    return expense;
-  });
-
-  return NextResponse.json(result);
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Error creating expense:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

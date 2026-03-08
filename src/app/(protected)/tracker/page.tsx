@@ -1,7 +1,12 @@
 "use client"
 
-import { PortfolioDashboard } from "@/components/tracker/dashboard/PortfolioDashboard"
+import { UnifiedDashboard } from "@/components/tracker/dashboard/UnifiedDashboard"
+import { PageWrapper } from "@/components/layout/page-wrapper"
 
 export default function TrackerPage() {
-  return <PortfolioDashboard />
+  return (
+    <PageWrapper maxWidth="lg">
+      <UnifiedDashboard />
+    </PageWrapper>
+  )
 }

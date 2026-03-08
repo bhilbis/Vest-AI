@@ -1,0 +1,37 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   Γû▓ Next.js 16.0.5 (Turbopack)
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+> Build error occurred
+Error: Turbopack build failed with 2 errors:
+./src/app/(protected)/financial-overview/page.tsx:239:41
+Parsing ecmascript source code failed
+  237 |       const res = await fetch(`/api/expenses?${params.toString()}`)
+  238 |       if (!res.ok) throw new Error("Failed")
+> 239 |       setData((p) => ({ ...p, expenses: await res.json() }))
+      |                                         ^^^^^
+  240 |     } catch (e) { console.error("Error fetching expenses:", e) }
+  241 |     finally { setLoading((p) => ({ ...p, expenses: false })) }
+  242 |   }, [filters.category, filters.startDate, filters.endDate, filters.month])
+
+await isn't allowed in non-async function
+
+
+./src/app/(protected)/financial-overview/page.tsx:248:42
+Parsing ecmascript source code failed
+  246 |       const res = await fetch(`/api/transfers?month=${filters.month}`)
+  247 |       if (!res.ok) return
+> 248 |       setData((p) => ({ ...p, transfers: await res.json() }))
+      |                                          ^^^^^
+  249 |     } catch (e) { console.error("Error fetching transfers:", e) }
+  250 |   }, [filters.month])
+  251 |
+
+await isn't allowed in non-async function
+
+
+    at <unknown> (./src/app/(protected)/financial-overview/page.tsx:239:41)
+    at <unknown> (./src/app/(protected)/financial-overview/page.tsx:248:42)

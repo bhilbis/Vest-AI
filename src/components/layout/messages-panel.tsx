@@ -10,6 +10,9 @@ import {
   ChevronDown,
   Sparkles,
   User,
+  Paperclip,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -29,6 +32,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
+import { cn } from '@/lib/utils'
+import { AI_MODELS } from '@/app/api/data'
 
 /* ===================== TYPES ===================== */
 
@@ -59,29 +64,6 @@ interface AIResponse {
 }
 
 /* ===================== CONSTANTS ===================== */
-
-const AI_MODELS = [
-  {
-    id: 'deepseek/deepseek-r1-0528',
-    name: 'DeepSeek R1',
-    description: 'Analisis cepat, biaya hemat',
-  },
-  {
-    id: 'deepseek/deepseek-v3',
-    name: 'DeepSeek V3',
-    description: 'Reasoning lebih dalam',
-  },
-  {
-    id: 'meta-llama/llama-4-maverick',
-    name: 'Llama 4 Maverick',
-    description: 'Tanggapan singkat & efisien',
-  },
-  {
-    id: 'mistralai/mistral-small-3.2-24b-instruct',
-    name: 'Mistral Small 24B',
-    description: 'Model ringan untuk pertanyaan umum',
-  },
-] as const
 
 const CONTEXT_OPTIONS = [
   {
@@ -127,10 +109,13 @@ export function MessagesPanel({
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<string>(AI_MODELS[0].id)
+  // Default to first model key
+  const [selectedModel, setSelectedModel] = useState<string>(Object.keys(AI_MODELS)[0])
   const [selectedContext, setSelectedContext] = useState<string[]>(['all'])
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   /* ===================== EFFECTS ===================== */
 
@@ -159,6 +144,14 @@ export function MessagesPanel({
       /* ignore */
     }
   }, [])
+  
+  // Auto resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [input]);
 
   /* ===================== HANDLERS ===================== */
 
@@ -251,196 +244,242 @@ export function MessagesPanel({
     ])
   }
 
-  if (!isOpen) return null
-
   /* ===================== RENDER ===================== */
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, x: position === 'left' ? 300 : -300 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: position === 'left' ? 300 : -300 }}
-        className={`
-          fixed ${position === 'left' ? 'right-2' : 'left-2'}
-          top-2 bottom-2
-          w-[calc(100vw-1rem)] sm:w-96
-          z-40
-        `}
-      >
-        <div className="flex h-full flex-col rounded-2xl border bg-background/95 backdrop-blur-xl shadow-2xl">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b p-4">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-linear-to-r from-blue-500 to-purple-500 text-white">
-                  <Bot size={16} />
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">AI Assistant</p>
-                <p className="text-xs text-muted-foreground">
-                  Portfolio Advisor
-                </p>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, x: position === 'left' ? -320 : 320, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: position === 'left' ? -320 : 320, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className={cn(
+            "fixed top-4 bottom-4 z-40 flex flex-col shadow-2xl rounded-2xl border border-border bg-background/95 backdrop-blur-xl overflow-hidden",
+            position === 'left' ? 'left-4' : 'right-4',
+            isExpanded ? 'w-[calc(100vw-2rem)] md:w-[800px]' : 'w-[calc(100vw-2rem)] md:w-[450px]'
+          )}
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Bot size={20} className="text-primary" />
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-chart-1 rounded-full border-2 border-background ring-1 ring-background" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">VestAI Assistant</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+                    Portfolio Advisor
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => setIsExpanded(!isExpanded)}>
+                  {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={startNewChat}>
+                  <Plus size={18} />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-destructive/10 hover:text-destructive" onClick={onClose}>
+                  <X size={18} />
+                </Button>
               </div>
             </div>
 
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={startNewChat}>
-                <Plus size={16} />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X size={16} />
-              </Button>
-            </div>
-          </div>
+            {/* Messages Area */}
+            <ScrollArea className="flex-1 px-4 py-4">
+              <div className="space-y-6">
+                {messages.map((msg, idx) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx === messages.length - 1 ? 0.1 : 0 }}
+                    className={cn(
+                      "flex gap-3",
+                      msg.role === 'user' ? 'justify-end' : 'justify-start'
+                    )}
+                  >
+                    {msg.role === 'assistant' && (
+                      <Avatar className="h-8 w-8 mt-1 border border-border">
+                        <AvatarFallback className="bg-primary/5 text-primary">
+                          <Bot size={14} />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${
-                    msg.role === 'user'
-                      ? 'justify-end'
-                      : 'justify-start'
-                  } gap-2`}
-                >
-                  {msg.role === 'assistant' && (
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="bg-linear-to-r from-blue-500 to-purple-500 text-white">
-                        <Bot size={12} />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-
-                  <div className="max-w-[80%]">
-                    <div
-                      className={`rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-accent'
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {msg.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-
-                  {msg.role === 'user' && (
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback>
-                        <User size={12} />
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              ))}
-
-              {isTyping && (
-                <div className="flex gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="bg-linear-to-r from-blue-500 to-purple-500 text-white">
-                      <Bot size={12} />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex gap-1 rounded-lg bg-accent px-3 py-2">
-                    {[0, 150, 300].map((d) => (
-                      <span
-                        key={d}
-                        className="h-2 w-2 animate-pulse rounded-full bg-muted-foreground"
-                        style={{ animationDelay: `${d}ms` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-          </ScrollArea>
-
-          {/* Input */}
-          <div className="border-t p-3 space-y-2">
-            <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-              <Select
-                value={selectedModel}
-                onValueChange={setSelectedModel}
-              >
-                <SelectTrigger className="h-7 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {AI_MODELS.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      <div className="flex items-center gap-1">
-                        <Sparkles size={12} />
-                        {m.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Context <ChevronDown size={12} />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64">
-                  <div className="space-y-2">
-                    {CONTEXT_OPTIONS.map((opt) => (
-                      <label
-                        key={opt.id}
-                        className="flex items-start gap-2 text-xs"
+                    <div className={cn(
+                      "max-w-[85%] space-y-1",
+                      msg.role === 'user' ? 'items-end flex flex-col' : 'items-start'
+                    )}>
+                      <div
+                        className={cn(
+                          "px-4 py-2.5 text-sm leading-relaxed shadow-sm",
+                          msg.role === 'user'
+                            ? 'bg-primary text-primary-foreground rounded-2xl rounded-tr-sm'
+                            : 'bg-muted/80 text-foreground border border-border/50 rounded-2xl rounded-tl-sm'
+                        )}
                       >
-                        <Checkbox
-                          checked={selectedContext.includes(opt.id)}
-                          onCheckedChange={(checked) => {
-                            setSelectedContext((prev) =>
-                              checked
-                                ? [...prev, opt.id]
-                                : prev.filter((id) => id !== opt.id),
-                            )
-                          }}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground px-1">
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
 
-            <div className="flex gap-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Tanya tentang portfolio Anda…"
-                rows={2}
-                className="resize-none"
-                disabled={isTyping}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSend()
-                  }
-                }}
-              />
-              <Button
-                onClick={handleSend}
-                disabled={!input.trim() || isTyping}
-              >
-                <Send size={16} />
-              </Button>
+                    {msg.role === 'user' && (
+                      <Avatar className="h-8 w-8 mt-1 border border-border">
+                        <AvatarFallback className="bg-muted text-muted-foreground">
+                          <User size={14} />
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </motion.div>
+                ))}
+
+                {isTyping && (
+                  <div className="flex gap-3">
+                    <Avatar className="h-8 w-8 border border-border">
+                      <AvatarFallback className="bg-primary/5 text-primary">
+                        <Bot size={14} />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted/80 border border-border/50 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5 h-10">
+                      <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" />
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </ScrollArea>
+
+            {/* Input Area */}
+            <div className="p-4 bg-background border-t border-border">
+              {/* Controls */}
+              <div className="flex gap-2 mb-3">
+                 <Select
+                  value={selectedModel}
+                  onValueChange={setSelectedModel}
+                >
+                  <SelectTrigger className="h-8 text-xs w-[140px] bg-muted/50 border-border/60 focus:ring-1 focus:ring-primary/20">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-primary" />
+                      <span className="truncate">
+                        {selectedModel.split('/')[1] || selectedModel}
+                      </span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(AI_MODELS).map((key) => (
+                      <SelectItem key={key} value={key} className="text-xs">
+                          {key.split('/')[1]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs bg-muted/50 border-border/60 gap-1.5">
+                      Context <ChevronDown size={12} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3" align="start">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-medium text-xs text-muted-foreground uppercase tracking-wider">Data Context</h4>
+                        <p className="text-[10px] text-muted-foreground">Select what data the AI can access</p>
+                      </div>
+                      <div className="space-y-2">
+                        {CONTEXT_OPTIONS.map((opt) => (
+                          <div
+                            key={opt.id}
+                            className="flex items-start gap-2"
+                          >
+                            <Checkbox
+                              id={opt.id}
+                              checked={selectedContext.includes(opt.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedContext((prev) =>
+                                  checked
+                                    ? [...prev, opt.id]
+                                    : prev.filter((id) => id !== opt.id),
+                                )
+                              }}
+                            />
+                            <div className="grid gap-0.5 leading-none">
+                              <label
+                                htmlFor={opt.id}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {opt.label}
+                              </label>
+                              <p className="text-[10px] text-muted-foreground">
+                                {opt.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Input Box */}
+              <div className="relative rounded-2xl border border-border bg-muted/30 focus-within:ring-1 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask about your portfolio performance, insights, or advice..."
+                  className="min-h-[44px] max-h-[120px] w-full resize-none border-0 bg-transparent py-3 px-4 pr-12 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                  disabled={isTyping}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSend()
+                    }
+                  }}
+                />
+                <div className="absolute right-1.5 bottom-1.5 flex gap-1">
+                   <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    disabled={isTyping}
+                   >
+                     <Paperclip size={16} />
+                   </Button>
+                   <Button
+                    onClick={handleSend}
+                    disabled={!input.trim() || isTyping}
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8 rounded-xl transition-all duration-200",
+                      input.trim() 
+                        ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90" 
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <Send size={14} className={input.trim() ? "ml-0.5" : ""} />
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-2 text-center">
+                <p className="text-[10px] text-muted-foreground">
+                  AI can make mistakes. Please verify important financial information.
+                </p>
+              </div>
             </div>
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   )
 }

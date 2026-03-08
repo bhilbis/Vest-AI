@@ -16,7 +16,6 @@ export const AI_MODELS = {
     model: "google/gemini-2.5-pro-exp-03-25:free",
     systemPrompt: "You are VestAI, a helpful financial assistant that can answer general questions about finance, investing, and markets.",
     streamable: false
-
   },
   'deepseek/deepseek-r1-0528': {
     model: "deepseek/deepseek-r1-0528:free",
@@ -48,6 +47,8 @@ export const NavbarItems = [
 ];
 
 export const assetTypes = [
-  { id: 'stock', label: 'Saham', color: 'bg-blue-500' },
-  { id: 'crypto', label: 'Crypto', color: 'bg-orange-500' },
+  { id: 'stock', label: 'Saham', color: 'bg-chart-1' },
+  { id: 'crypto', label: 'Crypto', color: 'bg-chart-2' },
+  { id: 'gold', label: 'Emas', color: 'bg-chart-3' },
+  { id: 'cash', label: 'Kas', color: 'bg-chart-4' },
 ];

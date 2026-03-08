@@ -14,7 +14,7 @@ export function usePortfolioAssets(): UsePortfolioAssetsResult {
 
       const res = await fetch("/api/assets");
       if (!res.ok) {
-        throw new Error("Gagal memuat data aset");
+        return;
       }
 
       const data = await res.json();

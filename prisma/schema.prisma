@@ -17,6 +17,8 @@ model User {
   name              String?
   email             String?   @unique
   password          String?
+  role              String   @default("USER")  // USER | ADMIN
+  isActive          Boolean  @default(true)
   emailVerified     DateTime?
   image             String?
   accounts          Account[]
@@ -62,6 +64,9 @@ model Asset {
   createdAt DateTime @default(now())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, type])
+  @@index([userId, createdAt])
 }
 
 model Analysis {
@@ -120,6 +125,8 @@ model Income {
 
   accountId String
   account   AccountBalance @relation(fields: [accountId], references: [id])
+
+  @@index([userId, date])
 }
 
 model Expense {
@@ -141,6 +148,8 @@ model Expense {
 
   @@index([userId, date])
   @@index([budgetId])
+  @@index([userId, category])
+  @@index([userId, date, category])
 }
 
 model AccountTransfer {
@@ -159,6 +168,8 @@ model AccountTransfer {
   user         User @relation(fields: [userId], references: [id])
 
   createdAt    DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 model Session {

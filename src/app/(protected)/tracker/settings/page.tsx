@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useThemeStore } from '@/lib/themeToggle';
 import { useSession, signOut } from 'next-auth/react';
 import { User, Mail, Moon, Sun, Info, LogOut, Shield } from 'lucide-react';
+import { PageWrapper } from '@/components/layout/page-wrapper';
 
 const SettingItem = ({ icon: Icon, title, description, children }: any) => (
   <div className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors">
@@ -36,13 +37,14 @@ const SectionHeader = ({ title, description }: { title: string, description?: st
     )}
   </div>
 );
+
 export default function Page() {
   const { data: session } = useSession();
   const { theme, setTheme } = useThemeStore();
   const isDarkMode = theme === 'dark';
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+    <PageWrapper maxWidth="md" className="space-y-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Pengaturan</h1>
@@ -142,6 +144,6 @@ export default function Page() {
       <div className="text-center text-sm text-muted-foreground py-4">
         <p>© 2024 AI Portfolio Tracker. All rights reserved.</p>
       </div>
-    </div>
+    </PageWrapper>
   );
 }

@@ -2,7 +2,6 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from "react"
-import type { CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import {
   DownloadIcon,
@@ -38,15 +36,18 @@ import {
   CalendarDays,
   TrendingUp,
   Activity,
+  Target,
+  Zap,
+  Sparkles,
 } from "lucide-react"
 
 import { ExpenseSummaryCards } from "@/components/expenses/ExpenseSummaryCard"
-import { ExpenseFilters } from "@/components/expenses/ExpenseFilter"
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog"
 import { useExpenseForm } from "@/hooks/useExpensesForm"
 import { TransferFormDialog } from "@/components/expenses/TransferFormDialog"
 import { AccountBalanceFormDialog } from "@/components/balance-type/BalanceTypeFormDialog"
 import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog"
+import { IncomeFormDialog } from "@/components/income/IncomeFormDialog"
 
 import {
   EXPENSE_CATEGORIES,
@@ -55,6 +56,7 @@ import {
 } from "@/lib/expenseUtils"
 
 import { Budget, Expense } from "@/types/types"
+import { PageWrapper } from "@/components/layout/page-wrapper"
 
 // ==================== TYPES ====================
 export interface AccountBalance {
@@ -92,61 +94,19 @@ const ACCOUNT_TYPE_LABELS = {
   ewallet: "E-Wallet",
 } as const
 
-const PALETTE = {
-  primary: "var(--color-primary)",
-  primaryFg: "var(--color-primary-foreground)",
-  accent: "var(--color-accent)",
-  accentFg: "var(--color-accent-foreground)",
-  positive: "var(--chart-1)",
-  info: "var(--chart-2)",
-  warning: "var(--chart-4)",
-  danger: "var(--destructive)",
-  surface: "var(--color-card)",
-  surfaceAlt: "var(--color-popover)",
-  border: "var(--color-border)",
-  muted: "var(--color-muted-foreground)",
-  pageBg: "linear-gradient(135deg, var(--color-background), var(--color-sidebar))",
-  gradientPrimary: "linear-gradient(90deg, var(--color-primary), var(--color-accent))",
-  gradientSuccess: "linear-gradient(90deg, var(--chart-3), var(--chart-1))",
-  gradientNeutral: "linear-gradient(90deg, var(--color-secondary), var(--color-accent))",
-} as const
-
-const surfaceStyle: CSSProperties = {
-  backgroundColor: PALETTE.surface,
-  borderColor: PALETTE.border,
+const ACCOUNT_TYPE_EMOJI: Record<string, string> = {
+  cash: "💵",
+  bank: "🏦",
+  ewallet: "📱",
 }
 
-const surfaceAltStyle: CSSProperties = {
-  backgroundColor: PALETTE.surfaceAlt,
-  borderColor: PALETTE.border,
-}
-
-const ACCOUNT_TYPE_STYLES: Record<string, CSSProperties> = {
-  cash: {
-    backgroundColor: "color-mix(in oklch, var(--chart-1) 20%, var(--color-card) 80%)",
-    color: "var(--chart-1)",
-    borderColor: PALETTE.border,
-  },
-  bank: {
-    backgroundColor: "color-mix(in oklch, var(--chart-2) 20%, var(--color-card) 80%)",
-    color: "var(--chart-2)",
-    borderColor: PALETTE.border,
-  },
-  ewallet: {
-    backgroundColor: "color-mix(in oklch, var(--chart-3) 20%, var(--color-card) 80%)",
-    color: "var(--chart-3)",
-    borderColor: PALETTE.border,
-  },
-}
-
-// ==================== UTILITY FUNCTIONS ====================
+// ==================== UTILITY ====================
 const getRecordIcon = (record: MergedRecord) => {
   if (record.type === "transfer") {
     if (record.category === "topup") return ArrowUpRight
     if (record.category === "withdraw") return ArrowDownRight
     return ArrowLeftRight
   }
-
   const key = record.category?.toLowerCase()
   if (key?.includes("food") || key?.includes("makan")) return Utensils
   if (key?.includes("transport") || key?.includes("transportasi")) return Car
@@ -159,10 +119,7 @@ const getRecordIcon = (record: MergedRecord) => {
 const formatMonthLabel = (monthStr: string) => {
   const [year, month] = monthStr.split("-").map(Number)
   if (!year || !month) return monthStr
-  return new Date(year, month - 1).toLocaleDateString("id-ID", {
-    month: "long",
-    year: "numeric",
-  })
+  return new Date(year, month - 1).toLocaleDateString("id-ID", { month: "long", year: "numeric" })
 }
 
 const getMonthKey = (value?: string | Date) => {
@@ -171,315 +128,174 @@ const getMonthKey = (value?: string | Date) => {
   return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), 1)).toISOString().slice(0, 7)
 }
 
+// ==================== NEO-BRUTALISM CARD COMPONENT ====================
+function NeoCard({
+  children,
+  className = "",
+  accent = "border-border",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { accent?: string }) {
+  return (
+    <div
+      className={`rounded-2xl border-2 ${accent} bg-card shadow-[4px_4px_0px_0px] shadow-border/40 transition-all duration-200 hover:shadow-[6px_6px_0px_0px] hover:shadow-border/50 hover:-translate-y-0.5 ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+}
+
+function SectionTitle({ icon: Icon, title, color = "text-primary" }: { icon: React.ElementType; title: string; color?: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className={`h-9 w-9 rounded-xl border-2 border-border bg-muted flex items-center justify-center shadow-[2px_2px_0px_0px] shadow-border/30`}>
+        <Icon className={`h-4.5 w-4.5 ${color}`} />
+      </div>
+      <h2 className="text-lg font-bold tracking-tight">{title}</h2>
+    </div>
+  )
+}
+
 // ==================== MAIN COMPONENT ====================
 export default function FinancialOverviewPage() {
-  // State Management - Grouped by concern
   const [data, setData] = useState({
     expenses: [] as Expense[],
     transfers: [] as any[],
     accounts: [] as AccountBalance[],
     budgets: [] as BudgetWithUsage[],
   })
-
-  const [loading, setLoading] = useState({
-    expenses: true,
-    accounts: true,
-    budgets: true,
-  })
-
-  const [dialogs, setDialogs] = useState({
-    expense: false,
-    transfer: false,
-    account: false,
-    budget: false,
-  })
-
+  const [loading, setLoading] = useState({ expenses: true, accounts: true, budgets: true })
+  const [dialogs, setDialogs] = useState({ expense: false, transfer: false, account: false, budget: false, income: false })
   const currentMonthKey = useMemo(() => getMonthKey(), [])
-
-  const [editing, setEditing] = useState<{
-    account: AccountBalance | null
-    budget: BudgetWithUsage | null
-  }>({
-    account: null,
-    budget: null,
-  })
-
-  const [filters, setFilters] = useState({
-    category: "all",
-    startDate: "",
-    endDate: "",
-    month: currentMonthKey,
-  })
-
-  const [activeTab, setActiveTab] = useState<"overview" | "budgets" | "expenses" | "activity">(
-    typeof window !== "undefined" && window.innerWidth < 768
-      ? "expenses"
-      : "overview"
-  )
+  const [editing, setEditing] = useState<{ account: AccountBalance | null; budget: BudgetWithUsage | null }>({ account: null, budget: null })
+  const [filters, setFilters] = useState({ category: "all", startDate: "", endDate: "", month: currentMonthKey })
 
   const {
-    formData,
-    editingExpense,
-    removePhoto,
-    updateFormData,
-    handlePhotoChange,
-    handleRemovePhoto,
-    handleEdit,
-    resetForm,
+    formData, editingExpense, removePhoto,
+    updateFormData, handlePhotoChange, handleRemovePhoto, handleEdit, resetForm,
   } = useExpenseForm()
 
-  // ==================== COMPUTED VALUES ====================
-  const expenseMonthKey = useMemo(
-    () => formData.date ? formData.date.slice(0, 7) : new Date().toISOString().slice(0, 7),
-    [formData.date]
-  )
-
-  const budgetsForExpense = useMemo(
-    () => data.budgets.filter((budget) => budget.monthKey === expenseMonthKey),
-    [data.budgets, expenseMonthKey]
-  )
-
+  // ==================== COMPUTED ====================
+  const expenseMonthKey = useMemo(() => formData.date ? formData.date.slice(0, 7) : new Date().toISOString().slice(0, 7), [formData.date])
+  const budgetsForExpense = useMemo(() => data.budgets.filter((b) => b.monthKey === expenseMonthKey), [data.budgets, expenseMonthKey])
   const selectedMonthLabel = useMemo(() => formatMonthLabel(filters.month), [filters.month])
 
-  const updateMonth = useCallback((value: string) => {
-    if (!value) return
-    setFilters((prev) => ({ ...prev, month: value, startDate: "", endDate: "" }))
-  }, [])
-
-  const resetToCurrentMonth = useCallback(() => {
-    updateMonth(currentMonthKey)
-  }, [currentMonthKey, updateMonth])
-
-  const shiftMonth = useCallback((delta: number) => {
-    const [year, month] = filters.month.split("-").map(Number)
-    if (!year || !month) return
-    const next = new Date(Date.UTC(year, month - 1 + delta, 1))
-    updateMonth(getMonthKey(next))
+  const updateMonth = useCallback((v: string) => { if (v) setFilters((p) => ({ ...p, month: v, startDate: "", endDate: "" })) }, [])
+  const resetToCurrentMonth = useCallback(() => updateMonth(currentMonthKey), [currentMonthKey, updateMonth])
+  const shiftMonth = useCallback((d: number) => {
+    const [y, m] = filters.month.split("-").map(Number)
+    if (!y || !m) return
+    updateMonth(getMonthKey(new Date(Date.UTC(y, m - 1 + d, 1))))
   }, [filters.month, updateMonth])
 
   const mergedHistory = useMemo(() => {
-    const mappedExpenses: MergedRecord[] = data.expenses.map((ex) => ({
-      type: "expense",
-      id: ex.id,
-      title: ex.title,
-      amount: ex.amount,
-      category: ex.category || "",
-      description: ex.description || "",
-      photoUrl: ex.photoUrl,
-      date: ex.date,
-      accountId: ex.accountId,
-      budgetName: ex.budget?.name ?? null,
-    }))
-
-    const mappedTransfers: MergedRecord[] = data.transfers.map((tr) => {
-      let title = ""
-      let category = ""
-
-      if (tr.fromAccount.type !== "cash" && tr.toAccount.type === "cash") {
-        title = `Tarik Tunai dari ${tr.fromAccount.name}`
-        category = "withdraw"
-      } else if (tr.fromAccount.type === "cash" && tr.toAccount.type !== "cash") {
-        title = `Top Up ke ${tr.toAccount.name}`
-        category = "topup"
-      } else {
-        title = `Transfer: ${tr.fromAccount.name} → ${tr.toAccount.name}`
-        category = "transfer"
-      }
-
-      return {
-        type: "transfer",
-        id: tr.id,
-        title,
-        amount: tr.amount,
-        category,
-        description: tr.note ?? "",
-        photoUrl: null,
-        date: tr.date,
-        sourceAccountName: tr.fromAccount?.name,
-      }
-    })
-
-    return [...mappedExpenses, ...mappedTransfers].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    )
+    const mapped: MergedRecord[] = [
+      ...data.expenses.map((ex) => ({
+        type: "expense" as const, id: ex.id, title: ex.title, amount: ex.amount,
+        category: ex.category || "", description: ex.description || "", photoUrl: ex.photoUrl,
+        date: ex.date, accountId: ex.accountId, budgetName: ex.budget?.name ?? null,
+      })),
+      ...data.transfers.map((tr) => {
+        let title = "", category = ""
+        if (tr.fromAccount.type !== "cash" && tr.toAccount.type === "cash") { title = `Tarik Tunai dari ${tr.fromAccount.name}`; category = "withdraw" }
+        else if (tr.fromAccount.type === "cash" && tr.toAccount.type !== "cash") { title = `Top Up ke ${tr.toAccount.name}`; category = "topup" }
+        else { title = `${tr.fromAccount.name} → ${tr.toAccount.name}`; category = "transfer" }
+        return { type: "transfer" as const, id: tr.id, title, amount: tr.amount, category, description: tr.note ?? "", photoUrl: null, date: tr.date, sourceAccountName: tr.fromAccount?.name }
+      }),
+    ]
+    return mapped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [data.expenses, data.transfers])
 
   const summary = useMemo(() => calculateExpenseSummary(data.expenses), [data.expenses])
+  const totalBalance = useMemo(() => data.accounts.reduce((s, a) => s + a.balance, 0), [data.accounts])
+  const budgetTotals = useMemo(() => data.budgets.reduce((a, b) => ({ limit: a.limit + b.limit, spent: a.spent + b.spent }), { limit: 0, spent: 0 }), [data.budgets])
+  const budgetProgress = budgetTotals.limit ? Math.min((budgetTotals.spent / budgetTotals.limit) * 100, 100) : 0
 
-  const budgetTotals = useMemo(
-    () =>
-      data.budgets.reduce(
-        (acc, budget) => {
-          acc.limit += budget.limit
-          acc.spent += budget.spent
-          return acc
-        },
-        { limit: 0, spent: 0 }
-      ),
-    [data.budgets]
-  )
-
-  const budgetProgress = budgetTotals.limit
-    ? Math.min((budgetTotals.spent / budgetTotals.limit) * 100, 100)
-    : 0
-
-  const topBudgets = useMemo(() => {
-    if (!data.budgets?.length) return [] as BudgetWithUsage[]
-    return [...data.budgets]
-      .sort((a, b) => {
-        const usageA = a.limit ? a.spent / a.limit : 0
-        const usageB = b.limit ? b.spent / b.limit : 0
-        return usageB - usageA
-      })
-      .slice(0, 3)
-  }, [data.budgets])
-
-  // ==================== DATA FETCHING ====================
+  // ==================== DATA FETCHING (same as before) ====================
   const fetchAccounts = useCallback(async () => {
     try {
-      setLoading((prev) => ({ ...prev, accounts: true }))
+      setLoading((p) => ({ ...p, accounts: true }))
       const res = await fetch("/api/account-balance")
       if (!res.ok) return
-
-      let fetchedData = await res.json()
-      const cash = fetchedData.find((a: any) => a.type === "cash")
-
-      if (!cash) {
-        await fetch("/api/account-balance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Cash", type: "cash", balance: 0 }),
-        })
-
-        const res2 = await fetch("/api/account-balance")
-        fetchedData = await res2.json()
+      let d = await res.json()
+      if (!d.find((a: any) => a.type === "cash")) {
+        await fetch("/api/account-balance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Cash", type: "cash", balance: 0 }) })
+        const r2 = await fetch("/api/account-balance"); d = await r2.json()
       }
-
-      setData((prev) => ({ ...prev, accounts: fetchedData }))
-    } catch (e) {
-      console.error("Error fetching accounts:", e)
-    } finally {
-      setLoading((prev) => ({ ...prev, accounts: false }))
-    }
+      setData((p) => ({ ...p, accounts: d }))
+    } catch (e) { console.error("Error fetching accounts:", e) }
+    finally { setLoading((p) => ({ ...p, accounts: false })) }
   }, [])
 
   const fetchExpenses = useCallback(async () => {
     try {
-      setLoading((prev) => ({ ...prev, expenses: true }))
+      setLoading((p) => ({ ...p, expenses: true }))
       const params = new URLSearchParams()
       params.append("month", filters.month)
       if (filters.category !== "all") params.append("category", filters.category)
       if (filters.startDate) params.append("startDate", filters.startDate)
       if (filters.endDate) params.append("endDate", filters.endDate)
-
       const res = await fetch(`/api/expenses?${params.toString()}`)
-      if (!res.ok) throw new Error("Failed to fetch expenses")
-
-      const fetchedData = await res.json()
-      setData((prev) => ({ ...prev, expenses: fetchedData }))
-    } catch (error) {
-      console.error("Error fetching expenses:", error)
-    } finally {
-      setLoading((prev) => ({ ...prev, expenses: false }))
-    }
+      if (!res.ok) return
+      const expData = await res.json()
+      setData((p) => ({ ...p, expenses: expData }))
+    } catch (e) { console.error("Error fetching expenses:", e) }
+    finally { setLoading((p) => ({ ...p, expenses: false })) }
   }, [filters.category, filters.startDate, filters.endDate, filters.month])
 
   const fetchTransfers = useCallback(async () => {
     try {
       const res = await fetch(`/api/transfers?month=${filters.month}`)
       if (!res.ok) return
-
-      const fetchedData = await res.json()
-      setData((prev) => ({ ...prev, transfers: fetchedData }))
-    } catch (e) {
-      console.error("Error fetching transfers:", e)
-    }
+      const trfData = await res.json()
+      setData((p) => ({ ...p, transfers: trfData }))
+    } catch (e) { console.error("Error fetching transfers:", e) }
   }, [filters.month])
 
   const fetchBudgets = useCallback(async () => {
     try {
-      setLoading((prev) => ({ ...prev, budgets: true }))
+      setLoading((p) => ({ ...p, budgets: true }))
       const res = await fetch(`/api/budgets?month=${filters.month}`)
-      if (!res.ok) throw new Error("Failed to fetch budgets")
-
-      const fetchedData = await res.json()
-      const normalized = (fetchedData.budgets ?? []).map((budget: any) => {
-        const spent = Number(budget.spent ?? 0)
-        const remaining = Number(budget.remaining ?? Math.max(budget.limit - spent, 0))
-        const monthKey = budget.monthKey
-          ? budget.monthKey
-          : typeof budget.month === "string"
-          ? budget.month.slice(0, 7)
-          : new Date(budget.month).toISOString().slice(0, 7)
-
-        return { ...budget, spent, remaining, monthKey } as BudgetWithUsage
+      if (!res.ok) return
+      const fd = await res.json()
+      const normalized = (fd.budgets ?? []).map((b: any) => {
+        const spent = Number(b.spent ?? 0)
+        const remaining = Number(b.remaining ?? Math.max(b.limit - spent, 0))
+        const monthKey = b.monthKey ? b.monthKey : typeof b.month === "string" ? b.month.slice(0, 7) : new Date(b.month).toISOString().slice(0, 7)
+        return { ...b, spent, remaining, monthKey } as BudgetWithUsage
       })
-
-      setData((prev) => ({ ...prev, budgets: normalized }))
-    } catch (error) {
-      console.error("Error fetching budgets:", error)
-    } finally {
-      setLoading((prev) => ({ ...prev, budgets: false }))
-    }
+      setData((p) => ({ ...p, budgets: normalized }))
+    } catch (e) { console.error("Error fetching budgets:", e) }
+    finally { setLoading((p) => ({ ...p, budgets: false })) }
   }, [filters.month])
 
-  useEffect(() => {
-    fetchAccounts()
-    fetchExpenses()
-    fetchTransfers()
-    fetchBudgets()
-  }, [fetchAccounts, fetchExpenses, fetchTransfers, fetchBudgets])
+  useEffect(() => { fetchAccounts(); fetchExpenses(); fetchTransfers(); fetchBudgets() }, [fetchAccounts, fetchExpenses, fetchTransfers, fetchBudgets])
 
-  // ==================== EVENT HANDLERS ====================
+  // ==================== EVENT HANDLERS (same as before) ====================
   const handleSubmitExpense = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-
     try {
-      const submitFormData = new FormData()
-      submitFormData.append("title", formData.title)
-      submitFormData.append("amount", formData.amount)
-      submitFormData.append("category", formData.category)
-      submitFormData.append("description", formData.description)
-      submitFormData.append("date", formData.date)
-      submitFormData.append("accountId", formData.accountId)
-      submitFormData.append("budgetId", formData.budgetId || "")
-
-      if (formData.photo) submitFormData.append("photo", formData.photo)
-      if (editingExpense && removePhoto) submitFormData.append("removePhoto", "true")
-
+      const fd = new FormData()
+      fd.append("title", formData.title); fd.append("amount", formData.amount)
+      fd.append("category", formData.category); fd.append("description", formData.description)
+      fd.append("date", formData.date); fd.append("accountId", formData.accountId)
+      fd.append("budgetId", formData.budgetId || "")
+      if (formData.photo) fd.append("photo", formData.photo)
+      if (editingExpense && removePhoto) fd.append("removePhoto", "true")
       const url = editingExpense ? `/api/expenses/${editingExpense.id}` : "/api/expenses"
-      const method = editingExpense ? "PUT" : "POST"
-
-      const res = await fetch(url, { method, body: submitFormData })
-      if (!res.ok) throw new Error("Failed to save expense")
-
+      const res = await fetch(url, { method: editingExpense ? "PUT" : "POST", body: fd })
+      if (!res.ok) throw new Error("Failed")
       await Promise.all([fetchExpenses(), fetchBudgets()])
-      resetForm()
-      setDialogs((prev) => ({ ...prev, expense: false }))
-    } catch (error) {
-      console.error("Error saving expense:", error)
-      alert("Gagal menyimpan pengeluaran")
-    }
+      resetForm(); setDialogs((p) => ({ ...p, expense: false }))
+    } catch { alert("Gagal menyimpan pengeluaran") }
   }, [formData, editingExpense, removePhoto, fetchExpenses, fetchBudgets, resetForm])
 
   const handleDeleteExpense = useCallback(async (id: string) => {
     if (!confirm("Hapus pengeluaran ini?")) return
-
-    try {
-      const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete expense")
-
-      await Promise.all([fetchExpenses(), fetchBudgets()])
-    } catch (error) {
-      console.error("Error deleting expense:", error)
-      alert("Gagal menghapus pengeluaran")
-    }
+    try { const r = await fetch(`/api/expenses/${id}`, { method: "DELETE" }); if (!r.ok) throw new Error("Failed"); await Promise.all([fetchExpenses(), fetchBudgets()]) } catch { alert("Gagal menghapus") }
   }, [fetchExpenses, fetchBudgets])
 
-  const handleEditExpense = useCallback((expense: Expense) => {
-    handleEdit(expense)
-    setDialogs((prev) => ({ ...prev, expense: true }))
-  }, [handleEdit])
+  const handleEditExpense = useCallback((expense: Expense) => { handleEdit(expense); setDialogs((p) => ({ ...p, expense: true })) }, [handleEdit])
 
   const handleExportExpenses = useCallback(async () => {
     try {
@@ -488,1033 +304,408 @@ export default function FinancialOverviewPage() {
       if (filters.category !== "all") params.append("category", filters.category)
       if (filters.startDate) params.append("startDate", filters.startDate)
       if (filters.endDate) params.append("endDate", filters.endDate)
-
       const res = await fetch(`/api/expenses/export?${params.toString()}`)
-      if (!res.ok) throw new Error("Failed to export expenses")
-
+      if (!res.ok) throw new Error("Failed")
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
+      const a = document.createElement("a"); a.href = url
       a.download = `pengeluaran-${new Date().toISOString().split("T")[0]}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error("Error exporting:", error)
-      alert("Gagal mengekspor data")
-    }
-  }, [filters.category, filters.startDate, filters.endDate, filters.month])
+      document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a)
+    } catch { alert("Gagal mengekspor data") }
+  }, [filters])
 
-  const handleDeleteAccount = useCallback(async (id: string) => {
-    if (!confirm("Hapus akun saldo ini?")) return
+  const handleDeleteAccount = useCallback(async (id: string) => { if (!confirm("Hapus akun?")) return; try { const r = await fetch(`/api/account-balance/${id}`, { method: "DELETE" }); if (!r.ok) throw new Error("Failed"); await fetchAccounts() } catch { alert("Gagal menghapus") } }, [fetchAccounts])
+  const handleDeleteBudget = useCallback(async (id: string) => { if (!confirm("Hapus budget?")) return; try { const r = await fetch(`/api/budgets/${id}`, { method: "DELETE" }); if (!r.ok) throw new Error("Failed"); await fetchBudgets() } catch { alert("Gagal menghapus") } }, [fetchBudgets])
 
-    try {
-      const res = await fetch(`/api/account-balance/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete account")
-
-      await fetchAccounts()
-    } catch (error) {
-      console.error("Error deleting account:", error)
-      alert("Gagal menghapus akun saldo")
-    }
-  }, [fetchAccounts])
-
-  const handleDeleteBudget = useCallback(async (id: string) => {
-    if (!confirm("Hapus budget ini?")) return
-
-    try {
-      const res = await fetch(`/api/budgets/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Failed to delete budget")
-
-      await fetchBudgets()
-    } catch (error) {
-      console.error("Error deleting budget:", error)
-      alert("Gagal menghapus budget")
-    }
-  }, [fetchBudgets])
+  const isLoading = loading.expenses || loading.accounts || loading.budgets
 
   // ==================== RENDER ====================
   return (
-    <div className="min-h-screen" style={{ background: PALETTE.pageBg }}>
-      <div className="mx-auto w-full max-w-screen-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-8 lg:space-y-10">
-        
-        {/* ==================== HEADER ==================== */}
-        <header className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
-              <h1
-                className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight bg-clip-text text-transparent"
-                style={{ backgroundImage: PALETTE.gradientPrimary }}
-              >
-                Financial Overview
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl leading-relaxed">
-                Kelola keuangan Anda dengan mudah - pantau saldo, budget, dan pengeluaran dalam satu dashboard terpadu.
+    <PageWrapper maxWidth="lg" className="space-y-8">
+      {/* ═══════════ HEADER ═══════════ */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-muted px-3 py-1 text-xs font-semibold shadow-[2px_2px_0px_0px] shadow-border/30">
+            <Sparkles className="h-3 w-3 text-chart-4" />
+            {selectedMonthLabel}
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
+            Financial Overview <span className="inline-block animate-float">💰</span>
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-lg">
+            Semua keuangan kamu dalam satu halaman. Simple, clear, no BS.
+          </p>
+        </div>
+
+        {/* Month Switcher */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2 border-border shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none active:translate-x-0.5 active:translate-y-0.5" onClick={() => shiftMonth(-1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Input type="month" value={filters.month} onChange={(e) => updateMonth(e.target.value)} className="w-36 rounded-xl border-2 border-border font-semibold shadow-[2px_2px_0px_0px] shadow-border/30" />
+          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-2 border-border shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none active:translate-x-0.5 active:translate-y-0.5" onClick={() => shiftMonth(1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          {filters.month !== currentMonthKey && (
+            <Button variant="ghost" size="sm" onClick={resetToCurrentMonth} className="text-xs font-bold text-primary">
+              Hari ini
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* ═══════════ QUICK ACTIONS BAR ═══════════ */}
+      <NeoCard accent="border-primary/60" className="p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-bold">Quick Actions</p>
+              <p className="text-xs text-muted-foreground">Akses cepat ke semua fitur</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" className="rounded-xl border-2 border-chart-1/50 bg-chart-1 text-white font-bold shadow-[2px_2px_0px_0px] shadow-chart-1/30 hover:bg-chart-1/90 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 gap-1.5" onClick={() => setDialogs((p) => ({ ...p, expense: true }))}>
+              <PlusIcon className="h-3.5 w-3.5" /> Pengeluaran
+            </Button>
+            <Button size="sm" className="rounded-xl border-2 border-chart-2/50 bg-chart-2 text-white font-bold shadow-[2px_2px_0px_0px] shadow-chart-2/30 hover:bg-chart-2/90 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 gap-1.5" onClick={() => setDialogs((p) => ({ ...p, income: true }))}>
+              <ArrowUpRight className="h-3.5 w-3.5" /> Pemasukan
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-xl border-2 border-border font-bold shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 gap-1.5" onClick={() => setDialogs((p) => ({ ...p, transfer: true }))}>
+              <ArrowLeftRight className="h-3.5 w-3.5" /> Transfer
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-xl border-2 border-border font-bold shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 gap-1.5" onClick={() => { setEditing((p) => ({ ...p, budget: null })); setDialogs((p) => ({ ...p, budget: true })) }}>
+              <Target className="h-3.5 w-3.5" /> Set Budget
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-xl border-2 border-border font-bold shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none active:translate-x-0.5 active:translate-y-0.5 gap-1.5" onClick={handleExportExpenses}>
+              <DownloadIcon className="h-3.5 w-3.5" /> Export
+            </Button>
+          </div>
+        </div>
+      </NeoCard>
+
+      {/* ═══════════ STATS ROW ═══════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <NeoCard accent="border-chart-1/50" className="p-5">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Saldo</p>
+          {loading.accounts ? <div className="animate-shimmer h-8 w-28 rounded" /> : (
+            <p className="text-2xl font-black tabular-nums text-chart-1">{formatCurrency(totalBalance)}</p>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-1">{data.accounts.length} akun aktif</p>
+        </NeoCard>
+
+        <NeoCard accent="border-destructive/50" className="p-5">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Pengeluaran</p>
+          {loading.expenses ? <div className="animate-shimmer h-8 w-28 rounded" /> : (
+            <p className="text-2xl font-black tabular-nums text-destructive">{formatCurrency(summary.total)}</p>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-1">{summary.count} transaksi</p>
+        </NeoCard>
+
+        <NeoCard accent="border-primary/50" className="p-5">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Budget Used</p>
+          {loading.budgets ? <div className="animate-shimmer h-8 w-28 rounded" /> : (
+            <>
+              <p className={`text-2xl font-black tabular-nums ${budgetProgress > 90 ? "text-destructive" : budgetProgress > 70 ? "text-chart-4" : "text-primary"}`}>
+                {budgetProgress.toFixed(0)}%
               </p>
+              <Progress value={budgetProgress} className="h-1.5 mt-2" />
+            </>
+          )}
+        </NeoCard>
+
+        <NeoCard accent="border-chart-2/50" className="p-5">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Avg Expense</p>
+          {loading.expenses ? <div className="animate-shimmer h-8 w-28 rounded" /> : (
+            <p className="text-2xl font-black tabular-nums text-chart-2">{formatCurrency(summary.average)}</p>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-1">per transaksi</p>
+        </NeoCard>
+      </div>
+
+      {/* ═══════════ MAIN GRID: 2 COLUMNS ═══════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        {/* ── LEFT COL: Accounts + Budgets ── */}
+        <div className="lg:col-span-5 space-y-6">
+
+          {/* ACCOUNTS */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <SectionTitle icon={Wallet} title="Akun Saldo" />
+              <Button size="sm" variant="outline" className="rounded-xl border-2 border-border font-bold text-xs shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none gap-1" onClick={() => { setEditing((p) => ({ ...p, account: null })); setDialogs((p) => ({ ...p, account: true })) }}>
+                <PlusIcon className="h-3 w-3" /> Tambah
+              </Button>
             </div>
 
-            <div
-              className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground backdrop-blur-sm px-3 py-2 rounded-full border"
-              style={{ backgroundColor: `${PALETTE.surface}cc`, borderColor: PALETTE.border }}
-            >
-              <span className="relative flex h-2 w-2">
-                <span
-                  className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                  style={{ backgroundColor: PALETTE.accent }}
-                ></span>
-                <span
-                  className="relative inline-flex rounded-full h-2 w-2"
-                  style={{ backgroundColor: PALETTE.accent }}
-                ></span>
-              </span>
-              <span className="hidden sm:inline">Data diperbarui real-time</span>
-              <span className="sm:hidden">Live</span>
-            </div>
-          </div>
-        </header>
+            {loading.accounts ? (
+              <div className="space-y-3">{[1, 2].map(i => <div key={i} className="animate-shimmer h-20 rounded-2xl" />)}</div>
+            ) : data.accounts.length === 0 ? (
+              <NeoCard className="p-8 text-center">
+                <p className="text-4xl mb-2">🏦</p>
+                <p className="font-bold">Belum ada akun</p>
+                <p className="text-xs text-muted-foreground mb-3">Tambahkan akun pertamamu!</p>
+                <Button size="sm" className="rounded-xl gap-1" onClick={() => { setEditing((p) => ({ ...p, account: null })); setDialogs((p) => ({ ...p, account: true })) }}>
+                  <PlusIcon className="h-3 w-3" /> Buat Akun
+                </Button>
+              </NeoCard>
+            ) : (
+              <div className="space-y-3">
+                {data.accounts.map((acc) => (
+                  <NeoCard key={acc.id} className="p-4 group">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">{ACCOUNT_TYPE_EMOJI[acc.type] || "💳"}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold truncate">{acc.name}</p>
+                          <Badge variant="outline" className="text-[10px] capitalize border-2 rounded-lg">{ACCOUNT_TYPE_LABELS[acc.type as keyof typeof ACCOUNT_TYPE_LABELS] || acc.type}</Badge>
+                        </div>
+                        <p className="text-lg font-black tabular-nums text-chart-1">{formatCurrency(acc.balance)}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => { setEditing((p) => ({ ...p, account: acc })); setDialogs((p) => ({ ...p, account: true })) }}><Edit className="h-3.5 w-3.5" /> Edit</DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 text-destructive cursor-pointer text-xs" onClick={() => handleDeleteAccount(acc.id)}><Trash2 className="h-3.5 w-3.5" /> Hapus</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </NeoCard>
+                ))}
+              </div>
+            )}
+          </section>
 
-        {/* ==================== MONTH SWITCHER ==================== */}
-        <section
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border backdrop-blur-sm px-4 py-3"
-          style={surfaceAltStyle}
-        >
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <CalendarDays className="h-4 w-4" style={{ color: PALETTE.primary }} />
-              <span>{selectedMonthLabel}</span>
-              {filters.month === currentMonthKey && (
-                <Badge variant="outline" className="text-xs" style={{ borderColor: PALETTE.border, color: PALETTE.primary }}>
-                  Bulan ini
-                </Badge>
-              )}
+          {/* BUDGETS */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <SectionTitle icon={PieChart} title="Budgets" color="text-chart-4" />
+              <Button size="sm" variant="outline" className="rounded-xl border-2 border-border font-bold text-xs shadow-[2px_2px_0px_0px] shadow-border/30 active:shadow-none gap-1" onClick={() => { setEditing((p) => ({ ...p, budget: null })); setDialogs((p) => ({ ...p, budget: true })) }}>
+                <PlusIcon className="h-3 w-3" /> Budget
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Data ditata per bulan. Ubah bulan untuk masuk ke history tanpa mengubah filter lain.</p>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => shiftMonth(-1)}
-              aria-label="Bulan sebelumnya"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Input
-              type="month"
-              value={filters.month}
-              onChange={(e) => updateMonth(e.target.value)}
-              className="w-32"
-              aria-label="Pilih bulan"
+            {loading.budgets ? (
+              <div className="space-y-3">{[1, 2].map(i => <div key={i} className="animate-shimmer h-24 rounded-2xl" />)}</div>
+            ) : data.budgets.length === 0 ? (
+              <NeoCard className="p-8 text-center">
+                <p className="text-4xl mb-2">🎯</p>
+                <p className="font-bold">Belum ada budget</p>
+                <p className="text-xs text-muted-foreground mb-3">Set budget untuk kontrol pengeluaranmu</p>
+                <Button size="sm" className="rounded-xl gap-1" onClick={() => { setEditing((p) => ({ ...p, budget: null })); setDialogs((p) => ({ ...p, budget: true })) }}>
+                  <PlusIcon className="h-3 w-3" /> Set Budget
+                </Button>
+              </NeoCard>
+            ) : (
+              <div className="space-y-3">
+                {/* Budget Summary */}
+                <NeoCard accent="border-chart-4/40" className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-muted-foreground">RINGKASAN BUDGET</p>
+                    <span className={`text-sm font-black tabular-nums ${budgetProgress > 90 ? "text-destructive" : budgetProgress > 70 ? "text-chart-4" : "text-chart-1"}`}>{budgetProgress.toFixed(0)}%</span>
+                  </div>
+                  <Progress value={budgetProgress} className="h-2.5 rounded-full mb-2" />
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <span>Terpakai: {formatCurrency(budgetTotals.spent)}</span>
+                    <span>Limit: {formatCurrency(budgetTotals.limit)}</span>
+                  </div>
+                </NeoCard>
+
+                {/* Individual budgets */}
+                {data.budgets.map((budget) => {
+                  const usage = budget.limit ? Math.min((budget.spent / budget.limit) * 100, 100) : 0
+                  const color = usage > 90 ? "border-destructive/50" : usage > 70 ? "border-chart-4/50" : "border-chart-1/40"
+
+                  return (
+                    <NeoCard key={budget.id} accent={color} className="p-4 group">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate">{budget.name}</p>
+                          <p className="text-[11px] text-muted-foreground capitalize">{budget.category || "Budget"}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Badge variant="outline" className={`text-[10px] font-black border-2 rounded-lg tabular-nums ${usage > 90 ? "border-destructive/50 text-destructive" : usage > 70 ? "border-chart-4/50 text-chart-4" : "border-chart-1/50 text-chart-1"}`}>
+                            {usage.toFixed(0)}%
+                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36">
+                              <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => { setEditing((p) => ({ ...p, budget })); setDialogs((p) => ({ ...p, budget: true })) }}><Edit className="h-3.5 w-3.5" /> Edit</DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2 text-destructive cursor-pointer text-xs" onClick={() => handleDeleteBudget(budget.id)}><Trash2 className="h-3.5 w-3.5" /> Hapus</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                      <Progress value={usage} className="h-1.5 rounded-full mb-1.5" />
+                      <div className="flex justify-between text-[11px] text-muted-foreground tabular-nums">
+                        <span>{formatCurrency(budget.spent)}</span>
+                        <span>{formatCurrency(budget.limit)}</span>
+                      </div>
+                    </NeoCard>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* ── RIGHT COL: Expense Summary + Activity ── */}
+        <div className="lg:col-span-7 space-y-6">
+
+          {/* EXPENSE SUMMARY */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <SectionTitle icon={TrendingUp} title="Pengeluaran" color="text-chart-1" />
+              <div className="flex gap-2">
+                <Button size="sm" className="rounded-xl border-2 border-chart-1/50 bg-chart-1 text-white font-bold text-xs shadow-[2px_2px_0px_0px] shadow-chart-1/30 hover:bg-chart-1/90 active:shadow-none gap-1" onClick={() => setDialogs((p) => ({ ...p, expense: true }))}>
+                  <PlusIcon className="h-3 w-3" /> Tambah
+                </Button>
+              </div>
+            </div>
+            <ExpenseSummaryCards
+              totalExpenses={summary.total}
+              expensesCount={summary.count}
+              averageExpense={summary.average}
+              topCategory={summary.topCategory}
+              formatCurrency={formatCurrency}
             />
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => shiftMonth(1)}
-              aria-label="Bulan selanjutnya"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetToCurrentMonth}>
-              Bulan ini
-            </Button>
-          </div>
-        </section>
+          </section>
 
-        {/* ==================== TAB INTERFACE ==================== */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(value: string) =>
-            setActiveTab(value as "overview" | "budgets" | "expenses" | "activity")
-          }
-          className="space-y-6"
-        >
-          <TabsList
-            className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex h-auto backdrop-blur-sm border p-1"
-            style={surfaceAltStyle}
-          >
-            <TabsTrigger 
-              value="overview" 
-              className="data-[state=active]:bg-[linear-gradient(90deg,var(--color-primary),var(--color-accent))] data-[state=active]:text(--color-primary-foreground) transition-all duration-300 px-4 py-2.5 rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview</span>
-                <span className="sm:hidden">Overview</span>
-              </div>
-            </TabsTrigger>
-            
-            <TabsTrigger 
-              value="budgets" 
-              className="data-[state=active]:bg-[linear-gradient(90deg,var(--color-accent),var(--color-primary))] data-[state=active]:text-(--color-primary-foreground) transition-all duration-300 px-4 py-2.5 rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <PieChart className="h-4 w-4" />
-                <span className="hidden sm:inline">Budgets</span>
-                <span className="sm:hidden">Budget</span>
-              </div>
-            </TabsTrigger>
-            
-            <TabsTrigger 
-              value="expenses" 
-              className="data-[state=active]:bg-[linear-gradient(90deg,var(--chart-3),var(--chart-1))] data-[state=active]:text-(--color-primary-foreground) transition-all duration-300 px-4 py-2.5 rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                <span className="hidden sm:inline">Pengeluaran</span>
-                <span className="sm:hidden">Expenses</span>
-              </div>
-            </TabsTrigger>
-            
-            <TabsTrigger 
-              value="activity" 
-              className="data-[state=active]:bg-[linear-gradient(90deg,var(--chart-4),var(--destructive))] data-[state=active]:text-(--color-primary-foreground) transition-all duration-300 px-4 py-2.5 rounded-lg"
-            >
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                <span className="hidden sm:inline">Aktivitas</span>
-                <span className="sm:hidden">Activity</span>
-              </div>
-            </TabsTrigger>
-          </TabsList>
+          {/* RECENT ACTIVITY */}
+          <section className="space-y-4">
+            <SectionTitle icon={Activity} title="Aktivitas Terbaru" color="text-chart-2" />
 
-          {/* ==================== OVERVIEW TAB ==================== */}
-          <TabsContent value="overview" className="space-y-8 animate-in fade-in-50 duration-300">
-            {/* QUICK ACTIONS */}
-            <section className="space-y-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">Quick actions</h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Tambah pengeluaran, transfer saldo, atau set budget tanpa berpindah tab.</p>
+            <NeoCard className="overflow-hidden">
+              {loading.expenses ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    className="gap-2"
-                    style={{ backgroundImage: PALETTE.gradientSuccess, color: PALETTE.primaryFg }}
-                    onClick={() => setDialogs((prev) => ({ ...prev, expense: true }))}
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    Tambah pengeluaran
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setDialogs((prev) => ({ ...prev, transfer: true }))}
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                    Transfer saldo
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="gap-2"
-                    onClick={() => {
-                      setEditing((prev) => ({ ...prev, budget: null }))
-                      setDialogs((prev) => ({ ...prev, budget: true }))
-                    }}
-                  >
-                    <PieChart className="h-4 w-4" />
-                    Set budget
-                  </Button>
+              ) : mergedHistory.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-4xl mb-2">📭</p>
+                  <p className="font-bold">Belum ada aktivitas</p>
+                  <p className="text-xs text-muted-foreground">Transaksimu akan muncul di sini</p>
                 </div>
-              </div>
-
-              {topBudgets.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {topBudgets.map((budget) => {
-                    const usage = budget.limit ? Math.min((budget.spent / budget.limit) * 100, 100) : 0
-                    const isWarning = usage > 80
-                    const isDanger = usage > 100
-                    const usageColor = isDanger ? PALETTE.danger : isWarning ? PALETTE.warning : PALETTE.primary
+              ) : (
+                <ul className="divide-y divide-border">
+                  {mergedHistory.slice(0, 15).map((record) => {
+                    const Icon = getRecordIcon(record)
+                    const isNegative = record.type === "expense" || (record.type === "transfer" && record.category !== "topup")
+                    const accountName = record.type === "expense" && record.accountId ? data.accounts.find((a) => a.id === record.accountId)?.name : record.sourceAccountName
 
                     return (
-                      <Card key={budget.id} className="border backdrop-blur-sm" style={surfaceStyle}>
-                        <CardContent className="p-4 space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="space-y-0.5">
-                              <p className="text-xs text-muted-foreground capitalize">{budget.category || "Budget"}</p>
-                              <p className="text-sm font-semibold text-foreground line-clamp-1">{budget.name}</p>
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className="text-[11px]"
-                              style={{ borderColor: usageColor, color: usageColor }}
-                            >
-                              {usage.toFixed(0)}%
-                            </Badge>
+                      <li key={record.id + record.type} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors group">
+                        <div className={`h-9 w-9 rounded-xl border-2 flex items-center justify-center shrink-0 ${record.type === "transfer" ? "border-primary/30 bg-primary/5 text-primary" : "border-destructive/30 bg-destructive/5 text-destructive"}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold truncate">{record.title}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className="text-[11px] text-muted-foreground">
+                              {new Date(record.date).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })}
+                            </span>
+                            {record.category && record.category !== "transfer" && (
+                              <Badge variant="outline" className="text-[10px] capitalize border rounded-md h-4 px-1.5">{record.category}</Badge>
+                            )}
+                            {accountName && (
+                              <Badge variant="secondary" className="text-[10px] border rounded-md h-4 px-1.5">via {accountName}</Badge>
+                            )}
                           </div>
-                          <Progress value={usage} className="h-2 rounded-full" style={{ backgroundColor: PALETTE.surfaceAlt }} />
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>Sisa {formatCurrency(Math.max(budget.remaining, 0))}</span>
-                            <span className="tabular-nums">{formatCurrency(budget.limit)}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+
+                        <p className={`text-sm font-black tabular-nums shrink-0 ${isNegative ? "text-destructive" : "text-chart-1"}`}>
+                          {isNegative ? "−" : "+"}{formatCurrency(record.amount)}
+                        </p>
+
+                        {record.type === "expense" && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36">
+                              <DropdownMenuItem className="gap-2 cursor-pointer text-xs" onClick={() => { const exp = data.expenses.find(e => e.id === record.id); if (exp) handleEditExpense(exp) }}><Edit className="h-3.5 w-3.5" /> Edit</DropdownMenuItem>
+                              <DropdownMenuItem className="gap-2 text-destructive cursor-pointer text-xs" onClick={() => handleDeleteExpense(record.id)}><Trash2 className="h-3.5 w-3.5" /> Hapus</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </li>
                     )
                   })}
-                </div>
+                </ul>
               )}
-            </section>
-
-            {/* MY ACCOUNTS SECTION */}
-            <section className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
-                    <Wallet className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: PALETTE.primary }} />
-                    My Accounts
-                  </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Kelola semua akun saldo Anda dalam satu tempat
-                  </p>
-                </div>
-              </div>
-
-              {loading.accounts ? (
-                <div className="flex justify-center py-16">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin" style={{ color: PALETTE.primary }} />
-                    <p className="text-sm text-muted-foreground">Memuat akun...</p>
-                  </div>
-                </div>
-              ) : data.accounts.length === 0 ? (
-                <Card className="border-2 border-dashed backdrop-blur-sm" style={{ ...surfaceStyle, borderStyle: "dashed", borderWidth: 2 }}>
-                  <CardContent className="py-12 sm:py-16 text-center space-y-4">
-                    <div className="flex justify-center">
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center" style={{ backgroundColor: PALETTE.surfaceAlt }}>
-                        <Wallet className="h-8 w-8" style={{ color: PALETTE.primary }} />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-base font-medium">Belum ada akun saldo</p>
-                      <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                        Tambahkan akun pertama Anda untuk mulai melacak keuangan
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => {
-                        setEditing((prev) => ({ ...prev, account: null }))
-                        setDialogs((prev) => ({ ...prev, account: true }))
-                      }}
-                      className="gap-2"
-                      style={{ backgroundImage: PALETTE.gradientPrimary, color: PALETTE.primaryFg }}
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                      Tambah Akun Pertama
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {data.accounts.map((acc) => (
-                    <Card
-                      key={acc.id}
-                      className="group relative overflow-hidden border backdrop-blur-sm hover:shadow-lg transition-all duration-300"
-                      style={surfaceStyle}
-                    >
-                      <CardContent className="p-5 sm:p-6 space-y-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <h3 className="font-semibold text-base sm:text-lg truncate">{acc.name}</h3>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(acc.createdAt).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric"
-                              })}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {acc.type && (
-                              <Badge
-                                variant="outline"
-                                className="text-xs capitalize shrink-0 border"
-                                style={ACCOUNT_TYPE_STYLES[acc.type] ?? { borderColor: PALETTE.border, color: PALETTE.muted, backgroundColor: PALETTE.surfaceAlt }}
-                              >
-                                {ACCOUNT_TYPE_LABELS[acc.type as keyof typeof ACCOUNT_TYPE_LABELS] || acc.type}
-                              </Badge>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer"
-                                  onClick={() => {
-                                    setEditing((prev) => ({ ...prev, account: acc }))
-                                    setDialogs((prev) => ({ ...prev, account: true }))
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="gap-2 text-red-600 focus:text-red-600 cursor-pointer"
-                                  onClick={() => handleDeleteAccount(acc.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Hapus
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 space-y-1">
-                          <p className="text-xs text-muted-foreground">Saldo Saat Ini</p>
-                          <p
-                            className="text-2xl sm:text-3xl font-bold tabular-nums tracking-tight bg-clip-text text-transparent"
-                            style={{ backgroundImage: PALETTE.gradientPrimary }}
-                          >
-                            {formatCurrency(acc.balance)}
-                          </p>
-                        </div>
-                      </CardContent>
-                      
-                      <div
-                        className="absolute inset-x-0 -bottom-px h-px opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ background: PALETTE.gradientPrimary }}
-                      />
-                    </Card>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing((prev) => ({ ...prev, account: null }))
-                      setDialogs((prev) => ({ ...prev, account: true }))
-                    }}
-                    className="group flex h-full min-h-40 items-center justify-center rounded-xl border-2 border-dashed transition-all duration-300"
-                    style={{ borderColor: PALETTE.border, backgroundColor: `${PALETTE.surfaceAlt}` }}
-                  >
-                    <div
-                      className="flex flex-col items-center gap-3 text-muted-foreground transition-colors"
-                      style={{ color: PALETTE.muted }}
-                    >
-                      <div
-                        className="h-12 w-12 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform"
-                        style={{ backgroundColor: PALETTE.surfaceAlt }}
-                      >
-                        <PlusIcon className="h-6 w-6" />
-                      </div>
-                      <span className="text-sm font-medium">Tambah Akun</span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
-              <AccountBalanceFormDialog
-                isOpen={dialogs.account}
-                onOpenChange={(open) => {
-                  setDialogs((prev) => ({ ...prev, account: open }))
-                  if (!open) setEditing((prev) => ({ ...prev, account: null }))
-                }}
-                fetchData={fetchAccounts}
-                editing={editing.account}
-              />
-            </section>
-
-            {/* QUICK STATS SECTION */}
-            <section className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
-                  <Activity className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: PALETTE.accent }} />
-                  Quick Stats
-                </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Ringkasan cepat keuangan Anda
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border backdrop-blur-sm" style={surfaceStyle}>
-                  <CardContent className="p-5">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Total Balance</p>
-                      <p className="text-2xl font-bold tabular-nums" style={{ color: PALETTE.positive }}>
-                        {formatCurrency(data.accounts.reduce((sum, acc) => sum + acc.balance, 0))}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border backdrop-blur-sm" style={surfaceStyle}>
-                  <CardContent className="p-5">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Pengeluaran {selectedMonthLabel}</p>
-                      <p className="text-2xl font-bold tabular-nums" style={{ color: PALETTE.danger }}>
-                        {formatCurrency(summary.total)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border backdrop-blur-sm" style={surfaceStyle}>
-                  <CardContent className="p-5">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Active Budgets</p>
-                      <p className="text-2xl font-bold tabular-nums" style={{ color: PALETTE.primary }}>
-                        {data.budgets.length}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border backdrop-blur-sm" style={surfaceStyle}>
-                  <CardContent className="p-5">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Recent Transactions</p>
-                      <p className="text-2xl font-bold tabular-nums" style={{ color: PALETTE.accent }}>
-                        {mergedHistory.slice(0, 10).length}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </section>
-          </TabsContent>
-
-          {/* ==================== BUDGETS TAB ==================== */}
-          <TabsContent value="budgets" className="space-y-6 animate-in fade-in-50 duration-300">
-            <section className="space-y-5 sm:space-y-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
-                    <PieChart className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: PALETTE.accent }} />
-                    Monthly Budgets
-                  </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Tetapkan limit per kategori dan lihat progresnya sekilas.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <div
-                    className="flex items-center gap-2 rounded-xl border backdrop-blur-sm px-3 py-2 text-sm"
-                    style={surfaceAltStyle}
-                  >
-                    <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <Input
-                      type="month"
-                      value={filters.month}
-                      onChange={(e) => updateMonth(e.target.value)}
-                      className="w-28 sm:w-32 border-0 p-0 text-sm focus-visible:ring-0 bg-transparent"
-                    />
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hidden sm:inline-flex"
-                    onClick={resetToCurrentMonth}
-                  >
-                    Bulan ini
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    style={{ borderColor: PALETTE.border, color: PALETTE.accent }}
-                    onClick={() => {
-                      setEditing((prev) => ({ ...prev, budget: null }))
-                      setDialogs((prev) => ({ ...prev, budget: true }))
-                    }}
-                  >
-                    <PieChart className="h-4 w-4" />
-                    <span className="hidden sm:inline">Set Budget</span>
-                    <span className="sm:hidden">Budget</span>
-                  </Button>
-                </div>
-              </div>
-
-              {loading.budgets ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin" style={{ color: PALETTE.accent }} />
-                    <p className="text-sm text-muted-foreground">Memuat budget...</p>
-                  </div>
-                </div>
-              ) : data.budgets.length === 0 ? (
-                <Card className="border-2 border-dashed backdrop-blur-sm" style={{ ...surfaceStyle, borderStyle: "dashed", borderWidth: 2 }}>
-                  <CardContent className="py-12 sm:py-16 text-center space-y-4">
-                    <div className="flex justify-center">
-                      <div className="h-16 w-16 rounded-full flex items-center justify-center" style={{ backgroundColor: PALETTE.surfaceAlt }}>
-                        <PieChart className="h-8 w-8" style={{ color: PALETTE.accent }} />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-base font-medium">Belum ada budget bulan ini</p>
-                      <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                        Buat budget untuk mengontrol pengeluaran Anda
-                      </p>
-                    </div>
-                    <Button
-                      className="gap-2"
-                      style={{ backgroundImage: PALETTE.gradientNeutral, color: PALETTE.primaryFg }}
-                      onClick={() => {
-                        setEditing((prev) => ({ ...prev, budget: null }))
-                        setDialogs((prev) => ({ ...prev, budget: true }))
-                      }}
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                      Set Budget Pertama
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <>
-                  <Card className="border backdrop-blur-sm" style={surfaceStyle}>
-                    <CardContent className="p-5 sm:p-6 space-y-5">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                            {formatMonthLabel(filters.month)}
-                          </p>
-                          <h3 className="text-xl sm:text-2xl font-bold">Ringkasan budget bulan ini</h3>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            {formatCurrency(budgetTotals.spent)} dari {formatCurrency(budgetTotals.limit)} terpakai
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <div className="text-right">
-                            <p className="text-2xl sm:text-3xl font-bold tabular-nums" style={{ color: PALETTE.primary }}>
-                              {budgetProgress.toFixed(0)}%
-                            </p>
-                            <p className="text-xs text-muted-foreground">Terpakai</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Progress
-                          value={budgetProgress}
-                          className="h-2.5 rounded-full"
-                          style={{ backgroundColor: PALETTE.surfaceAlt }}
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Sisa: {formatCurrency(Math.max(budgetTotals.limit - budgetTotals.spent, 0))}</span>
-                          <span className={budgetProgress > 90 ? "text-red-600 font-medium" : ""}>
-                            {budgetProgress > 100 ? "Over Budget" : budgetProgress > 90 ? "Hampir habis" : "On track"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="rounded-lg border px-4 py-3" style={surfaceAltStyle}>
-                          <p className="text-xs text-muted-foreground">Total Limit</p>
-                          <p className="text-lg font-semibold tabular-nums">{formatCurrency(budgetTotals.limit)}</p>
-                        </div>
-                        <div className="rounded-lg border px-4 py-3" style={surfaceAltStyle}>
-                          <p className="text-xs text-muted-foreground">Terpakai</p>
-                          <p className="text-lg font-semibold tabular-nums">{formatCurrency(budgetTotals.spent)}</p>
-                        </div>
-                        <div className="rounded-lg border px-4 py-3" style={surfaceAltStyle}>
-                          <p className="text-xs text-muted-foreground">Sisa</p>
-                          <p className="text-lg font-semibold tabular-nums">{formatCurrency(Math.max(budgetTotals.limit - budgetTotals.spent, 0))}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {data.budgets.map((budget) => {
-                      const usage = budget.limit ? Math.min((budget.spent / budget.limit) * 100, 100) : 0
-                      const isWarning = usage > 80
-                      const isDanger = usage > 100
-                      const usageColor = isDanger
-                        ? PALETTE.danger
-                        : isWarning
-                        ? PALETTE.warning
-                        : PALETTE.primary
-
-                      return (
-                        <Card
-                          key={budget.id}
-                          className="group relative overflow-hidden border backdrop-blur-sm hover:border-primary/70 transition-all duration-300"
-                          style={{
-                            ...surfaceStyle,
-                            borderColor: isDanger
-                              ? PALETTE.danger
-                              : isWarning
-                              ? PALETTE.warning
-                              : PALETTE.border,
-                          }}
-                        >
-                          <CardContent className="p-4 sm:p-5 space-y-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 min-w-0 space-y-1">
-                                <div className="inline-flex items-center gap-2 text-[11px] text-muted-foreground capitalize">
-                                  <span className="rounded-full border px-2 py-1" style={{ borderColor: PALETTE.border }}>
-                                    {budget.category || "Budget"}
-                                  </span>
-                                  <span className="text-[11px]" style={{ color: usageColor }}>
-                                    {usage.toFixed(0)}%
-                                  </span>
-                                </div>
-                                <h3 className="text-base sm:text-lg font-semibold truncate">
-                                  {budget.name}
-                                </h3>
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem
-                                    className="gap-2 cursor-pointer"
-                                    onClick={() => {
-                                      setEditing((prev) => ({ ...prev, budget }))
-                                      setDialogs((prev) => ({ ...prev, budget: true }))
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="gap-2 text-red-600 focus:text-red-600 cursor-pointer"
-                                    onClick={() => handleDeleteBudget(budget.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    Hapus
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Progress
-                                value={usage}
-                                className="h-2 rounded-full"
-                                style={{
-                                  backgroundColor: PALETTE.surfaceAlt,
-                                }}
-                              />
-                              <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>Sisa: {formatCurrency(Math.max(budget.remaining, 0))}</span>
-                                <span className="tabular-nums">Limit: {formatCurrency(budget.limit)}</span>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-2 text-xs">
-                              <div className="rounded-md border px-2 py-2" style={surfaceAltStyle}>
-                                <p className="text-[11px] text-muted-foreground">Terpakai</p>
-                                <p className="font-semibold tabular-nums" style={{ color: usageColor }}>
-                                  {formatCurrency(budget.spent)}
-                                </p>
-                              </div>
-                              <div className="rounded-md border px-2 py-2" style={surfaceAltStyle}>
-                                <p className="text-[11px] text-muted-foreground">Sisa</p>
-                                <p className="font-semibold tabular-nums">{formatCurrency(Math.max(budget.remaining, 0))}</p>
-                              </div>
-                              <div className="rounded-md border px-2 py-2" style={surfaceAltStyle}>
-                                <p className="text-[11px] text-muted-foreground">Limit</p>
-                                <p className="font-semibold tabular-nums">{formatCurrency(budget.limit)}</p>
-                              </div>
-                            </div>
-
-                            {budget.notes && (
-                              <p className="text-xs text-muted-foreground border-t pt-3 line-clamp-2" style={{ borderColor: PALETTE.border }}>
-                                {budget.notes}
-                              </p>
-                            )}
-                          </CardContent>
-
-                          {(isWarning || isDanger) && (
-                            <div
-                              className="absolute top-2 right-2 h-2 w-2 rounded-full animate-pulse"
-                              style={{ backgroundColor: isDanger ? PALETTE.danger : PALETTE.warning }}
-                            />
-                          )}
-                        </Card>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-
-              <BudgetFormDialog
-                isOpen={dialogs.budget}
-                onOpenChange={(open) => {
-                  setDialogs((prev) => ({ ...prev, budget: open }))
-                  if (!open) setEditing((prev) => ({ ...prev, budget: null }))
-                }}
-                defaultMonth={filters.month}
-                onSuccess={fetchBudgets}
-                editing={editing.budget}
-              />
-            </section>
-          </TabsContent>
-
-          {/* ==================== EXPENSES TAB ==================== */}
-          <TabsContent value="expenses" className="space-y-6 animate-in fade-in-50 duration-300">
-            <section className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: PALETTE.positive }} />
-                    Expense Summary
-                  </h2>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Ringkasan dan statistik pengeluaran bulan {selectedMonthLabel}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    className="gap-2"
-                    style={{ backgroundImage: PALETTE.gradientSuccess, color: PALETTE.primaryFg }}
-                    onClick={() => setDialogs((prev) => ({ ...prev, expense: true }))}
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tambah Pengeluaran</span>
-                    <span className="sm:hidden">Tambah</span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setDialogs((prev) => ({ ...prev, transfer: true }))}
-                  >
-                    <ArrowLeftRight className="h-4 w-4" />
-                    <span className="hidden sm:inline">Transfer Saldo</span>
-                    <span className="sm:hidden">Transfer</span>
-                  </Button>
-
-                  <Button
-                    variant="secondary"
-                    className="gap-2"
-                    onClick={handleExportExpenses}
-                  >
-                    <DownloadIcon className="h-4 w-4" />
-                    <span className="hidden sm:inline">Export</span>
-                  </Button>
-                </div>
-              </div>
-
-              <ExpenseSummaryCards
-                totalExpenses={summary.total}
-                expensesCount={summary.count}
-                averageExpense={summary.average}
-                topCategory={summary.topCategory}
-                formatCurrency={formatCurrency}
-              />
-
-              <ExpenseFormDialog
-                isOpen={dialogs.expense}
-                onOpenChange={(open) => {
-                  setDialogs((prev) => ({ ...prev, expense: open }))
-                  if (open && !editingExpense) {
-                    updateFormData({ date: `${filters.month}-01` })
-                  }
-                  if (!open) resetForm()
-                }}
-                formData={formData}
-                onFormDataChange={updateFormData}
-                onSubmit={handleSubmitExpense}
-                onPhotoChange={handlePhotoChange}
-                onRemovePhoto={handleRemovePhoto}
-                isEditing={!!editingExpense}
-                categories={EXPENSE_CATEGORIES}
-                accounts={data.accounts}
-                budgets={budgetsForExpense}
-                existingPhotoUrl={editingExpense?.photoUrl}
-              />
-            </section>
-          </TabsContent>
-
-          {/* ==================== ACTIVITY TAB ==================== */}
-          <TabsContent value="activity" className="space-y-6 animate-in fade-in-50 duration-300">
-            <section className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-xl sm:text-2xl font-semibold tracking-tight flex items-center gap-2">
-                  <Activity className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: PALETTE.primary }} />
-                  Recent Activity
-                </h2>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Riwayat transaksi dan pengeluaran untuk {selectedMonthLabel}
-                </p>
-              </div>
-
-              <ExpenseFilters
-                filterCategory={filters.category}
-                filterStartDate={filters.startDate}
-                filterEndDate={filters.endDate}
-                onCategoryChange={(value) => setFilters((prev) => ({ ...prev, category: value }))}
-                onStartDateChange={(value) => setFilters((prev) => ({ ...prev, startDate: value }))}
-                onEndDateChange={(value) => setFilters((prev) => ({ ...prev, endDate: value }))}
-                categories={EXPENSE_CATEGORIES}
-                month={filters.month}
-                onMonthChange={updateMonth}
-                onResetMonth={resetToCurrentMonth}
-              />
-
-              <Card className="border backdrop-blur-sm overflow-hidden" style={surfaceStyle}>
-                <CardContent className="p-0">
-                  {loading.expenses ? (
-                    <div className="flex items-center justify-center py-16">
-                      <div className="flex flex-col items-center gap-3">
-                        <Loader2 className="h-8 w-8 animate-spin" style={{ color: PALETTE.primary }} />
-                        <p className="text-sm text-muted-foreground">Memuat riwayat...</p>
-                      </div>
-                    </div>
-                  ) : mergedHistory.length === 0 ? (
-                    <div className="py-16 text-center">
-                      <div className="flex justify-center mb-4">
-                        <div className="h-16 w-16 rounded-full flex items-center justify-center" style={{ backgroundColor: PALETTE.surfaceAlt }}>
-                          <Activity className="h-8 w-8" style={{ color: PALETTE.muted }} />
-                        </div>
-                      </div>
-                      <p className="text-base font-medium mb-1">Belum ada aktivitas</p>
-                      <p className="text-sm text-muted-foreground">
-                        Transaksi Anda akan muncul di sini
-                      </p>
-                    </div>
-                  ) : (
-                    <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-                      {mergedHistory.map((record) => {
-                        const Icon = getRecordIcon(record)
-                        const isNegative =
-                          record.type === "expense" ||
-                          (record.type === "transfer" && record.category !== "topup")
-
-                        const accountNameFromExpense =
-                          record.type === "expense" && record.accountId
-                            ? data.accounts.find((a) => a.id === record.accountId)?.name
-                            : undefined
-
-                        const sourceAccountName = accountNameFromExpense || record.sourceAccountName
-
-                        return (
-                          <li
-                            key={record.id + record.type}
-                            className="flex items-center gap-3 sm:gap-4 px-4 py-3 sm:py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
-                          >
-                            <div
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full group-hover:scale-110 transition-transform"
-                              style={{
-                                backgroundColor: PALETTE.surfaceAlt,
-                                color: record.type === "transfer" ? PALETTE.primary : PALETTE.accent,
-                              }}
-                            >
-                              <Icon className="h-5 w-5" />
-                            </div>
-
-                            <div className="flex-1 min-w-0 space-y-1.5">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                                <p className="text-sm font-medium truncate pr-2">{record.title}</p>
-                                <p className="text-xs text-muted-foreground shrink-0">
-                                  {new Date(record.date).toLocaleDateString("id-ID", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                  })}
-                                </p>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <Badge variant="outline" className="text-xs capitalize">
-                                  {record.category || "Lainnya"}
-                                </Badge>
-                                {sourceAccountName && (
-                                  <Badge className="text-xs border-0" style={{ backgroundColor: PALETTE.surfaceAlt, color: PALETTE.primary }}>
-                                    via {sourceAccountName}
-                                  </Badge>
-                                )}
-                                {record.budgetName && (
-                                  <Badge className="text-xs border-0" style={{ backgroundColor: PALETTE.surfaceAlt, color: PALETTE.warning }}>
-                                    {record.budgetName}
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {record.description && (
-                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                  {record.description}
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="text-right shrink-0">
-                              <p
-                                className="text-sm sm:text-base font-bold tabular-nums"
-                                style={{ color: isNegative ? PALETTE.danger : PALETTE.positive }}
-                              >
-                                {isNegative ? "−" : "+"}{formatCurrency(record.amount)}
-                              </p>
-                            </div>
-
-                            {record.type === "expense" && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                  >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40">
-                                  <DropdownMenuItem
-                                    className="gap-2 cursor-pointer"
-                                    onClick={() => {
-                                      const expense = data.expenses.find(e => e.id === record.id)
-                                      if (expense) handleEditExpense(expense)
-                                    }}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="gap-2 text-red-600 focus:text-red-600 cursor-pointer"
-                                    onClick={() => handleDeleteExpense(record.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    Hapus
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            </section>
-          </TabsContent>
-        </Tabs>
-
-        {/* ==================== TRANSFER MODAL ==================== */}
-        <TransferFormDialog
-          isOpen={dialogs.transfer}
-          onOpenChange={(open) => setDialogs((prev) => ({ ...prev, transfer: open }))}
-          accounts={data.accounts}
-          onSuccess={() => {
-            fetchAccounts()
-            fetchTransfers()
-            fetchExpenses()
-          }}
-        />
+            </NeoCard>
+          </section>
+        </div>
       </div>
-    </div>
+
+      {/* ==================== DIALOGS ==================== */}
+      <ExpenseFormDialog
+        isOpen={dialogs.expense}
+        onOpenChange={(open) => { setDialogs((p) => ({ ...p, expense: open })); if (open && !editingExpense) updateFormData({ date: `${filters.month}-01` }); if (!open) resetForm() }}
+        formData={formData}
+        onFormDataChange={updateFormData}
+        onSubmit={handleSubmitExpense}
+        onPhotoChange={handlePhotoChange}
+        onRemovePhoto={handleRemovePhoto}
+        isEditing={!!editingExpense}
+        categories={EXPENSE_CATEGORIES}
+        accounts={data.accounts}
+        budgets={budgetsForExpense}
+        existingPhotoUrl={editingExpense?.photoUrl}
+      />
+
+      <TransferFormDialog
+        isOpen={dialogs.transfer}
+        onOpenChange={(open) => setDialogs((p) => ({ ...p, transfer: open }))}
+        accounts={data.accounts}
+        onSuccess={() => { fetchAccounts(); fetchTransfers(); fetchExpenses() }}
+      />
+
+      <AccountBalanceFormDialog
+        isOpen={dialogs.account}
+        onOpenChange={(open) => { setDialogs((p) => ({ ...p, account: open })); if (!open) setEditing((p) => ({ ...p, account: null })) }}
+        fetchData={fetchAccounts}
+        editing={editing.account}
+      />
+
+      <BudgetFormDialog
+        isOpen={dialogs.budget}
+        onOpenChange={(open) => { setDialogs((p) => ({ ...p, budget: open })); if (!open) setEditing((p) => ({ ...p, budget: null })) }}
+        defaultMonth={filters.month}
+        onSuccess={fetchBudgets}
+        editing={editing.budget}
+      />
+
+      <IncomeFormDialog
+        isOpen={dialogs.income}
+        onOpenChange={(open) => setDialogs((p) => ({ ...p, income: open }))}
+        accounts={data.accounts}
+        defaultDate={`${filters.month}-01`}
+        onSuccess={() => { fetchAccounts(); fetchExpenses() }}
+      />
+
+      {/* Loading indicator */}
+      {isLoading && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="rounded-xl border-2 border-border bg-card px-4 py-2 flex items-center gap-2 text-sm shadow-[3px_3px_0px_0px] shadow-border/30">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="font-semibold text-xs">Loading...</span>
+          </div>
+        </div>
+      )}
+    </PageWrapper>
   )
 }

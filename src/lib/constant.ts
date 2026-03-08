@@ -12,3 +12,6 @@ export const toMonthStart = (input?: string | null) => {
 
   return new Date(Date.UTC(year, month - 1, 1));
 };
+
+export const isSameMonth = (a: Date, b: Date) =>
+  a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth();

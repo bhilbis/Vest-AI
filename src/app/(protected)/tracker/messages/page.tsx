@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageWrapper } from "@/components/layout/page-wrapper";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm"
 
@@ -209,8 +210,8 @@ export default function MessagesPage() {
 
 
   return (
-    <>
-      <div className="flex items-center justify-end w-full gap-3 sticky top-3 px-4 z-10">  
+      <PageWrapper maxWidth="lg" className="py-0! flex flex-col h-[calc(100vh-80px)]">
+        <div className="flex items-center justify-end w-full gap-3 sticky top-3 z-10 py-3">  
         <Badge variant="secondary" className="gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
           AI Online
@@ -379,6 +380,6 @@ export default function MessagesPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+      </PageWrapper>
   );
 }

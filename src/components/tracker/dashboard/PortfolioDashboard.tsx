@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { DashboardHeader } from "./DashboardHeader";
 import { PortfolioCanvas } from "./PortfolioCanvas";
 import { PortfolioStats } from "./PortfolioStats";
+import { BentoDashboard } from "./BentoDashboard";
 import { usePortfolioAssets } from "./usePortfolioAssets";
 import type { AssetProps } from "./types";
 
@@ -14,6 +15,7 @@ export function PortfolioDashboard() {
   const { assets, setAssets, loading, error, reload } = usePortfolioAssets();
   const [selectedAsset, setSelectedAsset] = useState<AssetProps | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'dashboard' | 'canvas'>('dashboard');
 
   const handleRemoveAsset = useCallback(async (id: string) => {
     const confirmed = confirm("Apakah Anda yakin ingin menghapus aset ini?");
@@ -104,19 +106,12 @@ export function PortfolioDashboard() {
   }, [assets]);
 
   return (
-    <div className="w-full space-y-8 px-4 py-4 lg:px-10 lg:py-8">
-      <DashboardHeader loading={loading} onReload={reload} />
-
-      <PortfolioStats
-        totalValue={totalValue}
-        totalProfit={totalProfit}
-        profitPercentage={profitPercentage}
-        dailyChangeValue={1000000}
-        dailyChangePercent={2.5}
-        aiTrades={47}
-        aiTradesChange={15}
-        successRate={78.2}
-        successRateChange={2.1}
+    <div className="w-full space-y-6 max-w-[1920px] mx-auto">
+      <DashboardHeader 
+        loading={loading} 
+        onReload={reload} 
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {error && (
@@ -135,12 +130,34 @@ export function PortfolioDashboard() {
         </Card>
       )}
 
-      <PortfolioCanvas
-        assets={assets}
-        loading={loading}
-        onUpdate={handleUpdate}
-        onAssetClick={handleAssetClick}
-      />
+      {viewMode === 'dashboard' ? (
+        <BentoDashboard 
+            assets={assets} 
+            loading={loading}
+            onAssetClick={handleAssetClick}
+            onAddAsset={() => alert("Gunakan menu '+' di navbar untuk menambah aset baru.")} 
+        />
+      ) : (
+        <div className="space-y-8">
+            <PortfolioStats
+                totalValue={totalValue}
+                totalProfit={totalProfit}
+                profitPercentage={profitPercentage}
+                dailyChangeValue={1000000}
+                dailyChangePercent={2.5}
+                aiTrades={47}
+                aiTradesChange={15}
+                successRate={78.2}
+                successRateChange={2.1}
+            />
+            <PortfolioCanvas
+                assets={assets}
+                loading={loading}
+                onUpdate={handleUpdate}
+                onAssetClick={handleAssetClick}
+            />
+        </div>
+      )}
 
       <AssetDetailModal
         asset={selectedAsset as AssetProps}

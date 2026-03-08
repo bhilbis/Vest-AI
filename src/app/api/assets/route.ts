@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
+import { getAssets, createAsset } from "@/lib/services/assetService"
 
 /*
  * SUGGESTED PRISMA SCHEMA INDEXES:
@@ -18,27 +18,13 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Optimize: Select only fields actually used by frontend
-  // Frontend uses: id, name, type, category, color, amount, buyPrice, coinId, positionX, positionY, createdAt
-  const assets = await prisma.asset.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      category: true,
-      color: true,
-      amount: true,
-      buyPrice: true,
-      coinId: true,
-      positionX: true,
-      positionY: true,
-      createdAt: true,
-      // Exclude userId as it's not needed in response
-    },
-  })
-  return NextResponse.json(assets)
+  try {
+    const assets = await getAssets(session.user.id)
+    return NextResponse.json(assets)
+  } catch (error) {
+    console.error("Error fetching assets:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
 }
 
 // POST: Tambah aset baru
@@ -47,22 +33,25 @@ export async function POST(req: Request) {
   const body = await req.json()
   const { name, amount, buyPrice, type, category, color, coinId } = body
 
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const asset = await prisma.asset.create({
-    data: {
+  try {
+    const asset = await createAsset({
       name,
       amount: parseFloat(amount),
       buyPrice: parseFloat(buyPrice),
-      type: type || 'stock',
-      category: category || type || 'stock',
-      color: color || 'bg-gray-500',
-      coinId: coinId || null,
+      type,
+      category,
+      color,
+      coinId,
       userId: session.user.id,
-    },
-  })
+    })
 
-  return NextResponse.json(asset)
+    return NextResponse.json(asset)
+  } catch (error) {
+    console.error("Error creating asset:", error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
 }
 
 

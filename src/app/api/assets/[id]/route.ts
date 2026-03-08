@@ -6,8 +6,9 @@ import { authOptions } from "@/lib/auth"
 
 export async function DELETE(
   req: NextRequest,
-  id: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.id) {
@@ -15,7 +16,6 @@ export async function DELETE(
   }
 
   try {
-    // Verifikasi apakah aset milik user yang sedang login
     const asset = await prisma.asset.findUnique({
       where: { id },
     })
@@ -24,7 +24,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Aset tidak ditemukan atau bukan milik Anda" }, { status: 403 })
     }
 
-    // Hapus aset
     await prisma.asset.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
@@ -36,8 +35,9 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  id: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {
@@ -48,7 +48,6 @@ export async function PUT(
   const { name, amount, buyPrice, type, category, color, coinId } = body
 
   try {
-    // Verifikasi kepemilikan asset
     const asset = await prisma.asset.findUnique({
       where: { id },
     })
@@ -57,7 +56,6 @@ export async function PUT(
       return NextResponse.json({ error: "Asset tidak ditemukan atau bukan milik Anda" }, { status: 403 })
     }
 
-    // Update asset
     const updatedAsset = await prisma.asset.update({
       where: { id },
       data: {
@@ -76,4 +74,4 @@ export async function PUT(
     console.error("Gagal mengupdate asset:", err.message, err.stack, err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
-}
+}
