@@ -164,7 +164,7 @@ export function BentoDashboard({ assets, loading, onAddAsset, onAssetClick }: Be
                             <span className="font-medium text-foreground">{cat.name}</span>
                             <span className="text-muted-foreground">{cat.percentage.toFixed(1)}%</span>
                         </div>
-                        <Progress value={cat.percentage} className="h-2" indicatorClassName="bg-primary" />
+                        <Progress value={cat.percentage} className="h-2" />
                         <p className="text-xs text-muted-foreground text-right">{formatCurrency(cat.value)}</p>
                     </div>
                 ))}

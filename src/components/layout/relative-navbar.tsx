@@ -46,6 +46,88 @@ const additionalItems = [
   },
 ];
 
+function NavbarTooltip({
+  title,
+  children,
+  isMobile,
+  isVertical,
+  effectivePosition,
+}: {
+  title: string;
+  children: React.ReactNode;
+  isMobile: boolean;
+  isVertical: boolean;
+  effectivePosition: "left" | "right" | "bottom" | "top";
+}) {
+  if (isMobile) return <>{children}</>;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      {isVertical && (
+        <TooltipContent
+          side={effectivePosition === "left" ? "right" : "left"}
+        >
+          <p>{title}</p>
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
+function NavButtonContent({
+  item,
+  active,
+  isMobile,
+  isVertical,
+  effectivePosition,
+}: {
+  item: any;
+  active: boolean;
+  isMobile: boolean;
+  isVertical: boolean;
+  effectivePosition: "left" | "right" | "bottom" | "top";
+}) {
+  return (
+    <motion.div
+      whileHover={
+        !isMobile
+          ? {
+              y: isVertical ? 0 : -2,
+              x: isVertical ? (effectivePosition === "left" ? 2 : -2) : 0,
+              scale: 1.05,
+            }
+          : undefined
+      }
+      whileTap={{ scale: 0.95 }}
+      className={cn(
+        "relative rounded-xl transition-all duration-300 group flex items-center gap-2 cursor-pointer",
+        isMobile ? "p-3" : "p-2.5",
+        active
+          ? "bg-primary/10 text-primary shadow-sm backdrop-blur-sm"
+          : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <item.icon size={isMobile ? 22 : 20} strokeWidth={2.5} />
+      {!isVertical && !isMobile && (
+        <span className="text-sm font-medium">{item.title}</span>
+      )}
+
+      <AnimatePresence>
+        {active && (
+          <motion.div
+            layoutId="navbar-indicator"
+            className="absolute inset-0 rounded-xl bg-primary/5 -z-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 export function Navbar({
   position,
   onPositionChange,
@@ -158,73 +240,6 @@ export function Navbar({
     return false;
   };
 
-  const NavbarTooltip = ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => {
-    if (isMobile) return <>{children}</>;
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        {isVertical && (
-          <TooltipContent
-            side={effectivePosition === "left" ? "right" : "left"}
-          >
-            <p>{title}</p>
-          </TooltipContent>
-        )}
-      </Tooltip>
-    );
-  };
-
-  const NavButtonContent = ({
-    item,
-    active,
-  }: {
-    item: any;
-    active: boolean;
-  }) => (
-    <motion.div
-      whileHover={
-        !isMobile
-          ? {
-              y: isVertical ? 0 : -2,
-              x: isVertical ? (effectivePosition === "left" ? 2 : -2) : 0,
-              scale: 1.05,
-            }
-          : undefined
-      }
-      whileTap={{ scale: 0.95 }}
-      className={cn(
-        "relative rounded-xl transition-all duration-300 group flex items-center gap-2 cursor-pointer",
-        isMobile ? "p-3" : "p-2.5",
-        active
-          ? "bg-primary/10 text-primary shadow-sm backdrop-blur-sm"
-          : "hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-      )}
-    >
-      <item.icon size={isMobile ? 22 : 20} strokeWidth={2.5} />
-      {!isVertical && !isMobile && (
-        <span className="text-sm font-medium">{item.title}</span>
-      )}
-
-      <AnimatePresence>
-        {active && (
-          <motion.div
-            layoutId="navbar-indicator"
-            className="absolute inset-0 rounded-xl bg-primary/5 -z-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          />
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
 
   // ─── Mobile: full-width bottom bar, NOT floating pill ───────────────────────
   // This lets session-wrapper's paddingBottom handle the safe area correctly.
@@ -246,7 +261,7 @@ export function Navbar({
                     >
                       <DropdownMenuTrigger asChild>
                         <button title="Nav" className="outline-none">
-                          <NavButtonContent item={item} active={dropdownOpen} />
+                          <NavButtonContent item={item} active={dropdownOpen} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition} />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
@@ -279,11 +294,11 @@ export function Navbar({
                     </DropdownMenu>
                   ) : item.url ? (
                     <Link href={item.url}>
-                      <NavButtonContent item={item} active={isActive(item)} />
+                      <NavButtonContent item={item} active={isActive(item)} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition} />
                     </Link>
                   ) : (
                     <button onClick={onOpenMessages} className="outline-none">
-                      <NavButtonContent item={item} active={isActive(item)} />
+                      <NavButtonContent item={item} active={isActive(item)} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition} />
                     </button>
                   )}
                 </div>
@@ -374,7 +389,7 @@ export function Navbar({
                   >
                     <DropdownMenuTrigger asChild>
                       <button title="Nav" className="outline-none">
-                        <NavButtonContent item={item} active={dropdownOpen} />
+                        <NavButtonContent item={item} active={dropdownOpen} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition} />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -406,15 +421,15 @@ export function Navbar({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : item.url ? (
-                  <NavbarTooltip title={item.title}>
+                  <NavbarTooltip title={item.title} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition}>
                     <Link href={item.url}>
-                      <NavButtonContent item={item} active={isActive(item)} />
+                      <NavButtonContent item={item} active={isActive(item)} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition} />
                     </Link>
                   </NavbarTooltip>
                 ) : (
-                  <NavbarTooltip title={item.title}>
+                  <NavbarTooltip title={item.title} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition}>
                     <button onClick={onOpenMessages} className="outline-none">
-                      <NavButtonContent item={item} active={isActive(item)} />
+                      <NavButtonContent item={item} active={isActive(item)} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition} />
                     </button>
                   </NavbarTooltip>
                 )}
@@ -437,7 +452,7 @@ export function Navbar({
               "flex gap-2 relative z-10 items-center justify-center",
             )}
           >
-            <NavbarTooltip title={userData?.user?.name || "User"}>
+            <NavbarTooltip title={userData?.user?.name || "User"} isMobile={isMobile} isVertical={isVertical} effectivePosition={effectivePosition}>
               <motion.div
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}

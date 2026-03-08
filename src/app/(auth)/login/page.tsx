@@ -1,7 +1,7 @@
 "use client"
 
 import { signIn, useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, Loader2, ArrowRight, UserCircle } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -44,7 +44,7 @@ const mapNextAuthErrorToMessage = (errorCode: string | null) => {
   return ''
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const { status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -363,5 +363,19 @@ export default function LoginPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   )
 }
