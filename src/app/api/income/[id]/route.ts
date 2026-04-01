@@ -5,9 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function DELETE(req: Request, { params }: any) {
+export async function DELETE(
+  req: Request, 
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions);
-  const { id } = params;
 
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -25,9 +29,13 @@ export async function DELETE(req: Request, { params }: any) {
   return NextResponse.json({ success: true });
 }
 
-export async function PUT(req: Request, { params }: any) {
+export async function PUT(
+  req: Request, 
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions);
-  const { id } = params;
 
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

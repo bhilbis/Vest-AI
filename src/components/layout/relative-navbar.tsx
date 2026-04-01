@@ -132,9 +132,13 @@ function useSmartDirection(
     const viewW = window.innerWidth;
     const viewH = window.innerHeight;
 
-    setDirection({
-      horizontal: centerX < viewW / 2 ? "right" : "left",
-      vertical: centerY < viewH / 2 ? "down" : "up",
+    setDirection((prev) => {
+      const horizontal = centerX < viewW / 2 ? "right" : "left";
+      const vertical = centerY < viewH / 2 ? "down" : "up";
+      if (prev.horizontal === horizontal && prev.vertical === vertical) {
+        return prev; // Prevents cascading render if state hasn't changed
+      }
+      return { horizontal, vertical };
     });
   }, [fabRef]);
 

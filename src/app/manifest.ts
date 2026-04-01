@@ -2,14 +2,14 @@ import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Vest AI - Smart Investment Platform",
-    short_name: "Vest AI",
+    name: "Financial Tracker — Minimalist",
+    short_name: "Finance",
     description:
-      "Platform analisis saham berbasis AI untuk keputusan investasi cerdas",
-    start_url: "/",
+      "Aplikasi pencatat keuangan minimalis untuk melacak pengeluaran, pemasukan, transfer, dan budget secara cepat dan aman.",
+    start_url: "/financial-overview",
     display: "standalone",
-    background_color: "#0a0a0a",
-    theme_color: "#3b82f6",
+    background_color: "#09090B",
+    theme_color: "#09090B",
     orientation: "portrait",
     icons: [
       {
@@ -23,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
       },
     ],
-    categories: ["finance", "investment", "productivity", "trackers"],
+    categories: ["finance", "productivity", "trackers"],
     lang: "id",
     dir: "ltr",
   };

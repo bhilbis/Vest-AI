@@ -59,17 +59,15 @@ export function AccountBalanceFormDialog({
   const [balance, setBalance] = useState(initial.balance);
 
   // Reset state ONLY WHEN dialog opened → safe for React 19
+  // Reset state ONLY WHEN dialog opened
   useEffect(() => {
-
-    const timeoutId = setTimeout(() => {
-        if (isOpen) {
-            setName(initial.name);
-            setType(initial.type);
-            setBalance(initial.balance);
-        }
-    }, 2000);
-
-    return () => clearTimeout(timeoutId);
+    if (isOpen) {
+      setTimeout(() => {
+        setName(initial.name);
+        setType(initial.type);
+        setBalance(initial.balance);
+      }, 0);
+    }
   }, [isOpen, initial]);
 
   const handleSubmit = async (e: React.FormEvent) => {

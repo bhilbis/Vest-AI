@@ -6,9 +6,10 @@ import { authOptions } from "@/lib/auth"
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const { id } = await params
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions)
 
   if (!session?.user?.id) {
@@ -35,9 +36,10 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
-  const { id } = await params
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions)
   
   if (!session?.user?.id) {

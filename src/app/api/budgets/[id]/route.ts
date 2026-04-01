@@ -24,9 +24,11 @@ const withErrorHandling = async <T>(fn: () => Promise<T>) => {
 
 export async function PUT(
   req: Request,
-  id: any
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   return withErrorHandling(async () => {
+    const params = await context.params;
+    const id = params.id;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -74,9 +76,11 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  id: any
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   return withErrorHandling(async () => {
+    const params = await context.params;
+    const id = params.id;
     const session = await getServerSession(authOptions);
     if (!session?.user?.id)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

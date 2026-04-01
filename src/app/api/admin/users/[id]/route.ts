@@ -22,7 +22,7 @@ async function requireAdmin() {
 // PATCH /api/admin/users/[id] — Update user (role, isActive)
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   const auth = await requireAdmin();
   if ("error" in auth) {
@@ -33,7 +33,8 @@ export async function PATCH(
   }
 
   try {
-    const { id } = await params;
+    const params = await context.params;
+    const id = params.id;
     const body = await req.json();
     const updateData: Record<string, unknown> = {};
 
@@ -92,7 +93,7 @@ export async function PATCH(
 // DELETE /api/admin/users/[id] — Delete user
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   const auth = await requireAdmin();
   if ("error" in auth) {
@@ -103,7 +104,8 @@ export async function DELETE(
   }
 
   try {
-    const { id } = await params;
+    const params = await context.params;
+    const id = params.id;
 
     // Prevent admin from deleting themselves
     if (id === auth.user.id) {

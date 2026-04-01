@@ -14,7 +14,12 @@ function isSamePayrollMonth(expenseDate: Date, budgetMonth: Date): boolean {
   );
 }
 
-export async function PUT(req: Request, id: any) {
+export async function PUT(
+  req: Request, 
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -130,7 +135,12 @@ export async function PUT(req: Request, id: any) {
   return NextResponse.json(result);
 }
 
-export async function DELETE(req: Request, id: any) {
+export async function DELETE(
+  req: Request, 
+  context: { params: Promise<{ id: string }> | { id: string } }
+) {
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

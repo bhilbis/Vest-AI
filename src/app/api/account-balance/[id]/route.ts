@@ -14,8 +14,10 @@ import { authOptions } from "@/lib/auth";
 
 export async function PUT(
   req: Request,
-  id: any
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,6 +29,12 @@ export async function PUT(
       { error: "Nama dan jenis wajib diisi" },
       { status: 400 }
     );
+
+  // check ownership
+  const existing = await prisma.accountBalance.findFirst({
+    where: { id, userId: session.user.id }
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const updated = await prisma.accountBalance.update({
     where: {
@@ -44,11 +52,19 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  id: any
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
+  const params = await context.params;
+  const id = params.id;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // verify ownership
+  const existing = await prisma.accountBalance.findFirst({
+    where: { id, userId: session.user.id }
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Cek apakah dipakai income / expense
   const used = await prisma.expense.findFirst({

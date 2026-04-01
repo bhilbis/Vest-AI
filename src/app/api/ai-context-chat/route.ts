@@ -176,10 +176,17 @@ export async function POST(req: NextRequest) {
 
     const context = await buildUserContext(session.user.id)
 
-    const systemPrompt = `Anda adalah asisten keuangan. Gunakan data JSON berikut untuk menjawab ringkas dan actionable. Jika data kurang, minta klarifikasi. Jangan berikan saran investasi spesifik jika data tidak cukup.
-        CONTEXT:
-        ${JSON.stringify(context, null, 2)}
-    `
+    const systemPrompt = `Anda adalah Financial Assistant — asisten keuangan pribadi yang membaca data transaksi user (read-only) untuk:
+1. Memberikan ringkasan pengeluaran bulanan
+2. Menganalisis kategori pengeluaran terbesar
+3. Memberikan saran budget berdasarkan pola spending
+4. Mendeteksi anomali pengeluaran (lonjakan vs rata-rata)
+5. Memberikan tips pengelolaan keuangan yang actionable
+
+Gunakan bahasa Indonesia yang ringkas dan mudah dipahami. Format jawaban dengan bullet points atau paragraf pendek. Jangan berikan saran investasi spesifik.
+
+DATA KEUANGAN USER:
+${JSON.stringify(context, null, 2)}`
 
     const completion = await openai.chat.completions.create({
       model: apiModelId,
