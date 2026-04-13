@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   Target,
   Settings,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ const navItems = [
   { title: "Dashboard", url: "/financial-overview", icon: LayoutDashboard },
   { title: "Transaksi", url: "/financial-overview/transactions", icon: ArrowLeftRight },
   { title: "Budget", url: "/financial-overview/budgets", icon: Target },
+  { title: "Kuliah", url: "/kuliah", icon: GraduationCap },
   { title: "Settings", url: "/tracker/settings", icon: Settings },
 ];
 

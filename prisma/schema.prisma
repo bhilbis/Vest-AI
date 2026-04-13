@@ -29,6 +29,8 @@ model User {
   accountBalances   AccountBalance[]
   accountTransfers  AccountTransfer[]
   budgets           Budget[]
+  semesters         Semester[]
+  kuliahSettings    KuliahSettings?
   createdAt         DateTime @default(now())
 }
 
@@ -187,4 +189,83 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ==================== KULIAH TRACKER ====================
+
+model Semester {
+  id            String       @id @default(cuid())
+  nama          String       // "Semester 1 2025/2026"
+  tanggalMulai  DateTime     // Tanggal sesi 1
+  isActive      Boolean      @default(true)
+  mataKuliah    MataKuliah[]
+
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@index([userId])
+}
+
+model MataKuliah {
+  id          String        @id @default(cuid())
+  kode        String        // "EKMA4116"
+  nama        String        // "Manajemen"
+  sks         Int           @default(3)
+  jenis       String        @default("reguler") // "reguler" | "praktik"
+
+  semesterId  String
+  semester    Semester      @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  sessions    SesiKuliah[]
+
+  // UAS data
+  uasJumlahSoal   Int       @default(0)
+  uasJumlahBenar  Int       @default(0)
+
+  createdAt   DateTime      @default(now())
+
+  @@index([semesterId])
+}
+
+model SesiKuliah {
+  id            String     @id @default(cuid())
+  sesiNumber    Int        // 1-8
+  kehadiran     Boolean    @default(false)
+  diskusi       Float?     // nilai diskusi
+  tugas         Float?     // nilai tugas (sesi 3, 5, 7)
+
+  mataKuliahId  String
+  mataKuliah    MataKuliah @relation(fields: [mataKuliahId], references: [id], onDelete: Cascade)
+
+  @@unique([mataKuliahId, sesiNumber])
+  @@index([mataKuliahId])
+}
+
+model KuliahSettings {
+  id    String @id @default(cuid())
+
+  // Bobot komponen Tuton (harus total 100%)
+  bobotKehadiran  Float @default(20)   // default 20%
+  bobotDiskusi    Float @default(30)   // default 30%
+  bobotTugas      Float @default(50)   // default 50%
+
+  // Kontribusi nilai akhir — Reguler
+  kontribusiUAS       Float @default(70)  // 70%
+  kontribusiTuton     Float @default(30)  // 30%
+
+  // Kontribusi nilai akhir — Praktik tanpa Tuweb
+  kontribusiDiskusiPraktik  Float @default(50) // 50%
+  kontribusiTugasPraktik    Float @default(50) // 50%
+
+  // Grade boundaries
+  batasA  Float @default(80)
+  batasB  Float @default(70)
+  batasC  Float @default(56)
+  batasD  Float @default(45)
+  // < batasD = E
+
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

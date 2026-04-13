@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   Wallet,
+  GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +24,7 @@ const navItems = [
   { title: "Dashboard", url: "/financial-overview", icon: LayoutDashboard },
   { title: "Transaksi", url: "/financial-overview/transactions", icon: ArrowLeftRight },
   { title: "Budget", url: "/financial-overview/budgets", icon: Target },
+  { title: "Kuliah", url: "/kuliah", icon: GraduationCap },
   { title: "Settings", url: "/tracker/settings", icon: Settings },
 ];
 
