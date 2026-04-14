@@ -100,8 +100,15 @@ export async function POST(req: Request) {
           const buffer = Buffer.from(bytes);
           const uploadDir = path.join(process.cwd(), "public/uploads/expenses");
           if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-          const fileName = `${Date.now()}-${photo.name}`;
-          fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+          // Sanitize filename: strip path separators, replace unsafe chars
+          const safeName = path.basename(photo.name).replace(/[^a-zA-Z0-9._-]/g, "_");
+          const fileName = `${Date.now()}-${safeName}`;
+          const filePath = path.join(uploadDir, fileName);
+          // Ensure resolved path is within uploadDir (prevent traversal)
+          if (!filePath.startsWith(path.resolve(uploadDir))) {
+            throw new Error("Invalid filename");
+          }
+          fs.writeFileSync(filePath, buffer);
           return `/uploads/expenses/${fileName}`;
         })()
       : Promise.resolve(null),

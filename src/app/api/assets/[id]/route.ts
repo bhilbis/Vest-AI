@@ -73,7 +73,7 @@ export async function PUT(
 
     return NextResponse.json(updatedAsset)
   } catch (err: any) {
-    console.error("Gagal mengupdate asset:", err.message, err.stack, err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error("Gagal mengupdate asset:", err.message, err.stack)
+    return NextResponse.json({ error: "Gagal mengupdate asset" }, { status: 500 })
   }
 }

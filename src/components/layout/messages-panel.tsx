@@ -49,7 +49,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
     {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: 'Halo! Saya asisten keuangan Anda. Saya bisa membantu analisis pengeluaran, saran budget, atau ringkasan keuangan. Apa yang ingin Anda ketahui?',
+      content: 'Halo! Saya asisten AI Anda. Saya bisa membantu:\n\n📊 **Keuangan** — analisis pengeluaran, saran budget\n🎓 **Kuliah** — review progress, analisis nilai\n💡 **General** — tips, perencanaan\n\nApa yang ingin Anda ketahui?',
       timestamp: new Date(),
     },
   ])
@@ -274,7 +274,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tanya tentang keuangan Anda..."
+                placeholder="Tanya tentang keuangan, kuliah, atau apapun..."
                 className="min-h-[44px] max-h-[100px] w-full resize-none border-0 bg-transparent py-2.5 px-3 pr-10 text-[13px] focus-visible:ring-0 placeholder:text-zinc-600"
                 disabled={isTyping}
                 onKeyDown={(e) => {

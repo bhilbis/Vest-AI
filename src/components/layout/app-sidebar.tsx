@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Settings } from "lucide-react";
+import { useGuestStore } from "@/lib/guest-store";
 
 const navItems = [
   { title: "Dashboard", url: "/financial-overview", icon: LayoutDashboard },
@@ -32,6 +33,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
+  const { isGuest } = useGuestStore();
 
   return (
     <motion.aside
@@ -39,11 +41,19 @@ export function AppSidebar() {
       animate={{ width: collapsed ? 64 : 240 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="hidden lg:flex flex-col h-screen border-r border-border bg-background sticky top-0 overflow-hidden z-40 shrink-0"
+      style={{ paddingTop: isGuest ? '40px' : undefined }}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 h-14 border-b border-border shrink-0">
-        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-          <Wallet className="h-4 w-4 text-primary" />
+      <div
+        className={cn(
+          "flex items-center border-b border-border shrink-0",
+          collapsed
+            ? "flex-col gap-1.5 px-2 py-3"
+            : "flex-row gap-2 px-3 h-14"
+        )}
+      >
+        <div className="h-8 w-8 rounded-lg shrink-0 overflow-hidden bg-primary/10 flex items-center justify-center">
+          <Image src="/vest.png" alt="Vest AI Logo" width={32} height={32} className="w-full h-full object-cover" />
         </div>
         {!collapsed && (
           <motion.span
@@ -55,18 +65,32 @@ export function AppSidebar() {
             Vest AI
           </motion.span>
         )}
-        <div className={cn("flex items-center gap-1", collapsed ? "mx-auto flex-col" : "ml-auto")}>
-          {!collapsed && <ModeToggle />}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-          >
-            <ChevronLeft
-              size={16}
-              className={cn("transition-transform duration-200", collapsed && "rotate-180")}
-            />
-          </button>
-        </div>
+        {collapsed ? (
+          /* Collapsed: show theme + collapse vertically */
+          <div className="flex flex-col items-center gap-1">
+            <ModeToggle />
+            <button
+              onClick={() => setCollapsed(false)}
+              className="h-7 w-7 min-h-0 min-w-0 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+            >
+              <ChevronLeft
+                size={14}
+                className="rotate-180"
+              />
+            </button>
+          </div>
+        ) : (
+          /* Expanded: theme + collapse in a row */
+          <div className="flex items-center gap-1 ml-auto">
+            <ModeToggle />
+            <button
+              onClick={() => setCollapsed(true)}
+              className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}

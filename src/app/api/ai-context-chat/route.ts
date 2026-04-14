@@ -9,8 +9,8 @@ const openai = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPEN_ROUTER_API,
   defaultHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000", // ganti ke domain kamu
-    "X-Title": "AI Finance Tracker",         // bebas, tapi WAJIB ada
+    "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    "X-Title": "Vest AI Finance Tracker",
   },
 })
 
@@ -52,12 +52,16 @@ const usageMap = new Map<string, { count: number; resetAt: number }>()
 
 const okApiKey = !!process.env.OPEN_ROUTER_API
 
-const models = [
-  "deepseek/deepseek-r1-0528",
-  "deepseek/deepseek-v3",
-  "meta-llama/llama-4-maverick",
-  "mistralai/mistral-small-3.2-24b-instruct",
-]
+// Model ID mapping: key -> OpenRouter model ID
+const MODEL_MAP: Record<string, string> = {
+  "deepseek/deepseek-r1-0528": "deepseek/deepseek-r1-0528:free",
+  "deepseek/deepseek-v3": "deepseek/deepseek-chat-v3-0324:free",
+  "mistralai/mistral-small-3.2-24b-instruct": "mistralai/mistral-small-3.2-24b-instruct:free",
+  "google/gemini-2.5-pro-exp-03-25": "google/gemini-2.5-pro-exp-03-25:free",
+  "meta-llama/llama-4-maverick": "meta-llama/llama-4-maverick:free",
+}
+
+const allowedModels = Object.keys(MODEL_MAP)
 
 const limitNumber = (value: number, decimals = 2) =>
   Number.isFinite(value) ? Number(value.toFixed(decimals)) : 0
@@ -69,8 +73,11 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value)
 
+// ============================================================================
+// Build user context — financial + kuliah data
+// ============================================================================
 async function buildUserContext(userId: string) {
-  const [assets, balances, expenses, incomes, budgets, transfers] = await Promise.all([
+  const [assets, balances, expenses, incomes, budgets, transfers, semesters, kuliahSettings] = await Promise.all([
     prisma.asset.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
@@ -106,14 +113,53 @@ async function buildUserContext(userId: string) {
       take: 10,
       select: { id: true, amount: true, note: true, date: true, fromAccountId: true, toAccountId: true },
     }),
+    // Kuliah data
+    prisma.semester.findMany({
+      where: { userId },
+      include: {
+        mataKuliah: {
+          include: { sessions: { orderBy: { sesiNumber: "asc" } } },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 2,
+    }),
+    prisma.kuliahSettings.findUnique({
+      where: { userId },
+    }),
   ])
 
   const totalBalance = balances.reduce((sum, b) => sum + (b.balance ?? 0), 0)
   const expenseMonth = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0)
   const incomeMonth = incomes.reduce((sum, i) => sum + (i.amount ?? 0), 0)
 
+  // Build kuliah summary
+  const kuliahSummary = semesters.map((sem) => ({
+    semester: sem.nama,
+    tanggalMulai: sem.tanggalMulai.toISOString().slice(0, 10),
+    mataKuliah: sem.mataKuliah.map((mk) => {
+      const kehadiranCount = mk.sessions.filter((s) => s.kehadiran).length
+      const diskusiVals = mk.sessions.filter((s) => s.diskusi !== null).map((s) => s.diskusi!)
+      const tugasVals = mk.sessions.filter((s) => s.tugas !== null && [3, 5, 7].includes(s.sesiNumber)).map((s) => s.tugas!)
+      const avgDiskusi = diskusiVals.length > 0 ? diskusiVals.reduce((a, b) => a + b, 0) / diskusiVals.length : 0
+      const avgTugas = tugasVals.length > 0 ? tugasVals.reduce((a, b) => a + b, 0) / tugasVals.length : 0
+      return {
+        kode: mk.kode,
+        nama: mk.nama,
+        sks: mk.sks,
+        jenis: mk.jenis,
+        kehadiran: `${kehadiranCount}/8`,
+        rataRataDiskusi: limitNumber(avgDiskusi),
+        rataRataTugas: limitNumber(avgTugas),
+        uasJumlahSoal: mk.uasJumlahSoal,
+        uasJumlahBenar: mk.uasJumlahBenar,
+      }
+    }),
+  }))
+
   return {
-    summary: {
+    financialSummary: {
       totalBalance: formatCurrency(totalBalance),
       expenseRecentTotal: formatCurrency(expenseMonth),
       incomeRecentTotal: formatCurrency(incomeMonth),
@@ -133,6 +179,16 @@ async function buildUserContext(userId: string) {
     incomes: incomes.map((i) => ({ ...i, date: i.date.toISOString().slice(0, 10) })),
     budgets: budgets.map((b) => ({ ...b, month: b.month.toISOString().slice(0, 7) })),
     transfers: transfers.map((t) => ({ ...t, date: t.date.toISOString() })),
+    kuliahData: kuliahSummary,
+    kuliahSettings: kuliahSettings ? {
+      bobotKehadiran: kuliahSettings.bobotKehadiran,
+      bobotDiskusi: kuliahSettings.bobotDiskusi,
+      bobotTugas: kuliahSettings.bobotTugas,
+      kontribusiUAS: kuliahSettings.kontribusiUAS,
+      kontribusiTuton: kuliahSettings.kontribusiTuton,
+      kontribusiDiskusiPraktik: kuliahSettings.kontribusiDiskusiPraktik,
+      kontribusiTugasPraktik: kuliahSettings.kontribusiTugasPraktik,
+    } : null,
   }
 }
 
@@ -161,31 +217,35 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const userMessage: string = body.message
-    // Default to the first model key if not provided
-    const modelKey: string = body.model || models[0]
+    const modelKey: string = body.model || allowedModels[0]
 
     if (!userMessage || typeof userMessage !== "string") {
       return NextResponse.json({ error: "Message diperlukan" }, { status: 400 })
     }
 
-    if (!models.includes(modelKey)) {
-      return NextResponse.json({ error: "Model tidak diizinkan" }, { status: 400 })
+    // Resolve model ID — accept any key that maps to a known model
+    const apiModelId = MODEL_MAP[modelKey]
+    if (!apiModelId) {
+      return NextResponse.json({ error: `Model tidak diizinkan: ${modelKey}` }, { status: 400 })
     }
-
-    const apiModelId = modelKey
 
     const context = await buildUserContext(session.user.id)
 
-    const systemPrompt = `Anda adalah Financial Assistant — asisten keuangan pribadi yang membaca data transaksi user (read-only) untuk:
-1. Memberikan ringkasan pengeluaran bulanan
-2. Menganalisis kategori pengeluaran terbesar
-3. Memberikan saran budget berdasarkan pola spending
-4. Mendeteksi anomali pengeluaran (lonjakan vs rata-rata)
-5. Memberikan tips pengelolaan keuangan yang actionable
+    const systemPrompt = `Anda adalah AI Assistant serba bisa yang bisa membantu user dalam berbagai konteks. Anda memiliki akses read-only ke data user berikut:
 
-Gunakan bahasa Indonesia yang ringkas dan mudah dipahami. Format jawaban dengan bullet points atau paragraf pendek. Jangan berikan saran investasi spesifik.
+## Kemampuan Anda:
+1. **Keuangan**: Analisis pengeluaran, saran budget, ringkasan keuangan, deteksi anomali spending
+2. **Kuliah/Akademik**: Review progress kuliah UT, analisis nilai tuton, saran perbaikan nilai, reminder deadline sesi
+3. **General**: Pertanyaan umum, tips produktivitas, perencanaan
 
-DATA KEUANGAN USER:
+## Rules:
+- Gunakan bahasa Indonesia yang ringkas dan mudah dipahami
+- Format jawaban dengan bullet points atau paragraf pendek
+- Jangan berikan saran investasi spesifik
+- Untuk konteks kuliah, pahami sistem UT: 8 sesi per semester, Kehadiran/Diskusi/Tugas, bobot Tuton (Kehadiran + Diskusi + Tugas), Nilai Akhir = UAS + Tuton
+- Berikan saran yang actionable dan spesifik berdasarkan data user
+
+## DATA USER:
 ${JSON.stringify(context, null, 2)}`
 
     const completion = await openai.chat.completions.create({
@@ -196,15 +256,17 @@ ${JSON.stringify(context, null, 2)}`
         { role: "user", content: userMessage },
       ],
       temperature: 0.4,
-      max_tokens: 400,
+      max_tokens: 1024,
     })
 
     const rawMessage = completion.choices?.[0]?.message as AIMessage | undefined
     const content = extractAIContent(rawMessage)
 
     return NextResponse.json({ content })
-  } catch (error) {
-    console.error("AI context chat error", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  } catch (error: unknown) {
+    console.error("AI context chat error:", error)
+    // Return more useful error info
+    const message = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({ error: `AI Error: ${message}` }, { status: 500 })
   }
 }

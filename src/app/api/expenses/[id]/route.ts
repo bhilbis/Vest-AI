@@ -103,8 +103,15 @@ export async function PUT(
           fs.mkdirSync(uploadDir, { recursive: true });
         }
 
-        const fileName = `${Date.now()}-${photo.name}`;
-        fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+        // Sanitize filename: strip path separators, replace unsafe chars
+        const safeName = path.basename(photo.name).replace(/[^a-zA-Z0-9._-]/g, "_");
+        const fileName = `${Date.now()}-${safeName}`;
+        const filePath = path.join(uploadDir, fileName);
+        // Ensure resolved path is within uploadDir (prevent traversal)
+        if (!filePath.startsWith(path.resolve(uploadDir))) {
+          throw new Error("Invalid filename");
+        }
+        fs.writeFileSync(filePath, buffer);
         photoUrl = `/uploads/expenses/${fileName}`;
       }
 
@@ -146,6 +153,8 @@ export async function DELETE(
 
   const old = await prisma.expense.findUnique({ where: { id } });
   if (!old) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (old.userId !== session.user.id)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // balikin saldo
   await prisma.accountBalance.update({

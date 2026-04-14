@@ -116,13 +116,25 @@ export async function DELETE(
     }
 
     // Delete related records first (cascade)
+    // Must delete in dependency order: children before parents
     await prisma.$transaction([
+      // Kuliah: sessions → matkul → semester → settings
+      prisma.sesiKuliah.deleteMany({
+        where: { mataKuliah: { semester: { userId: id } } },
+      }),
+      prisma.mataKuliah.deleteMany({
+        where: { semester: { userId: id } },
+      }),
+      prisma.semester.deleteMany({ where: { userId: id } }),
+      prisma.kuliahSettings.deleteMany({ where: { userId: id } }),
+      // Financial
       prisma.expense.deleteMany({ where: { userId: id } }),
       prisma.income.deleteMany({ where: { userId: id } }),
       prisma.accountTransfer.deleteMany({ where: { userId: id } }),
       prisma.budget.deleteMany({ where: { userId: id } }),
       prisma.asset.deleteMany({ where: { userId: id } }),
       prisma.accountBalance.deleteMany({ where: { userId: id } }),
+      // Auth
       prisma.session.deleteMany({ where: { userId: id } }),
       prisma.account.deleteMany({ where: { userId: id } }),
       prisma.user.delete({ where: { id } }),

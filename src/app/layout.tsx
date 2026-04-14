@@ -47,6 +47,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  icons: {
+    icon: "/vest.png",
+    shortcut: "/vest.png",
+    apple: "/vest.png",
+  },
   openGraph: {
     type: "website",
     locale: "id_ID",
@@ -57,7 +62,7 @@ export const metadata: Metadata = {
       "Aplikasi pencatat keuangan minimalis untuk melacak pengeluaran, pemasukan, transfer, dan budget.",
     images: [
       {
-        url: "/opengraph-image",
+        url: "/vest.png",
         width: 1200,
         height: 630,
         alt: "Financial Tracker",
@@ -69,7 +74,7 @@ export const metadata: Metadata = {
     title: "Financial Tracker — Minimalist Finance Management",
     description:
       "Pencatat keuangan minimalis dengan AI assistant.",
-    images: ["/opengraph-image"],
+    images: ["/vest.png"],
   },
   robots: {
     index: true,

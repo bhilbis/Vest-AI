@@ -27,8 +27,10 @@ import {
   Check,
   X,
   BookOpen,
+  Edit,
 } from "lucide-react"
 import { AddMataKuliahDialog } from "./AddMataKuliahDialog"
+import { EditMataKuliahDialog } from "./EditMataKuliahDialog"
 import {
   SemesterData,
   MataKuliahData,
@@ -41,6 +43,7 @@ export function TrackerGrid() {
   const [activeSemesterId, setActiveSemesterId] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const [addMkOpen, setAddMkOpen] = useState(false)
+  const [editMk, setEditMk] = useState<MataKuliahData | null>(null)
   const [newSemester, setNewSemester] = useState({
     show: false,
     nama: "",
@@ -373,6 +376,7 @@ export function TrackerGrid() {
                     onToggleKehadiran={handleToggleKehadiran}
                     onUpdateSession={handleUpdateSession}
                     onDelete={handleDeleteMatkul}
+                    onEdit={setEditMk}
                     computeTotal={computeTotal}
                   />
                 ))}
@@ -408,6 +412,14 @@ export function TrackerGrid() {
           onSuccess={fetchSemesters}
         />
       )}
+
+      {/* Edit Matkul Dialog */}
+      <EditMataKuliahDialog
+        open={!!editMk}
+        onOpenChange={(open) => { if (!open) setEditMk(null) }}
+        mataKuliah={editMk}
+        onSuccess={fetchSemesters}
+      />
     </div>
   )
 }
@@ -422,6 +434,7 @@ function MataKuliahTable({
   onToggleKehadiran,
   onUpdateSession,
   onDelete,
+  onEdit,
   computeTotal,
 }: {
   mk: MataKuliahData
@@ -430,6 +443,7 @@ function MataKuliahTable({
   onToggleKehadiran: (id: string, current: boolean) => void
   onUpdateSession: (id: string, field: "diskusi" | "tugas", value: string) => void
   onDelete: (id: string) => void
+  onEdit: (mk: MataKuliahData) => void
   computeTotal: (mk: MataKuliahData) => number
 }) {
   const sessions = mk.sessions || []
@@ -465,6 +479,12 @@ function MataKuliahTable({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuItem
+                className="text-xs gap-2 cursor-pointer"
+                onClick={() => onEdit(mk)}
+              >
+                <Edit size={12} /> Edit
+              </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-xs gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
                 onClick={() => onDelete(mk.id)}

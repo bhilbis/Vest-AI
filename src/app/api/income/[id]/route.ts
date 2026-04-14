@@ -47,31 +47,41 @@ export async function PUT(
   const form = await req.json();
   const { title, amount, accountId, date } = form;
 
-  const updatedAmount = amount;
-  const updatedAccountId = accountId;
+  if (!title || !amount || !accountId) {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
 
-  // rollback saldo lama
-  await prisma.accountBalance.update({
-    where: { id: income.accountId },
-    data: { balance: { decrement: income.amount } },
-  });
+  try {
+    const updated = await prisma.$transaction(async (tx: any) => {
+      // rollback saldo lama
+      await tx.accountBalance.update({
+        where: { id: income.accountId },
+        data: { balance: { decrement: income.amount } },
+      });
 
-  // update income
-  const updated = await prisma.income.update({
-    where: { id },
-    data: {
-      title,
-      amount: updatedAmount,
-      date: new Date(date),
-      accountId: updatedAccountId,
-    },
-  });
+      // update income
+      const result = await tx.income.update({
+        where: { id },
+        data: {
+          title,
+          amount,
+          date: new Date(date),
+          accountId,
+        },
+      });
 
-  // tambah saldo baru
-  await prisma.accountBalance.update({
-    where: { id: updatedAccountId },
-    data: { balance: { increment: updatedAmount } },
-  });
+      // tambah saldo baru
+      await tx.accountBalance.update({
+        where: { id: accountId },
+        data: { balance: { increment: amount } },
+      });
 
-  return NextResponse.json(updated);
+      return result;
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("Error updating income:", error);
+    return NextResponse.json({ error: "Failed to update income" }, { status: 500 });
+  }
 }
