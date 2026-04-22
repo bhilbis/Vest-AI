@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { nama, tanggalMulai } = await req.json();
+  const { nama, tanggalMulai, totalSKS } = await req.json();
 
   if (!nama || !tanggalMulai)
     return NextResponse.json(
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
     data: {
       nama,
       tanggalMulai: new Date(tanggalMulai),
+      totalSKS: totalSKS ? Number(totalSKS) : 0,
       userId: session.user.id,
     },
     include: {

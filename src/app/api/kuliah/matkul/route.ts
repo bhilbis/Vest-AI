@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// POST — Add mata kuliah to semester (auto-creates 8 sessions)
+// POST — Add mata kuliah to semester (auto-creates sessions based on jenis)
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id)
@@ -17,7 +17,6 @@ export async function POST(req: Request) {
       { status: 400 }
     );
 
-  // Verify semester ownership
   const semester = await prisma.semester.findFirst({
     where: { id: semesterId, userId: session.user.id },
   });
@@ -27,16 +26,23 @@ export async function POST(req: Request) {
       { status: 404 }
     );
 
-  // Create mata kuliah with 8 sessions
+  const resolvedJenis: string = jenis || "reguler";
+
+  // Defaults based on jenis
+  const jumlahSesi = resolvedJenis === "tuweb" ? 15 : 8;
+  const sesiTugasList = resolvedJenis === "tuweb" ? "4,8,12" : "3,5,7";
+
   const mataKuliah = await prisma.mataKuliah.create({
     data: {
       kode,
       nama,
       sks: sks || 3,
-      jenis: jenis || "reguler",
+      jenis: resolvedJenis,
+      jumlahSesi,
+      sesiTugasList,
       semesterId,
       sessions: {
-        create: Array.from({ length: 8 }, (_, i) => ({
+        create: Array.from({ length: jumlahSesi }, (_, i) => ({
           sesiNumber: i + 1,
         })),
       },

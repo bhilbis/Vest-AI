@@ -31,6 +31,7 @@ export async function PUT(
   const updated = await prisma.sesiKuliah.update({
     where: { id },
     data: {
+      ...(body.isCompleted !== undefined && { isCompleted: body.isCompleted }),
       ...(body.kehadiran !== undefined && { kehadiran: body.kehadiran }),
       ...(body.diskusi !== undefined && {
         diskusi: body.diskusi === null ? null : Number(body.diskusi),

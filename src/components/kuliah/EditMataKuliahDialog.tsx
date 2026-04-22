@@ -25,7 +25,13 @@ interface EditMataKuliahDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   mataKuliah: MataKuliahData | null
-  onSuccess: () => void
+  onSuccess: (mk: MataKuliahData) => void
+}
+
+const JENIS_DESCRIPTIONS: Record<string, string> = {
+  reguler: "UAS (70%) + Tuton (30%) — 8 sesi",
+  praktik: "Hanya Diskusi + Tugas (tanpa UAS) — 8 sesi",
+  tuweb: "UAS (70%) + Tuton (30%) — 15 aktivitas belajar",
 }
 
 export function EditMataKuliahDialog({
@@ -39,10 +45,9 @@ export function EditMataKuliahDialog({
     kode: "",
     nama: "",
     sks: 3,
-    jenis: "reguler" as "reguler" | "praktik",
+    jenis: "reguler" as "reguler" | "praktik" | "tuweb",
   })
 
-  // Sync form with mataKuliah when dialog opens
   useEffect(() => {
     if (mataKuliah && open) {
       setForm({
@@ -65,7 +70,8 @@ export function EditMataKuliahDialog({
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error("Failed")
-      onSuccess()
+      const data: MataKuliahData = await res.json()
+      onSuccess(data)
       onOpenChange(false)
     } catch (err) {
       console.error(err)
@@ -79,9 +85,7 @@ export function EditMataKuliahDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Mata Kuliah</DialogTitle>
-          <DialogDescription>
-            Ubah data mata kuliah.
-          </DialogDescription>
+          <DialogDescription>Ubah data mata kuliah.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -137,25 +141,20 @@ export function EditMataKuliahDialog({
             <Select
               value={form.jenis}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, jenis: v as "reguler" | "praktik" }))
+                setForm((p) => ({ ...p, jenis: v as "reguler" | "praktik" | "tuweb" }))
               }
             >
               <SelectTrigger id="edit-jenis-matkul" className="h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="reguler">
-                  Reguler (dengan Tuweb/Tuton)
-                </SelectItem>
-                <SelectItem value="praktik">
-                  Praktik (tanpa Tuweb)
-                </SelectItem>
+                <SelectItem value="reguler">Reguler (Tuton 8 sesi)</SelectItem>
+                <SelectItem value="praktik">Praktik (tanpa UAS)</SelectItem>
+                <SelectItem value="tuweb">Tuweb (15 aktivitas)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground">
-              {form.jenis === "reguler"
-                ? "UAS + Tuton (Kehadiran, Diskusi, Tugas)"
-                : "Hanya Diskusi + Tugas (tanpa UAS)"}
+              {JENIS_DESCRIPTIONS[form.jenis]}
             </p>
           </div>
 

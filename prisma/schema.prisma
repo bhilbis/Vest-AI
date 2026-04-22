@@ -198,6 +198,7 @@ model Semester {
   nama          String       // "Semester 1 2025/2026"
   tanggalMulai  DateTime     // Tanggal sesi 1
   isActive      Boolean      @default(true)
+  totalSKS      Int          @default(0)  // target SKS semester ini
   mataKuliah    MataKuliah[]
 
   userId        String
@@ -212,11 +213,15 @@ model MataKuliah {
   kode        String        // "EKMA4116"
   nama        String        // "Manajemen"
   sks         Int           @default(3)
-  jenis       String        @default("reguler") // "reguler" | "praktik"
+  jenis       String        @default("reguler") // "reguler" | "praktik" | "tuweb"
 
   semesterId  String
   semester    Semester      @relation(fields: [semesterId], references: [id], onDelete: Cascade)
   sessions    SesiKuliah[]
+
+  // Dynamic session config
+  jumlahSesi      Int    @default(8)        // 8 for reguler/praktik, 15 for tuweb
+  sesiTugasList   String @default("3,5,7")  // comma-separated, e.g. "4,8,12" for tuweb
 
   // UAS data
   uasJumlahSoal   Int       @default(0)
@@ -229,10 +234,11 @@ model MataKuliah {
 
 model SesiKuliah {
   id            String     @id @default(cuid())
-  sesiNumber    Int        // 1-8
+  sesiNumber    Int        // 1-N (8 for reguler, 15 for tuweb)
+  isCompleted   Boolean    @default(false) // apakah sesi/aktivitas sudah diselesaikan
   kehadiran     Boolean    @default(false)
   diskusi       Float?     // nilai diskusi
-  tugas         Float?     // nilai tugas (sesi 3, 5, 7)
+  tugas         Float?     // nilai tugas
 
   mataKuliahId  String
   mataKuliah    MataKuliah @relation(fields: [mataKuliahId], references: [id], onDelete: Cascade)

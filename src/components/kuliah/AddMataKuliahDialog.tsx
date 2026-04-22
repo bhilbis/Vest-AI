@@ -19,12 +19,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
+import { MataKuliahData } from "@/lib/kuliah-types"
 
 interface AddMataKuliahDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   semesterId: string
-  onSuccess: () => void
+  onSuccess: (mk: MataKuliahData) => void
+}
+
+const JENIS_DESCRIPTIONS: Record<string, string> = {
+  reguler: "UAS (70%) + Tuton (30%) — 8 sesi",
+  praktik: "Hanya Diskusi + Tugas (tanpa UAS) — 8 sesi",
+  tuweb: "UAS (70%) + Tuton (30%) — 15 aktivitas belajar",
 }
 
 export function AddMataKuliahDialog({
@@ -38,7 +45,7 @@ export function AddMataKuliahDialog({
     kode: "",
     nama: "",
     sks: 3,
-    jenis: "reguler" as "reguler" | "praktik",
+    jenis: "reguler" as "reguler" | "praktik" | "tuweb",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,8 +59,9 @@ export function AddMataKuliahDialog({
         body: JSON.stringify({ ...form, semesterId }),
       })
       if (!res.ok) throw new Error("Failed")
+      const data: MataKuliahData = await res.json()
       setForm({ kode: "", nama: "", sks: 3, jenis: "reguler" })
-      onSuccess()
+      onSuccess(data)
       onOpenChange(false)
     } catch (err) {
       console.error(err)
@@ -125,25 +133,20 @@ export function AddMataKuliahDialog({
             <Select
               value={form.jenis}
               onValueChange={(v) =>
-                setForm((p) => ({ ...p, jenis: v as "reguler" | "praktik" }))
+                setForm((p) => ({ ...p, jenis: v as "reguler" | "praktik" | "tuweb" }))
               }
             >
               <SelectTrigger id="jenis-matkul" className="h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="reguler">
-                  Reguler (dengan Tuweb/Tuton)
-                </SelectItem>
-                <SelectItem value="praktik">
-                  Praktik (tanpa Tuweb)
-                </SelectItem>
+                <SelectItem value="reguler">Reguler (Tuton 8 sesi)</SelectItem>
+                <SelectItem value="praktik">Praktik (tanpa UAS)</SelectItem>
+                <SelectItem value="tuweb">Tuweb (15 aktivitas)</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[10px] text-muted-foreground">
-              {form.jenis === "reguler"
-                ? "UAS + Tuton (Kehadiran, Diskusi, Tugas)"
-                : "Hanya Diskusi + Tugas (tanpa UAS)"}
+              {JENIS_DESCRIPTIONS[form.jenis]}
             </p>
           </div>
 

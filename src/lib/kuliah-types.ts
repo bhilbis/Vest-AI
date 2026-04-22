@@ -3,6 +3,7 @@
 export interface SesiKuliahData {
   id: string
   sesiNumber: number
+  isCompleted: boolean
   kehadiran: boolean
   diskusi: number | null
   tugas: number | null
@@ -14,8 +15,10 @@ export interface MataKuliahData {
   kode: string
   nama: string
   sks: number
-  jenis: "reguler" | "praktik"
+  jenis: "reguler" | "praktik" | "tuweb"
   semesterId: string
+  jumlahSesi: number
+  sesiTugasList: string
   sessions: SesiKuliahData[]
   uasJumlahSoal: number
   uasJumlahBenar: number
@@ -27,6 +30,7 @@ export interface SemesterData {
   nama: string
   tanggalMulai: string
   isActive: boolean
+  totalSKS: number
   mataKuliah: MataKuliahData[]
   userId: string
   createdAt: string
@@ -62,6 +66,13 @@ export const DEFAULT_SETTINGS: Omit<KuliahSettingsData, "userId"> = {
   batasD: 45,
 }
 
+export function parseSesiTugasList(list: string): number[] {
+  return list
+    .split(",")
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => !isNaN(n))
+}
+
 // Grade calculation utilities
 export function getLetterGrade(nilai: number, settings: KuliahSettingsData): string {
   if (nilai >= settings.batasA) return "A"
@@ -95,23 +106,24 @@ export function calculateNilaiTuton(
   totalTuton: number
 } {
   const sessions = mk.sessions || []
+  const tugasSessionNumbers = parseSesiTugasList(mk.sesiTugasList || "3,5,7")
+  const totalSessions = mk.jumlahSesi || 8
 
-  // Kehadiran: count of true / 8, scaled to max score
   const totalKehadiran = sessions.filter((s) => s.kehadiran).length
-  const rataKehadiran = (totalKehadiran / 8) * 100
+  const rataKehadiran = (totalKehadiran / totalSessions) * 100
 
-  // Diskusi: average of non-null values
   const diskusiValues = sessions.filter((s) => s.diskusi !== null).map((s) => s.diskusi!)
-  const rataDiskusi = diskusiValues.length > 0
-    ? diskusiValues.reduce((a, b) => a + b, 0) / diskusiValues.length
-    : 0
+  const rataDiskusi =
+    diskusiValues.length > 0
+      ? diskusiValues.reduce((a, b) => a + b, 0) / diskusiValues.length
+      : 0
 
-  // Tugas: average of non-null tugas (sesi 3, 5, 7)
-  const tugasSessions = sessions.filter((s) => [3, 5, 7].includes(s.sesiNumber))
+  const tugasSessions = sessions.filter((s) => tugasSessionNumbers.includes(s.sesiNumber))
   const tugasValues = tugasSessions.filter((s) => s.tugas !== null).map((s) => s.tugas!)
-  const rataTugas = tugasValues.length > 0
-    ? tugasValues.reduce((a, b) => a + b, 0) / tugasValues.length
-    : 0
+  const rataTugas =
+    tugasValues.length > 0
+      ? tugasValues.reduce((a, b) => a + b, 0) / tugasValues.length
+      : 0
 
   const nilaiKehadiran = (rataKehadiran * settings.bobotKehadiran) / 100
   const nilaiDiskusi = (rataDiskusi * settings.bobotDiskusi) / 100
@@ -143,18 +155,21 @@ export function calculateNilaiAkhir(
   const tutonResult = calculateNilaiTuton(mk, settings)
 
   if (mk.jenis === "praktik") {
-    // Praktik tanpa Tuweb: Diskusi% + Tugas% only
     const sessions = mk.sessions || []
-    const diskusiValues = sessions.filter((s) => s.diskusi !== null).map((s) => s.diskusi!)
-    const rataDiskusi = diskusiValues.length > 0
-      ? diskusiValues.reduce((a, b) => a + b, 0) / diskusiValues.length
-      : 0
+    const tugasSessionNumbers = parseSesiTugasList(mk.sesiTugasList || "3,5,7")
 
-    const tugasSessions = sessions.filter((s) => [3, 5, 7].includes(s.sesiNumber))
+    const diskusiValues = sessions.filter((s) => s.diskusi !== null).map((s) => s.diskusi!)
+    const rataDiskusi =
+      diskusiValues.length > 0
+        ? diskusiValues.reduce((a, b) => a + b, 0) / diskusiValues.length
+        : 0
+
+    const tugasSessions = sessions.filter((s) => tugasSessionNumbers.includes(s.sesiNumber))
     const tugasValues = tugasSessions.filter((s) => s.tugas !== null).map((s) => s.tugas!)
-    const rataTugas = tugasValues.length > 0
-      ? tugasValues.reduce((a, b) => a + b, 0) / tugasValues.length
-      : 0
+    const rataTugas =
+      tugasValues.length > 0
+        ? tugasValues.reduce((a, b) => a + b, 0) / tugasValues.length
+        : 0
 
     const kontribusiDiskusi = (rataDiskusi * settings.kontribusiDiskusiPraktik) / 100
     const kontribusiTugas = (rataTugas * settings.kontribusiTugasPraktik) / 100
@@ -170,10 +185,9 @@ export function calculateNilaiAkhir(
     }
   }
 
-  // Reguler: UAS 70% + Tuton 30%
-  const nilaiUAS = mk.uasJumlahSoal > 0
-    ? (mk.uasJumlahBenar / mk.uasJumlahSoal) * 100
-    : 0
+  // Reguler + Tuweb: UAS 70% + Tuton 30%
+  const nilaiUAS =
+    mk.uasJumlahSoal > 0 ? (mk.uasJumlahBenar / mk.uasJumlahSoal) * 100 : 0
   const nilaiTuton = tutonResult.totalTuton
   const kontribusiUAS = (nilaiUAS * settings.kontribusiUAS) / 100
   const kontribusiTuton = (nilaiTuton * settings.kontribusiTuton) / 100
@@ -189,7 +203,6 @@ export function calculateNilaiAkhir(
   }
 }
 
-// Calculate session date from semester start date
 export function getSessionDate(startDate: string, sessionNumber: number): string {
   const date = new Date(startDate)
   date.setDate(date.getDate() + (sessionNumber - 1) * 7)
@@ -202,6 +215,10 @@ export function getSessionDateRange(startDate: string, sessionNumber: number): s
   const end = new Date(start)
   end.setDate(end.getDate() + 6)
   const fmtStart = start.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit" })
-  const fmtEnd = end.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "2-digit" })
-  return `${fmtStart} s/d ${fmtEnd}`
+  const fmtEnd = end.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  })
+  return `${fmtStart}–${fmtEnd}`
 }
