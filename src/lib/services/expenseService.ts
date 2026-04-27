@@ -34,8 +34,8 @@ function parseMonthRange(monthParam: string) {
     throw new Error("Invalid month value");
   }
 
-  const monthStart = new Date(year, month - 1, 1);
-  const monthEndExclusive = new Date(year, month, 1);
+  const monthStart = new Date(Date.UTC(year, month - 1, 1));
+  const monthEndExclusive = new Date(Date.UTC(year, month, 1));
   return { monthStart, monthEndExclusive };
 }
 

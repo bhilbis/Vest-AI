@@ -177,12 +177,16 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                 {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
               </button>
               <button
+                type='button'
+                title='Start New Chat'
                 onClick={startNewChat}
                 className="h-7 w-7 rounded flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
               >
                 <Plus size={14} />
               </button>
               <button
+                type='button'
+                title='Close'
                 onClick={onClose}
                 className="h-7 w-7 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors"
               >
@@ -254,7 +258,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
           <div className="p-3 border-t border-zinc-800 shrink-0">
             <div className="flex gap-2 mb-2">
               <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="h-7 text-[11px] w-auto bg-zinc-800 border-zinc-700 text-zinc-400 min-h-[28px] min-w-[28px]">
+                <SelectTrigger className="h-7 text-[11px] w-auto bg-zinc-800 border-zinc-700 text-zinc-400 min-h-7 min-w-7">
                   <SelectValue>
                     {selectedModel.split('/')[1]?.split('-').slice(0, 2).join('-') || selectedModel}
                   </SelectValue>
@@ -275,7 +279,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Tanya tentang keuangan, kuliah, atau apapun..."
-                className="min-h-[44px] max-h-[100px] w-full resize-none border-0 bg-transparent py-2.5 px-3 pr-10 text-[13px] focus-visible:ring-0 placeholder:text-zinc-600"
+                className="min-h-11 max-h-[100px] w-full resize-none border-0 bg-transparent py-2.5 px-3 pr-10 text-[13px] focus-visible:ring-0 placeholder:text-zinc-600"
                 disabled={isTyping}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -289,7 +293,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                 disabled={!input.trim() || isTyping}
                 size="icon"
                 className={cn(
-                  "absolute right-1.5 bottom-1.5 h-7 w-7 rounded-lg min-h-[28px] min-w-[28px] transition-colors",
+                  "absolute right-1.5 bottom-1.5 h-7 w-7 rounded-lg min-h-7 min-w-7 transition-colors",
                   input.trim()
                     ? "bg-foreground text-background hover:bg-zinc-300"
                     : "bg-zinc-700 text-zinc-500"

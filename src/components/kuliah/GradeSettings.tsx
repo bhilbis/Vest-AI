@@ -5,7 +5,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, RotateCcw, Save, AlertTriangle } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
+import { 
+  Loader2, 
+  RotateCcw, 
+  Save, 
+  AlertTriangle, 
+  Users,
+  Monitor,
+  FileText,
+  Scale,
+  CheckCircle2,
+  Info,
+  type LucideIcon
+} from "lucide-react"
 import { KuliahSettingsData, DEFAULT_SETTINGS } from "@/lib/kuliah-types"
 import { cn } from "@/lib/utils"
 
@@ -94,8 +107,11 @@ export function GradeSettings() {
 
   if (loading || !settings) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground animate-pulse">Memuat pengaturan...</p>
+        </div>
       </div>
     )
   }
@@ -112,165 +128,126 @@ export function GradeSettings() {
   const allValid = tutonValid && regulerValid && praktikValid
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Header + Actions */}
-      <div className="flex items-center justify-between">
+    <div className="max-w-6xl mx-auto space-y-10 py-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
             Pengaturan Bobot Penilaian
           </h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Sesuaikan bobot perhitungan nilai sesuai ketentuan program studi
+          <p className="text-sm text-muted-foreground mt-1 font-medium">
+            Sesuaikan parameter perhitungan nilai sesuai dengan standar akademik terbaru
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 text-xs gap-1.5 min-h-0 text-muted-foreground"
+            className="h-10 px-4 text-xs font-bold gap-2 text-muted-foreground hover:bg-white dark:hover:bg-muted shadow-sm border border-transparent hover:border-border"
             onClick={handleReset}
           >
-            <RotateCcw size={12} /> Reset Default
+            <RotateCcw className="h-3.5 w-3.5" /> Reset Default
           </Button>
           <Button
             size="sm"
-            className="h-8 text-xs gap-1.5 min-h-0"
+            className="h-10 px-6 text-xs font-bold gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 border-none"
             onClick={handleSave}
             disabled={saving || !dirty || !allValid}
           >
             {saving ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Save size={12} />
+              <Save className="h-3.5 w-3.5" />
             )}
-            Simpan
+            Simpan Perubahan
           </Button>
         </div>
       </div>
 
-      {/* ====== BOBOT TUTON ====== */}
-      <SettingsSection
-        title="Bobot Komponen Tutorial Online (Tuton)"
-        subtitle="Total harus 100%"
-        total={tutonTotal}
-        valid={tutonValid}
-      >
-        <div className="grid grid-cols-3 gap-4">
-          <SettingsField
-            label="Kehadiran"
-            value={settings.bobotKehadiran}
-            onChange={(v) => update("bobotKehadiran", v)}
-            suffix="%"
-          />
-          <SettingsField
-            label="Diskusi"
-            value={settings.bobotDiskusi}
-            onChange={(v) => update("bobotDiskusi", v)}
-            suffix="%"
-          />
-          <SettingsField
-            label="Tugas"
-            value={settings.bobotTugas}
-            onChange={(v) => update("bobotTugas", v)}
-            suffix="%"
-          />
-        </div>
-      </SettingsSection>
+      {/* Bento Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bobot Tuton */}
+        <WeightCard
+          title="Bobot Komponen Tuton"
+          subtitle="Distribusi nilai pada tutorial online"
+          icon={Users}
+          total={tutonTotal}
+          isValid={tutonValid}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <SettingsField
+              label="Kehadiran"
+              value={settings.bobotKehadiran}
+              onChange={(v) => update("bobotKehadiran", v)}
+            />
+            <SettingsField
+              label="Diskusi"
+              value={settings.bobotDiskusi}
+              onChange={(v) => update("bobotDiskusi", v)}
+            />
+            <SettingsField
+              label="Tugas"
+              value={settings.bobotTugas}
+              onChange={(v) => update("bobotTugas", v)}
+            />
+          </div>
+        </WeightCard>
 
-      {/* ====== KONTRIBUSI REGULER ====== */}
-      <SettingsSection
-        title="Kontribusi Nilai Akhir — Mata Kuliah Reguler"
-        subtitle="UAS + Tuton = 100%"
-        total={regulerTotal}
-        valid={regulerValid}
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <SettingsField
-            label="UAS"
-            value={settings.kontribusiUAS}
-            onChange={(v) => update("kontribusiUAS", v)}
-            suffix="%"
-          />
-          <SettingsField
-            label="Tuton"
-            value={settings.kontribusiTuton}
-            onChange={(v) => update("kontribusiTuton", v)}
-            suffix="%"
-          />
-        </div>
-      </SettingsSection>
+        {/* Kontribusi Reguler */}
+        <WeightCard
+          title="Mata Kuliah Reguler"
+          subtitle="Kontribusi UAS dan Tuton ke Nilai Akhir"
+          icon={Monitor}
+          total={regulerTotal}
+          isValid={regulerValid}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <SettingsField
+              label="UAS"
+              value={settings.kontribusiUAS}
+              onChange={(v) => update("kontribusiUAS", v)}
+            />
+            <SettingsField
+              label="Tuton"
+              value={settings.kontribusiTuton}
+              onChange={(v) => update("kontribusiTuton", v)}
+            />
+          </div>
+        </WeightCard>
 
-      {/* ====== KONTRIBUSI PRAKTIK ====== */}
-      <SettingsSection
-        title="Kontribusi Nilai Akhir — Mata Kuliah Praktik (tanpa Tuweb)"
-        subtitle="Diskusi + Tugas = 100%"
-        total={praktikTotal}
-        valid={praktikValid}
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <SettingsField
-            label="Diskusi"
-            value={settings.kontribusiDiskusiPraktik}
-            onChange={(v) => update("kontribusiDiskusiPraktik", v)}
-            suffix="%"
-          />
-          <SettingsField
-            label="Tugas"
-            value={settings.kontribusiTugasPraktik}
-            onChange={(v) => update("kontribusiTugasPraktik", v)}
-            suffix="%"
-          />
-        </div>
-      </SettingsSection>
+        {/* Kontribusi Praktik */}
+        <WeightCard
+          title="Mata Kuliah Praktik"
+          subtitle="Kontribusi komponen untuk mata kuliah non-Tuweb"
+          icon={FileText}
+          total={praktikTotal}
+          isValid={praktikValid}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <SettingsField
+              label="Diskusi"
+              value={settings.kontribusiDiskusiPraktik}
+              onChange={(v) => update("kontribusiDiskusiPraktik", v)}
+            />
+            <SettingsField
+              label="Tugas"
+              value={settings.kontribusiTugasPraktik}
+              onChange={(v) => update("kontribusiTugasPraktik", v)}
+            />
+          </div>
+        </WeightCard>
 
-      {/* ====== BATAS NILAI ====== */}
-      <div className="rounded-xl border border-border bg-card shadow-xs p-4 space-y-4">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">
-            Batas Nilai (Grade Boundaries)
-          </h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Batas bawah untuk masing-masing grade
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <GradeField
-            grade="A"
-            value={settings.batasA}
-            onChange={(v) => update("batasA", v)}
-            color="text-emerald-600 dark:text-emerald-400"
-          />
-          <GradeField
-            grade="B"
-            value={settings.batasB}
-            onChange={(v) => update("batasB", v)}
-            color="text-blue-600 dark:text-blue-400"
-          />
-          <GradeField
-            grade="C"
-            value={settings.batasC}
-            onChange={(v) => update("batasC", v)}
-            color="text-amber-600 dark:text-amber-400"
-          />
-          <GradeField
-            grade="D"
-            value={settings.batasD}
-            onChange={(v) => update("batasD", v)}
-            color="text-orange-600 dark:text-orange-400"
-          />
-        </div>
-
-        <p className="text-[10px] text-muted-foreground">
-          Nilai di bawah {settings.batasD} = Grade E
-        </p>
+        {/* Grade Boundaries */}
+        <GradeBoundariesCard settings={settings} update={update} />
       </div>
 
-      {/* Dirty indicator */}
+      {/* Dirty Indicator Floating */}
       {dirty && (
-        <div className="flex items-center gap-2 text-[11px] text-amber-600 dark:text-amber-400">
-          <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-          Ada perubahan yang belum disimpan
+        <div className="fixed bottom-8 right-8 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300 z-50">
+          <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+          <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
+            Perubahan belum disimpan
+          </p>
         </div>
       )}
     </div>
@@ -278,50 +255,71 @@ export function GradeSettings() {
 }
 
 // ============================================================================
-// Sub Components
+// Redesigned Sub Components
 // ============================================================================
 
-function SettingsSection({
-  title,
-  subtitle,
-  total,
-  valid,
-  children,
-}: {
+interface WeightCardProps {
   title: string
   subtitle: string
+  icon: LucideIcon
   total: number
-  valid: boolean
+  isValid: boolean
   children: React.ReactNode
-}) {
+}
+
+function WeightCard({ title, subtitle, icon: Icon, total, isValid, children }: WeightCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-card shadow-xs p-4 space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {subtitle}
-          </p>
+    <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-300 p-8 flex flex-col h-full">
+      <div className="flex items-start justify-between mb-8">
+        <div className="flex gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-[#F1F5F9] dark:bg-muted flex items-center justify-center shrink-0">
+            <Icon className="h-6 w-6 text-foreground/70" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-foreground tracking-tight">{title}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">{subtitle}</p>
+          </div>
         </div>
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] font-bold tabular-nums min-h-0 min-w-0",
-            valid
-              ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-              : "border-destructive/30 text-destructive"
+            "px-3 py-1.5 rounded-full text-[11px] font-black tabular-nums border-none shadow-sm",
+            isValid
+              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+              : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
           )}
         >
-          {valid ? (
-            `${total}% ✓`
+          {isValid ? (
+            <span className="flex items-center gap-1.5">
+              100% <CheckCircle2 size={12} strokeWidth={3} />
+            </span>
           ) : (
-            <span className="flex items-center gap-1">
-              <AlertTriangle size={10} /> {total.toFixed(1)}%
+            <span className="flex items-center gap-1.5">
+              <AlertTriangle size={12} strokeWidth={3} /> {total.toFixed(1)}%
             </span>
           )}
         </Badge>
       </div>
-      {children}
+
+      <div className="flex-1 mb-8">
+        {children}
+      </div>
+
+      <div className="space-y-3 mt-auto pt-6 border-t border-border/30">
+        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span>Total Akumulasi</span>
+          <span className={cn(isValid ? "text-emerald-600" : "text-red-600")}>
+            {total.toFixed(0)}%
+          </span>
+        </div>
+        <Progress 
+          value={total} 
+          className={cn(
+            "h-2 bg-muted rounded-full",
+            isValid ? "[&>div]:bg-emerald-500" : "[&>div]:bg-red-500"
+          )} 
+        />
+      </div>
     </div>
   )
 }
@@ -330,19 +328,17 @@ function SettingsField({
   label,
   value,
   onChange,
-  suffix,
 }: {
   label: string
   value: number
   onChange: (value: number) => void
-  suffix?: string
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="text-[11px] font-medium text-muted-foreground">
+    <div className="space-y-2.5">
+      <Label className="text-[12px] font-bold text-muted-foreground/80 ml-1">
         {label}
       </Label>
-      <div className="relative">
+      <div className="relative group">
         <Input
           type="number"
           min={0}
@@ -350,46 +346,117 @@ function SettingsField({
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="h-9 text-sm tabular-nums pr-8 min-h-0"
+          className="h-12 bg-[#F8FAFC] dark:bg-muted/50 border-border/50 rounded-xl text-sm font-bold tabular-nums pr-10 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
         />
-        {suffix && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-            {suffix}
-          </span>
-        )}
+        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground/50">
+          %
+        </span>
       </div>
     </div>
   )
 }
 
-function GradeField({
-  grade,
-  value,
-  onChange,
-  color,
-}: {
-  grade: string
-  value: number
-  onChange: (value: number) => void
-  color: string
+function GradeBoundariesCard({ 
+  settings, 
+  update 
+}: { 
+  settings: KuliahSettingsData, 
+  update: (field: keyof KuliahSettingsData, value: number) => void 
 }) {
+  const grades = [
+    { label: "A", field: "batasA" as const, color: "bg-emerald-500", text: "text-emerald-600", light: "bg-emerald-50" },
+    { label: "B", field: "batasB" as const, color: "bg-blue-500", text: "text-blue-600", light: "bg-blue-50" },
+    { label: "C", field: "batasC" as const, color: "bg-amber-500", text: "text-amber-600", light: "bg-amber-50" },
+    { label: "D", field: "batasD" as const, color: "bg-orange-500", text: "text-orange-600", light: "bg-orange-50" },
+  ]
+
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className={cn("text-sm font-black", color)}>≥</span>
-        <Label className="text-[11px] font-bold text-foreground">
-          Grade {grade}
-        </Label>
+    <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-300 p-8 flex flex-col lg:col-span-2">
+      <div className="flex items-start gap-4 mb-8">
+        <div className="h-12 w-12 rounded-2xl bg-[#F1F5F9] dark:bg-muted flex items-center justify-center shrink-0">
+          <Scale className="h-6 w-6 text-foreground/70" />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-foreground tracking-tight">Batas Nilai (Grade Boundaries)</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">Tentukan ambang batas minimum untuk setiap tingkatan nilai</p>
+        </div>
       </div>
-      <Input
-        type="number"
-        min={0}
-        max={100}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
-        className="h-9 text-sm tabular-nums min-h-0"
-      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+        {grades.map((g) => (
+          <div key={g.label} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center font-black text-sm shadow-sm", g.color, "text-white")}>
+                {g.label}
+              </div>
+              <Label className="text-xs font-bold text-muted-foreground">Grade {g.label}</Label>
+            </div>
+            <div className="relative">
+              <span className={cn("absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black", g.text)}>≥</span>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={settings[g.field]}
+                onChange={(e) => update(g.field, Number(e.target.value) || 0)}
+                className="h-14 bg-[#F8FAFC] dark:bg-muted/50 border-border/50 rounded-2xl text-base font-black tabular-nums pl-10 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Visual Scale */}
+      <div className="relative pt-10 pb-4">
+        <div className="flex justify-between mb-3 px-1">
+          <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">Grade A</span>
+          <span className="text-[10px] font-black text-blue-600 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-md">Grade B</span>
+          <span className="text-[10px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-md">Grade C</span>
+          <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded-md">Grade D</span>
+          <span className="text-[10px] font-black text-red-600 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-md">Grade E</span>
+        </div>
+        
+        <div className="h-6 w-full bg-muted rounded-2xl overflow-hidden flex shadow-inner border border-border/30 p-1">
+          <div className="h-full bg-emerald-500 rounded-l-xl transition-all duration-500 ease-in-out" style={{ width: `${100 - settings.batasA}%` }} />
+          <div className="h-full bg-blue-500 transition-all duration-500 ease-in-out" style={{ width: `${settings.batasA - settings.batasB}%` }} />
+          <div className="h-full bg-amber-500 transition-all duration-500 ease-in-out" style={{ width: `${settings.batasB - settings.batasC}%` }} />
+          <div className="h-full bg-orange-500 transition-all duration-500 ease-in-out" style={{ width: `${settings.batasC - settings.batasD}%` }} />
+          <div className="h-full bg-red-500 rounded-r-xl flex-1 transition-all duration-500 ease-in-out" />
+        </div>
+        
+        <div className="flex justify-between mt-4 px-1">
+          <div className="flex flex-col items-center">
+            <div className="h-3 w-0.5 bg-border/50 mb-1" />
+            <span className="text-[11px] font-black tabular-nums text-foreground">{settings.batasA}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="h-3 w-0.5 bg-border/50 mb-1" />
+            <span className="text-[11px] font-black tabular-nums text-foreground">{settings.batasB}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="h-3 w-0.5 bg-border/50 mb-1" />
+            <span className="text-[11px] font-black tabular-nums text-foreground">{settings.batasC}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="h-3 w-0.5 bg-border/50 mb-1" />
+            <span className="text-[11px] font-black tabular-nums text-foreground">{settings.batasD}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="h-3 w-0.5 bg-border/50 mb-1" />
+            <span className="text-[11px] font-black tabular-nums text-foreground">0</span>
+          </div>
+        </div>
+        
+        <div className="mt-8 p-4 rounded-2xl bg-[#F8FAFC] dark:bg-muted/30 border border-border/50 flex items-center gap-3">
+          <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+            <Info className="h-4 w-4 text-amber-600" />
+          </div>
+          <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+            Mahasiswa dengan nilai di bawah <span className="font-bold text-foreground">{settings.batasD}</span> akan secara otomatis mendapatkan <span className="font-bold text-red-600">Grade E</span>.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

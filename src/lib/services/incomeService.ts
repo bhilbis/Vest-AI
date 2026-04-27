@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 type CreateIncomeParams = {
   title: string;
@@ -8,9 +9,42 @@ type CreateIncomeParams = {
   accountId: string;
 };
 
-export async function getIncomes(userId: string) {
+type GetIncomesParams = {
+  userId: string;
+  monthParam?: string | null;
+};
+
+function parseMonthRange(monthParam: string) {
+  if (!/^\d{4}-\d{2}$/.test(monthParam)) {
+    throw new Error("Invalid month format");
+  }
+
+  const [yearStr, monthStr] = monthParam.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error("Invalid month value");
+  }
+
+  const monthStart = new Date(Date.UTC(year, month - 1, 1));
+  const monthEndExclusive = new Date(Date.UTC(year, month, 1));
+  return { monthStart, monthEndExclusive };
+}
+
+export async function getIncomes({ userId, monthParam }: GetIncomesParams) {
+  const where: Prisma.IncomeWhereInput = { userId };
+
+  if (monthParam) {
+    const { monthStart, monthEndExclusive } = parseMonthRange(monthParam);
+    where.date = {
+      gte: monthStart,
+      lt: monthEndExclusive,
+    };
+  }
+
   return prisma.income.findMany({
-    where: { userId },
+    where,
     include: {
       account: {
         select: {

@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { SessionProviderWrapper } from "@/components/layout/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { VestAIStructuredData } from "@/components/seo/JsonLd";
+import { Toaster } from "@/components/ui/sonner";
+import { SplashScreen } from "@/components/pwa/SplashScreen";
 import "katex/dist/katex.min.css";
 
 export const viewport: Viewport = {
@@ -14,13 +16,9 @@ export const viewport: Viewport = {
   themeColor: "#09090B",
 };
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
 });
 
 export const metadata: Metadata = {
@@ -44,6 +42,17 @@ export const metadata: Metadata = {
   creator: "Financial Tracker",
   publisher: "Financial Tracker",
   metadataBase: new URL("https://go-aoixsy.my.id"),
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Financial Tracker",
+    startupImage: [
+      {
+        url: "/vest.png",
+        media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)",
+      },
+    ],
+  },
   alternates: {
     canonical: "/",
   },
@@ -100,31 +109,31 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${jakarta.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
+          <SplashScreen />
           <VestAIStructuredData />
-          <SessionProviderWrapper>{children}</SessionProviderWrapper>
+          <SessionProviderWrapper>
+            {children}
+            <Toaster position="top-center" richColors />
+          </SessionProviderWrapper>
           <script
             dangerouslySetInnerHTML={{
               __html: `
                 if ('serviceWorker' in navigator) {
-                  if ('${process.env.NODE_ENV}' === 'production') {
-                    window.addEventListener('load', () => {
-                      navigator.serviceWorker.register('/sw.js').catch(() => {});
+                  window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                      console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, function(err) {
+                      console.log('ServiceWorker registration failed: ', err);
                     });
-                  } else {
-                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                      for(let registration of registrations) {
-                        registration.unregister();
-                      }
-                    });
-                  }
+                  });
                 }
               `,
             }}

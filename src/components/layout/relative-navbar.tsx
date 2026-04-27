@@ -622,7 +622,7 @@ export function Navbar({
                       onOpenChange={setDropdownOpen}
                     >
                       <DropdownMenuTrigger asChild>
-                        <button title="Nav" className="outline-none">
+                        <button type="button" title="Nav" className="outline-none">
                           <NavButtonContent
                             item={item}
                             active={dropdownOpen}
@@ -673,7 +673,7 @@ export function Navbar({
                       />
                     </Link>
                   ) : (
-                    <button onClick={onOpenMessages} className="outline-none">
+                    <button title="Navigation" type="button" onClick={onOpenMessages} className="outline-none">
                       <NavButtonContent
                         item={item}
                         active={isActive(item)}
@@ -777,7 +777,7 @@ export function Navbar({
                     onOpenChange={setDropdownOpen}
                   >
                     <DropdownMenuTrigger asChild>
-                      <button title="Nav" className="outline-none">
+                      <button type="button" title="Nav" className="outline-none">
                         <NavButtonContent
                           item={item}
                           active={dropdownOpen}
@@ -841,7 +841,7 @@ export function Navbar({
                     isVertical={isVertical}
                     effectivePosition={effectivePosition}
                   >
-                    <button onClick={onOpenMessages} className="outline-none">
+                    <button type="button" title="Navigation" onClick={onOpenMessages} className="outline-none">
                       <NavButtonContent
                         item={item}
                         active={isActive(item)}

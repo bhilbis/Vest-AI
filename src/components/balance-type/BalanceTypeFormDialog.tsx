@@ -18,6 +18,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { BankCombobox } from "./BankCombobox";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 
 interface Props {
   isOpen: boolean;
@@ -136,9 +137,10 @@ export function AccountBalanceFormDialog({
           <div className="space-y-2">
             <Label>Saldo</Label>
             <Input
-              type="number"
-              value={balance}
-              onChange={(e) => setBalance(Number(e.target.value))}
+              type="text"
+              inputMode="numeric"
+              value={formatCurrencyInput(String(balance))}
+              onChange={(e) => setBalance(Number(parseCurrencyInput(e.target.value)))}
               required
             />
           </div>

@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlusIcon, XIcon } from "lucide-react";
 import Image from "next/image";
 import { Budget } from "@/types/types";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 
 interface FormData {
   title: string;
@@ -109,11 +110,12 @@ export function ExpenseFormDialog({
             <div className="space-y-2">
               <Label>Jumlah (Rp) *</Label>
               <Input
-                type="number"
-                value={formData.amount}
-                onChange={(e) => onFormDataChange({ amount: e.target.value })}
+                type="text"
+                inputMode="numeric"
+                value={formatCurrencyInput(formData.amount)}
+                onChange={(e) => onFormDataChange({ amount: parseCurrencyInput(e.target.value) })}
+                placeholder="0"
                 required
-                min="0"
               />
             </div>
           </div>

@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils"
 
 interface Account {
   id: string
@@ -102,11 +103,11 @@ export function IncomeFormDialog({
             <Label htmlFor="income-amount">Jumlah (Rp)</Label>
             <Input
               id="income-amount"
-              type="number"
+              type="text"
+              inputMode="numeric"
               placeholder="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min={0}
+              value={formatCurrencyInput(amount)}
+              onChange={(e) => setAmount(parseCurrencyInput(e.target.value))}
               required
             />
           </div>

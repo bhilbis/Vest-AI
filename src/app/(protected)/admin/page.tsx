@@ -279,6 +279,7 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       <Label htmlFor="add-role">Role</Label>
                       <select
+                        title="Add Role"
                         id="add-role"
                         name="role"
                         defaultValue="USER"
@@ -521,6 +522,8 @@ export default function AdminPage() {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button
+                                      type="button"
+                                      title="Delete User"
                                       onClick={() => handleDeleteUser(user)}
                                       disabled={isSelf}
                                       className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed transition-colors"

@@ -2,6 +2,7 @@ import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "vest-ai-finance",
     name: "Financial Tracker — Minimalist",
     short_name: "Finance",
     description:
@@ -16,15 +17,37 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "/vest.png",
         sizes: "192x192",
         type: "image/png",
+        purpose: "maskable",
       },
       {
         src: "/vest.png",
         sizes: "512x512",
         type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/vest.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/vest.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
       },
     ],
     categories: ["finance", "productivity", "trackers"],
     lang: "id",
     dir: "ltr",
+    screenshots: [
+      {
+        src: "/vest.png",
+        sizes: "1200x630",
+        type: "image/png",
+        label: "Dashboard Financial Tracker",
+      },
+    ],
   };
 }

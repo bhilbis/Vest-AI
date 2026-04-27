@@ -10,7 +10,6 @@ import {
   Target,
   LogOut,
   ChevronLeft,
-  Wallet,
   GraduationCap,
 } from "lucide-react";
 import { useState } from "react";
@@ -70,6 +69,8 @@ export function AppSidebar() {
           <div className="flex flex-col items-center gap-1">
             <ModeToggle />
             <button
+              type="button"
+              title="Collapsed"
               onClick={() => setCollapsed(false)}
               className="h-7 w-7 min-h-0 min-w-0 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
             >
@@ -84,6 +85,8 @@ export function AppSidebar() {
           <div className="flex items-center gap-1 ml-auto">
             <ModeToggle />
             <button
+              title="Collapsed button"
+              type="button"
               onClick={() => setCollapsed(true)}
               className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
             >

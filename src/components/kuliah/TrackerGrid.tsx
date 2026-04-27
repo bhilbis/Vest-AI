@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -31,6 +32,13 @@ import {
   CheckCircle2,
   TrendingUp,
 } from "lucide-react"
+import { toast } from "sonner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { AddMataKuliahDialog } from "./AddMataKuliahDialog"
 import { EditMataKuliahDialog } from "./EditMataKuliahDialog"
 import {
@@ -135,37 +143,48 @@ export function TrackerGrid() {
   // ── Semester CRUD ─────────────────────────────────────────────────────────
   const handleCreateSemester = async () => {
     if (!newSemester.nama.trim() || !newSemester.tanggalMulai) return
-    try {
-      const res = await fetch("/api/kuliah/semester", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nama: newSemester.nama,
-          tanggalMulai: newSemester.tanggalMulai,
-          totalSKS: newSemester.totalSKS ? Number(newSemester.totalSKS) : 0,
-        }),
-      })
-      if (!res.ok) throw new Error("Failed")
+    const promise = fetch("/api/kuliah/semester", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nama: newSemester.nama,
+        tanggalMulai: newSemester.tanggalMulai,
+        totalSKS: newSemester.totalSKS ? Number(newSemester.totalSKS) : 0,
+      }),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error("Gagal membuat semester")
       const created: SemesterData = await res.json()
       setSemesters((prev) => [created, ...prev])
       setActiveSemesterId(created.id)
       setNewSemester({ show: false, nama: "", tanggalMulai: "", totalSKS: "" })
-    } catch (e) {
-      console.error(e)
-    }
+      return created
+    })
+
+    toast.promise(promise, {
+      loading: "Membuat semester...",
+      success: (data) => `Semester "${data.nama}" berhasil dibuat`,
+      error: "Gagal membuat semester",
+    })
   }
 
   const handleDeleteSemester = async (id: string) => {
-    if (!confirm("Hapus semester beserta semua mata kuliah di dalamnya?")) return
-    try {
-      await fetch(`/api/kuliah/semester/${id}`, { method: "DELETE" })
+    const sem = semesters.find((s) => s.id === id)
+    if (!sem) return
+    if (!confirm(`Hapus semester "${sem.nama}" beserta semua mata kuliah di dalamnya?`)) return
+
+    const promise = fetch(`/api/kuliah/semester/${id}`, { method: "DELETE" }).then(async (res) => {
+      if (!res.ok) throw new Error("Gagal menghapus")
       setSemesters((prev) => prev.filter((s) => s.id !== id))
       if (activeSemesterId === id) {
         setActiveSemesterId((semesters.find((s) => s.id !== id)?.id) || "")
       }
-    } catch (e) {
-      console.error(e)
-    }
+    })
+
+    toast.promise(promise, {
+      loading: "Menghapus semester...",
+      success: "Semester berhasil dihapus",
+      error: "Gagal menghapus semester",
+    })
   }
 
   // ── Matkul CRUD ───────────────────────────────────────────────────────────
@@ -178,6 +197,7 @@ export function TrackerGrid() {
             : sem
         )
       )
+      toast.success(`Mata kuliah "${mk.nama}" ditambahkan`)
     },
     []
   )
@@ -193,54 +213,99 @@ export function TrackerGrid() {
           : sem
       )
     )
+    toast.success(`Mata kuliah "${mk.nama}" diperbarui`)
   }, [])
 
   const handleDeleteMatkul = async (id: string) => {
     if (!confirm("Hapus mata kuliah ini?")) return
-    try {
-      await fetch(`/api/kuliah/matkul/${id}`, { method: "DELETE" })
+    const promise = fetch(`/api/kuliah/matkul/${id}`, { method: "DELETE" }).then(async (res) => {
+      if (!res.ok) throw new Error("Gagal menghapus")
       setSemesters((prev) =>
         prev.map((sem) => ({
           ...sem,
           mataKuliah: sem.mataKuliah.filter((mk) => mk.id !== id),
         }))
       )
-    } catch (e) {
-      console.error(e)
-    }
+    })
+
+    toast.promise(promise, {
+      loading: "Menghapus mata kuliah...",
+      success: "Mata kuliah berhasil dihapus",
+      error: "Gagal menghapus mata kuliah",
+    })
   }
 
   // ── Session updates (optimistic) ──────────────────────────────────────────
   const handleToggleKehadiran = async (sessionId: string, current: boolean) => {
-    updateSessionLocal(sessionId, { kehadiran: !current })
+    const newVal = !current
+    const session = semesters
+      .flatMap((sem) => sem.mataKuliah)
+      .flatMap((mk) => mk.sessions)
+      .find((s) => s.id === sessionId)
+
+    if (!session) return
+
+    // Auto-complete logic
+    const shouldComplete = newVal && (session.diskusi !== null || session.tugas !== null)
+    const updates: Partial<SesiKuliahData> = { kehadiran: newVal }
+    if (shouldComplete && !session.isCompleted) {
+      updates.isCompleted = true
+    }
+
+    updateSessionLocal(sessionId, updates)
+    
     try {
       await fetch(`/api/kuliah/session/${sessionId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kehadiran: !current }),
+        body: JSON.stringify(updates),
+      })
+      toast.success(newVal ? "Kehadiran dicatat" : "Kehadiran dihapus", {
+        description: shouldComplete && !session.isCompleted ? "Sesi otomatis ditandai selesai" : undefined,
+        icon: newVal ? <Check className="h-4 w-4 text-emerald-500" /> : <X className="h-4 w-4 text-muted-foreground" />,
       })
     } catch {
-      updateSessionLocal(sessionId, { kehadiran: current })
+      updateSessionLocal(sessionId, { kehadiran: current, isCompleted: session.isCompleted })
+      toast.error("Gagal memperbarui kehadiran")
     }
   }
 
   const handleToggleCompleted = async (sessionId: string, current: boolean) => {
-    updateSessionLocal(sessionId, { isCompleted: !current })
+    const newVal = !current
+    updateSessionLocal(sessionId, { isCompleted: newVal })
     try {
       await fetch(`/api/kuliah/session/${sessionId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isCompleted: !current }),
+        body: JSON.stringify({ isCompleted: newVal }),
+      })
+      toast.success(newVal ? "Sesi selesai" : "Sesi belum selesai", {
+        icon: newVal ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4 text-muted-foreground" />,
       })
     } catch {
       updateSessionLocal(sessionId, { isCompleted: current })
+      toast.error("Gagal memperbarui status sesi")
     }
   }
 
   const handleUpdateSession = useCallback(
     (sessionId: string, field: "diskusi" | "tugas", value: string) => {
       const numVal = value === "" ? null : Number(value)
-      updateSessionLocal(sessionId, { [field]: numVal })
+      const session = semesters
+        .flatMap(sem => sem.mataKuliah)
+        .flatMap(mk => mk.sessions)
+        .find(s => s.id === sessionId)
+      
+      if (!session) return
+
+      // Auto-complete logic
+      const updates: Partial<SesiKuliahData> = { [field]: numVal }
+      const willHaveValue = numVal !== null
+      if (willHaveValue && session.kehadiran && !session.isCompleted) {
+        updates.isCompleted = true
+      }
+
+      updateSessionLocal(sessionId, updates)
 
       const key = `${sessionId}-${field}`
       const existing = debounceTimers.current.get(key)
@@ -253,16 +318,21 @@ export function TrackerGrid() {
             await fetch(`/api/kuliah/session/${sessionId}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ [field]: numVal }),
+              body: JSON.stringify(updates),
             })
+            if (updates.isCompleted) {
+              toast.success("Nilai disimpan & Sesi otomatis selesai", {
+                icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              })
+            }
           } catch {
-            // silent — will reconcile on next page load
+            toast.error("Gagal menyimpan nilai")
           }
           debounceTimers.current.delete(key)
         }, 700)
       )
     },
-    [updateSessionLocal]
+    [updateSessionLocal, semesters]
   )
 
   // ── Compute inline tuton total (using defaults, no settings fetch) ────────
@@ -305,47 +375,54 @@ export function TrackerGrid() {
   }
 
   return (
-    <div className="space-y-5">
+    <TooltipProvider delayDuration={300}>
+      <div className="space-y-5">
       {/* Semester Selector */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          {semesters.length > 0 ? (
-            <Select value={activeSemesterId} onValueChange={setActiveSemesterId}>
-              <SelectTrigger className="w-[240px] h-9 text-sm">
-                <SelectValue placeholder="Pilih Semester" />
-              </SelectTrigger>
-              <SelectContent>
-                {semesters.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.nama}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <p className="text-sm text-muted-foreground">Belum ada semester</p>
-          )}
-
-          {activeSemester && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button type="button" aria-label="Opsi semester" className="h-8 w-8 min-h-0 min-w-0 rounded-md flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                  <MoreHorizontal size={16} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40">
-                <DropdownMenuItem
-                  className="text-xs gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-                  onClick={() => handleDeleteSemester(activeSemester.id)}
-                >
-                  <Trash2 size={12} /> Hapus Semester
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+      <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between bg-muted/20 p-4 rounded-xl border border-border/50">
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Tracker Perkuliahan</h2>
+          <p className="text-sm text-muted-foreground">Pantau progres kehadiran dan nilai mata kuliah Anda.</p>
         </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            {semesters.length > 0 ? (
+              <Select value={activeSemesterId} onValueChange={setActiveSemesterId}>
+                <SelectTrigger className="w-56 h-10 text-sm font-medium">
+                  <SelectValue placeholder="Pilih Semester" />
+                </SelectTrigger>
+                <SelectContent>
+                  {semesters.map((s) => (
+                    <SelectItem key={s.id} value={s.id} className="text-sm">
+                      {s.nama}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm font-medium text-muted-foreground">Belum ada semester</p>
+            )}
 
-        <div className="flex gap-2">
+            {activeSemester && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-foreground">
+                    <MoreHorizontal size={18} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem
+                    className="text-sm gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive py-2.5"
+                    onClick={() => handleDeleteSemester(activeSemester.id)}
+                  >
+                    <Trash2 size={16} /> Hapus Semester
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -365,6 +442,7 @@ export function TrackerGrid() {
           )}
         </div>
       </div>
+    </div>
 
       {/* New Semester Form */}
       {newSemester.show && (
@@ -393,14 +471,15 @@ export function TrackerGrid() {
             <div className="flex items-center gap-1.5">
               <BookOpen size={14} className="text-muted-foreground shrink-0" />
               <Input
-                type="number"
-                min={0}
-                max={30}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="Target SKS"
                 value={newSemester.totalSKS}
-                onChange={(e) =>
-                  setNewSemester((p) => ({ ...p, totalSKS: e.target.value }))
-                }
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, "")
+                  setNewSemester((p) => ({ ...p, totalSKS: val }))
+                }}
                 className="h-9 text-sm w-28"
               />
             </div>
@@ -528,6 +607,7 @@ export function TrackerGrid() {
         }}
       />
     </div>
+    </TooltipProvider>
   )
 }
 
@@ -571,9 +651,6 @@ function SKSSummary({ semester }: { semester: SemesterData }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mata Kuliah Table
-// ─────────────────────────────────────────────────────────────────────────────
 function MataKuliahTable({
   mk,
   semester,
@@ -602,58 +679,74 @@ function MataKuliahTable({
   const allDone = completedCount === mk.jumlahSesi
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
-          <BookOpen size={14} className="text-primary shrink-0" />
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0">
-            {mk.kode}
-          </span>
-          <span className="text-sm font-semibold text-foreground truncate">
-            {mk.nama}
-          </span>
-          <Badge
-            variant="outline"
-            className="text-[9px] min-h-0 min-w-0 border-border text-muted-foreground shrink-0"
-          >
-            {mk.sks} SKS
-          </Badge>
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
+      {/* Header - Sticky on Mobile */}
+      <div className="sticky top-0 z-20 flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 bg-muted/40 border-b border-border backdrop-blur-md gap-3">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5 sm:mt-0">
+            <BookOpen size={18} />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                {mk.kode}
+              </span>
+              <Badge
+                variant="outline"
+                className="text-[9px] h-4 px-1.5 border-border text-muted-foreground shrink-0"
+              >
+                {mk.sks} SKS
+              </Badge>
+            </div>
+            <h3 className="text-sm font-bold text-foreground leading-tight truncate sm:whitespace-normal sm:line-clamp-2">
+              {mk.nama}
+            </h3>
+          </div>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Completion progress */}
-          <span
-            className={cn(
-              "text-[10px] tabular-nums font-medium px-1.5 py-0.5 rounded",
-              allDone
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            {completedCount}/{mk.jumlahSesi} selesai
-          </span>
-          {/* Tuton score */}
-          <span className="text-sm font-bold tabular-nums text-primary">
-            {total.toFixed(1)}
-          </span>
+        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
+          <div className="flex items-center gap-3">
+            {/* Completion progress */}
+            <div className="flex flex-col items-end sm:items-center">
+              <span className="text-[9px] text-muted-foreground uppercase font-semibold tracking-tighter sm:hidden">Progres</span>
+              <span
+                className={cn(
+                  "text-[10px] tabular-nums font-bold px-2 py-0.5 rounded-full",
+                  allDone
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                    : "bg-muted-foreground/10 text-muted-foreground"
+                )}
+              >
+                {completedCount}/{mk.jumlahSesi}
+              </span>
+            </div>
+            {/* Tuton score */}
+            <div className="flex flex-col items-end sm:items-center">
+              <span className="text-[9px] text-muted-foreground uppercase font-semibold tracking-tighter sm:hidden">Skor</span>
+              <span className="text-sm font-black tabular-nums text-primary">
+                {total.toFixed(1)}
+              </span>
+            </div>
+          </div>
+          <div className="h-8 w-px bg-border/60 mx-1 hidden sm:block" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button type="button" aria-label="Opsi mata kuliah" className="h-7 w-7 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                <MoreHorizontal size={14} />
+              <button type="button" aria-label="Opsi mata kuliah" className="h-8 w-8 min-h-0 min-w-0 rounded-full flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all">
+                <MoreHorizontal size={16} />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem
-                className="text-xs gap-2 cursor-pointer"
+                className="text-xs gap-2 cursor-pointer py-2"
                 onClick={() => onEdit(mk)}
               >
-                <Edit size={12} /> Edit
+                <Edit size={14} className="text-muted-foreground" /> Edit Mata Kuliah
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="text-xs gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                className="text-xs gap-2 cursor-pointer py-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                 onClick={() => onDelete(mk.id)}
               >
-                <Trash2 size={12} /> Hapus
+                <Trash2 size={14} /> Hapus Mata Kuliah
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -661,74 +754,81 @@ function MataKuliahTable({
       </div>
 
       {/* Scrollable Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border bg-muted/20">
-              <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium text-muted-foreground w-24 min-w-[96px]">
-                Komponen
+      <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-border">
+        <table className="w-full text-xs border-separate border-spacing-0">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-muted/30">
+              <th className="sticky left-0 z-20 bg-card/95 backdrop-blur-sm px-4 py-3 text-left font-bold text-muted-foreground border-b border-r border-border w-28 min-w-28">
+                KOMPONEN
               </th>
               {sessions.map((s, i) => (
                 <th
                   key={s.id}
                   className={cn(
-                    "px-2 py-2 text-center font-medium text-muted-foreground min-w-[80px]",
-                    s.isCompleted && "bg-emerald-500/5"
+                    "px-3 py-3 text-center font-medium border-b border-border min-w-[85px]",
+                    s.isCompleted ? "bg-emerald-500/10" : "bg-muted/20"
                   )}
                 >
-                  <div className="text-[11px] font-bold text-foreground">
+                  <div className="text-[10px] font-black text-foreground uppercase tracking-tight">
                     {colLabel} {i + 1}
                   </div>
-                  <div className="text-[9px] text-muted-foreground/70">
+                  <div className="text-[9px] text-muted-foreground/80 font-medium">
                     {getSessionDateRange(semester.tanggalMulai, i + 1)}
                   </div>
                 </th>
               ))}
-              <th className="px-3 py-2 text-center font-bold text-foreground min-w-[60px] bg-muted/30">
-                Total
+              <th className="px-4 py-3 text-center font-bold text-primary min-w-[70px] bg-primary/5 border-b border-border">
+                TOTAL
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/50">
             {/* Selesai Row */}
-            <tr className="border-b border-border/50 hover:bg-muted/10 transition-colors">
-              <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-muted-foreground text-[11px]">
+            <tr className="hover:bg-muted/5 transition-colors group">
+              <td className="sticky left-0 z-10 bg-card/95 backdrop-blur-sm px-4 py-2.5 font-bold text-muted-foreground text-[10px] uppercase tracking-wider border-r border-border">
                 Selesai
               </td>
               {sessions.map((s) => (
                 <td
                   key={s.id}
                   className={cn(
-                    "px-2 py-1.5 text-center",
+                    "px-3 py-2.5 text-center transition-colors",
                     s.isCompleted && "bg-emerald-500/5"
                   )}
                 >
-                  <button
-                    type="button"
-                    aria-label={s.isCompleted ? "Tandai belum selesai" : "Tandai selesai"}
-                    onClick={() => onToggleCompleted(s.id, s.isCompleted)}
-                    className={cn(
-                      "h-6 w-6 min-h-0 min-w-0 rounded-full flex items-center justify-center mx-auto transition-all duration-200",
-                      s.isCompleted
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25"
-                        : "bg-muted/50 text-muted-foreground/30 hover:bg-muted hover:text-muted-foreground"
-                    )}
-                  >
-                    {s.isCompleted ? (
-                      <CheckCircle2 size={13} strokeWidth={2.5} />
-                    ) : (
-                      <Circle size={13} strokeWidth={1.5} />
-                    )}
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={s.isCompleted ? "Tandai belum selesai" : "Tandai selesai"}
+                        onClick={() => onToggleCompleted(s.id, s.isCompleted)}
+                        className={cn(
+                          "h-6 w-6 min-h-0 min-w-0 rounded-full flex items-center justify-center mx-auto transition-all duration-300 transform active:scale-90",
+                          s.isCompleted
+                            ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20"
+                            : "bg-muted text-muted-foreground/30 hover:bg-muted-foreground/20 hover:text-muted-foreground"
+                        )}
+                      >
+                        {s.isCompleted ? (
+                          <CheckCircle2 size={14} strokeWidth={3} />
+                        ) : (
+                          <Circle size={14} strokeWidth={2} />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-[10px]">{s.isCompleted ? "Tandai Belum Selesai" : "Tandai Selesai"}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </td>
               ))}
-              <td className="px-3 py-1.5 text-center bg-muted/10">
+              <td className="px-4 py-2.5 text-center bg-primary/5 font-bold tabular-nums">
                 <span
                   className={cn(
-                    "text-[11px] font-semibold tabular-nums",
+                    "text-[11px]",
                     allDone
                       ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-foreground"
+                      : "text-primary"
                   )}
                 >
                   {completedCount}/{mk.jumlahSesi}
@@ -737,88 +837,92 @@ function MataKuliahTable({
             </tr>
 
             {/* Kehadiran Row */}
-            <tr className="border-b border-border/50 hover:bg-muted/10 transition-colors">
-              <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-muted-foreground">
+            <tr className="hover:bg-muted/5 transition-colors group">
+              <td className="sticky left-0 z-10 bg-card/95 backdrop-blur-sm px-4 py-2.5 font-bold text-muted-foreground text-[10px] uppercase tracking-wider border-r border-border">
                 Kehadiran
               </td>
               {sessions.map((s) => (
                 <td
                   key={s.id}
                   className={cn(
-                    "px-2 py-1.5 text-center",
+                    "px-3 py-2.5 text-center transition-colors",
                     s.isCompleted && "bg-emerald-500/5"
                   )}
                 >
-                  <button
-                    type="button"
-                    aria-label={s.kehadiran ? "Tandai tidak hadir" : "Tandai hadir"}
-                    onClick={() => onToggleKehadiran(s.id, s.kehadiran)}
-                    className={cn(
-                      "h-7 w-7 min-h-0 min-w-0 rounded-md flex items-center justify-center mx-auto transition-all duration-200",
-                      s.kehadiran
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25"
-                        : "bg-muted text-muted-foreground/40 hover:bg-muted/80 hover:text-muted-foreground"
-                    )}
-                  >
-                    {s.kehadiran ? (
-                      <Check size={14} strokeWidth={3} />
-                    ) : (
-                      <X size={12} strokeWidth={2} />
-                    )}
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={s.kehadiran ? "Tandai tidak hadir" : "Tandai hadir"}
+                        onClick={() => onToggleKehadiran(s.id, s.kehadiran)}
+                        className={cn(
+                          "h-8 w-8 min-h-0 min-w-0 rounded-lg flex items-center justify-center mx-auto transition-all duration-300 transform active:scale-90",
+                          s.kehadiran
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm"
+                            : "bg-muted text-muted-foreground/40 hover:bg-muted-foreground/10 hover:text-muted-foreground border border-transparent"
+                        )}
+                      >
+                        {s.kehadiran ? (
+                          <Check size={16} strokeWidth={3} />
+                        ) : (
+                          <X size={14} strokeWidth={2.5} />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-[10px]">{s.kehadiran ? "Hapus Kehadiran" : "Catat Kehadiran"}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </td>
               ))}
-              <td className="px-3 py-1.5 text-center bg-muted/10">
-                <span className="text-[11px] font-semibold tabular-nums text-foreground">
-                  {sessions.filter((s) => s.kehadiran).length}/{mk.jumlahSesi}
-                </span>
+              <td className="px-4 py-2.5 text-center bg-primary/5 font-bold tabular-nums text-primary text-[11px]">
+                {sessions.filter((s) => s.kehadiran).length}/{mk.jumlahSesi}
               </td>
             </tr>
 
             {/* Diskusi Row */}
-            <tr className="border-b border-border/50 hover:bg-muted/10 transition-colors">
-              <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-muted-foreground">
+            <tr className="hover:bg-muted/5 transition-colors group">
+              <td className="sticky left-0 z-10 bg-card/95 backdrop-blur-sm px-4 py-2.5 font-bold text-muted-foreground text-[10px] uppercase tracking-wider border-r border-border">
                 Diskusi
               </td>
               {sessions.map((s) => (
                 <td
                   key={s.id}
                   className={cn(
-                    "px-1 py-1.5 text-center",
+                    "px-2 py-2.5 text-center transition-colors",
                     s.isCompleted && "bg-emerald-500/5"
                   )}
                 >
                   <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
+                    type="text"
+                    inputMode="decimal"
                     value={s.diskusi ?? ""}
-                    onChange={(e) =>
-                      onUpdateSession(s.id, "diskusi", e.target.value)
-                    }
-                    className="h-7 w-14 text-[11px] text-center mx-auto tabular-nums min-h-0 px-1"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, "")
+                      const parts = val.split(".")
+                      const sanitized = parts[0] + (parts.length > 1 ? "." + parts[1].slice(0, 2) : "")
+                      onUpdateSession(s.id, "diskusi", sanitized)
+                    }}
+                    className="h-8 w-14 text-[11px] font-bold text-center placeholder:text-center mx-auto tabular-nums min-h-0 px-1 bg-background focus:ring-1 focus:ring-primary border-muted-foreground/20"
                     placeholder="—"
                   />
                 </td>
               ))}
-              <td className="px-3 py-1.5 text-center bg-muted/10">
-                <span className="text-[11px] font-semibold tabular-nums text-foreground">
-                  {(() => {
-                    const vals = sessions
-                      .filter((s) => s.diskusi !== null)
-                      .map((s) => s.diskusi!)
-                    return vals.length > 0
-                      ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
-                      : "—"
-                  })()}
-                </span>
+              <td className="px-4 py-2.5 text-center bg-primary/5 font-bold tabular-nums text-primary text-[11px]">
+                {(() => {
+                  const vals = sessions
+                    .filter((s) => s.diskusi !== null)
+                    .map((s) => s.diskusi!)
+                  return vals.length > 0
+                    ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+                    : "—"
+                })()}
               </td>
             </tr>
 
             {/* Tugas Row */}
-            <tr className="hover:bg-muted/10 transition-colors">
-              <td className="sticky left-0 z-10 bg-card px-3 py-2 font-medium text-muted-foreground">
+            <tr className="hover:bg-muted/5 transition-colors group">
+              <td className="sticky left-0 z-10 bg-card/95 backdrop-blur-sm px-4 py-2.5 font-bold text-muted-foreground text-[10px] uppercase tracking-wider border-r border-border">
                 Tugas
               </td>
               {sessions.map((s) => {
@@ -827,43 +931,44 @@ function MataKuliahTable({
                   <td
                     key={s.id}
                     className={cn(
-                      "px-1 py-1.5 text-center",
+                      "px-2 py-2.5 text-center transition-colors",
                       s.isCompleted && "bg-emerald-500/5"
                     )}
                   >
                     {isTugasSesi ? (
                       <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.1}
+                        type="text"
+                        inputMode="decimal"
                         value={s.tugas ?? ""}
-                        onChange={(e) =>
-                          onUpdateSession(s.id, "tugas", e.target.value)
-                        }
-                        className="h-7 w-14 text-[11px] text-center mx-auto tabular-nums min-h-0 px-1"
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, "")
+                          const parts = val.split(".")
+                          const sanitized = parts[0] + (parts.length > 1 ? "." + parts[1].slice(0, 2) : "")
+                          onUpdateSession(s.id, "tugas", sanitized)
+                        }}
+                        className="h-8 w-14 text-[11px] font-bold text-center placeholder:text-center mx-auto tabular-nums min-h-0 px-1 bg-background focus:ring-1 focus:ring-primary border-muted-foreground/20"
                         placeholder="—"
                       />
                     ) : (
-                      <span className="text-muted-foreground/30 text-[10px]">—</span>
+                      <div className="h-8 flex items-center justify-center">
+                        <span className="text-muted-foreground/20 text-[10px]">—</span>
+                      </div>
                     )}
                   </td>
                 )
               })}
-              <td className="px-3 py-1.5 text-center bg-muted/10">
-                <span className="text-[11px] font-semibold tabular-nums text-foreground">
-                  {(() => {
-                    const vals = sessions
-                      .filter(
-                        (s) =>
-                          s.tugas !== null && tugasSessions.includes(s.sesiNumber)
-                      )
-                      .map((s) => s.tugas!)
-                    return vals.length > 0
-                      ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
-                      : "—"
-                  })()}
-                </span>
+              <td className="px-4 py-2.5 text-center bg-primary/5 font-bold tabular-nums text-primary text-[11px]">
+                {(() => {
+                  const vals = sessions
+                    .filter(
+                      (s) =>
+                        s.tugas !== null && tugasSessions.includes(s.sesiNumber)
+                    )
+                    .map((s) => s.tugas!)
+                  return vals.length > 0
+                    ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+                    : "—"
+                })()}
               </td>
             </tr>
           </tbody>
@@ -873,9 +978,6 @@ function MataKuliahTable({
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty State
-// ─────────────────────────────────────────────────────────────────────────────
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="rounded-xl border border-border bg-card shadow-xs p-12 text-center">

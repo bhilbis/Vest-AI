@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 
 interface BudgetFormDialogProps {
   isOpen: boolean;
@@ -123,10 +124,10 @@ export function BudgetFormDialog({
             <div className="space-y-2">
               <Label>Limit (Rp) *</Label>
               <Input
-                type="number"
-                min={0}
-                value={limit}
-                onChange={(e) => setLimit(e.target.value)}
+                type="text"
+                inputMode="numeric"
+                value={formatCurrencyInput(limit)}
+                onChange={(e) => setLimit(parseCurrencyInput(e.target.value))}
                 required
               />
             </div>

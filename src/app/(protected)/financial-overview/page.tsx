@@ -282,17 +282,24 @@ export default function FinancialOverviewPage() {
   return (
     <PageWrapper maxWidth="lg" className="space-y-6">
       {/* Header */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <p className="text-sm text-zinc-500">{formatMonth(filters.month)}</p>
+          <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground">{formatMonth(filters.month)}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted min-h-0 min-w-0" onClick={() => shiftMonth(-1)}>
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg w-fit shrink-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-background shadow-none min-h-0 min-w-0" onClick={() => shiftMonth(-1)}>
             <ChevronLeft size={16} />
           </Button>
-          <Input type="month" value={filters.month} onChange={(e) => updateMonth(e.target.value)} className="w-36 h-8 text-xs bg-background border-input min-h-0" />
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted min-h-0 min-w-0" onClick={() => shiftMonth(1)}>
+          <div className="relative">
+            <Input 
+              type="month" 
+              value={filters.month} 
+              onChange={(e) => updateMonth(e.target.value)} 
+              className="w-[165px] h-8 text-xs bg-background border-input min-h-0 px-2 cursor-pointer focus-visible:ring-1" 
+            />
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground hover:bg-background shadow-none min-h-0 min-w-0" onClick={() => shiftMonth(1)}>
             <ChevronRight size={16} />
           </Button>
         </div>
@@ -306,13 +313,13 @@ export default function FinancialOverviewPage() {
         <Button size="sm" className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground border-transparent gap-1.5 text-xs font-medium" onClick={() => setDialogs((p) => ({ ...p, income: true }))}>
           <TrendingUp size={14} /> Pemasukan
         </Button>
-        <Button size="sm" variant="outline" className="h-9 rounded-lg border-input text-foreground hover:bg-accent gap-1.5 text-xs font-medium min-h-0" onClick={() => setDialogs((p) => ({ ...p, transfer: true }))}>
+        <Button size="sm" variant="outline" className="h-9 rounded-lg border-input text-foreground hover:bg-accent gap-1.5 text-xs font-medium" onClick={() => setDialogs((p) => ({ ...p, transfer: true }))}>
           <ArrowLeftRight size={14} /> Transfer
         </Button>
-        <Button size="sm" variant="outline" className="h-9 rounded-lg border-input text-foreground hover:bg-accent gap-1.5 text-xs font-medium min-h-0" onClick={() => { setEditing((p) => ({ ...p, budget: null })); setDialogs((p) => ({ ...p, budget: true })) }}>
+        <Button size="sm" variant="outline" className="h-9 rounded-lg border-input text-foreground hover:bg-accent gap-1.5 text-xs font-medium" onClick={() => { setEditing((p) => ({ ...p, budget: null })); setDialogs((p) => ({ ...p, budget: true })) }}>
           <Target size={14} /> Budget
         </Button>
-        <Button size="sm" variant="ghost" className="h-9 rounded-lg text-muted-foreground hover:bg-muted gap-1.5 text-xs min-h-0" onClick={handleExportExpenses}>
+        <Button size="sm" variant="ghost" className="h-9 rounded-lg text-muted-foreground hover:bg-muted gap-1.5 text-xs" onClick={handleExportExpenses}>
           <DownloadIcon size={14} /> Export
         </Button>
       </div>
@@ -373,7 +380,7 @@ export default function FinancialOverviewPage() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="h-8 w-8 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
+                        <button type="button" title="More Actions" className="h-8 w-8 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
                           <MoreHorizontal size={14} />
                         </button>
                       </DropdownMenuTrigger>
@@ -413,7 +420,7 @@ export default function FinancialOverviewPage() {
                           <span className={cn("text-[11px] font-semibold tabular-nums", usage > 90 ? "text-destructive" : usage > 70 ? "text-yellow-500" : "text-muted-foreground")}>{usage.toFixed(0)}%</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
+                              <button title="More Actions" type='button' className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
                                 <MoreHorizontal size={14} />
                               </button>
                             </DropdownMenuTrigger>
@@ -481,7 +488,7 @@ export default function FinancialOverviewPage() {
                         {record.type === "expense" && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
+                              <button type="button" title="more action" className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
                                 <MoreHorizontal size={14} />
                               </button>
                             </DropdownMenuTrigger>

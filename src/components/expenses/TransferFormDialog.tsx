@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 
 type TransferMode = "transfer" | "withdraw" | "topup";
 
@@ -350,11 +350,11 @@ export function TransferFormDialog({
           <div className="space-y-2">
             <Label>Jumlah</Label>
             <Input
-              type="number"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Contoh: 100000"
+              type="text"
+              inputMode="numeric"
+              value={formatCurrencyInput(amount)}
+              onChange={(e) => setAmount(parseCurrencyInput(e.target.value))}
+              placeholder="Contoh: 100,000"
             />
           </div>
 

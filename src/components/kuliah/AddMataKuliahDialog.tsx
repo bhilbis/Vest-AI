@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2 } from "lucide-react"
+import { Loader2, X } from "lucide-react"
 import { MataKuliahData } from "@/lib/kuliah-types"
 
 interface AddMataKuliahDialogProps {
@@ -155,9 +155,10 @@ export function AddMataKuliahDialog({
               type="button"
               variant="outline"
               size="sm"
-              className="h-9 text-xs min-h-0"
+              className="h-9 text-xs min-h-0 gap-1.5"
               onClick={() => onOpenChange(false)}
             >
+              <X className="h-3.5 w-3.5" />
               Batal
             </Button>
             <Button

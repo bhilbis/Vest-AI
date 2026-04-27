@@ -4,12 +4,18 @@ import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { getIncomes, createIncome } from "@/lib/services/incomeService";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json([], { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const monthParam = searchParams.get("month");
+
   try {
-    const incomes = await getIncomes(session.user.id);
+    const incomes = await getIncomes({
+      userId: session.user.id,
+      monthParam,
+    });
     return NextResponse.json(incomes);
   } catch (error) {
     console.error("Error fetching incomes:", error);

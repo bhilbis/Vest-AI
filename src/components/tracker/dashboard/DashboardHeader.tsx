@@ -11,7 +11,7 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ loading, onReload, viewMode, onViewModeChange }: DashboardHeaderProps) {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-r from-primary/5 via-accent/8 to-background shadow-sm ring-1 ring-border/60">
+    <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-linear-to-r from-primary/5 via-accent/8 to-background shadow-sm ring-1 ring-border/60">
       <div className="absolute inset-y-0 right-0 w-1/3 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.12),transparent_45%)]" />
       <div className="relative flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-7 lg:py-6">
         <div className="space-y-2">
