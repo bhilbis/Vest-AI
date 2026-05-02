@@ -31,6 +31,7 @@ import {
   Circle,
   CheckCircle2,
   TrendingUp,
+  MessageSquarePlus,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -49,6 +50,7 @@ import {
   parseSesiTugasList,
 } from "@/lib/kuliah-types"
 import { cn } from "@/lib/utils"
+import { useKuliahLayout } from "@/app/(protected)/kuliah/layout"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Jenis config
@@ -343,7 +345,7 @@ export function TrackerGrid() {
 
     const kehadiranCount = sessions.filter((s) => s.kehadiran).length
     const diskusiVals = sessions
-      .filter((s) => s.diskusi !== null)
+      .filter((s) => s.diskusi !== null && !tugasSessions.includes(s.sesiNumber))
       .map((s) => s.diskusi!)
     const tugasVals = sessions
       .filter((s) => s.tugas !== null && tugasSessions.includes(s.sesiNumber))
@@ -672,11 +674,17 @@ function MataKuliahTable({
   onEdit: (mk: MataKuliahData) => void
   computeTotal: (mk: MataKuliahData) => number
 }) {
+  const kuliahLayout = useKuliahLayout()
   const sessions = mk.sessions || []
   const tugasSessions = parseSesiTugasList(mk.sesiTugasList || "3,5,7")
   const total = computeTotal(mk)
   const completedCount = sessions.filter((s) => s.isCompleted).length
   const allDone = completedCount === mk.jumlahSesi
+
+  const handleAddContext = () => {
+    kuliahLayout.setIsChatOpen(true)
+    toast.success("Mata kuliah ditambahkan ke konteks chat!")
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
@@ -728,28 +736,45 @@ function MataKuliahTable({
             </div>
           </div>
           <div className="h-8 w-px bg-border/60 mx-1 hidden sm:block" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" aria-label="Opsi mata kuliah" className="h-8 w-8 min-h-0 min-w-0 rounded-full flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all">
-                <MoreHorizontal size={16} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
-                className="text-xs gap-2 cursor-pointer py-2"
-                onClick={() => onEdit(mk)}
-              >
-                <Edit size={14} className="text-muted-foreground" /> Edit Mata Kuliah
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-xs gap-2 cursor-pointer py-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                onClick={() => onDelete(mk.id)}
-              >
-                <Trash2 size={14} /> Hapus Mata Kuliah
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 min-h-0 min-w-0"
+                  onClick={handleAddContext}
+                >
+                  <MessageSquarePlus size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-[10px]">Tambah ke konteks AI</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" aria-label="Opsi mata kuliah" className="h-8 w-8 min-h-0 min-w-0 rounded-full flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all">
+                  <MoreHorizontal size={16} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem
+                  className="text-xs gap-2 cursor-pointer py-2"
+                  onClick={() => onEdit(mk)}
+                >
+                  <Edit size={14} className="text-muted-foreground" /> Edit Mata Kuliah
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-xs gap-2 cursor-pointer py-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                  onClick={() => onDelete(mk.id)}
+                >
+                  <Trash2 size={14} /> Hapus Mata Kuliah
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -885,33 +910,42 @@ function MataKuliahTable({
               <td className="sticky left-0 z-10 bg-card/95 backdrop-blur-sm px-4 py-2.5 font-bold text-muted-foreground text-[10px] uppercase tracking-wider border-r border-border">
                 Diskusi
               </td>
-              {sessions.map((s) => (
-                <td
-                  key={s.id}
-                  className={cn(
-                    "px-2 py-2.5 text-center transition-colors",
-                    s.isCompleted && "bg-emerald-500/5"
-                  )}
-                >
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={s.diskusi ?? ""}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9.]/g, "")
-                      const parts = val.split(".")
-                      const sanitized = parts[0] + (parts.length > 1 ? "." + parts[1].slice(0, 2) : "")
-                      onUpdateSession(s.id, "diskusi", sanitized)
-                    }}
-                    className="h-8 w-14 text-[11px] font-bold text-center placeholder:text-center mx-auto tabular-nums min-h-0 px-1 bg-background focus:ring-1 focus:ring-primary border-muted-foreground/20"
-                    placeholder="—"
-                  />
-                </td>
-              ))}
+              {sessions.map((s) => {
+                const isTugasSesi = tugasSessions.includes(s.sesiNumber)
+                return (
+                  <td
+                    key={s.id}
+                    className={cn(
+                      "px-2 py-2.5 text-center transition-colors",
+                      s.isCompleted && "bg-emerald-500/5"
+                    )}
+                  >
+                    {!isTugasSesi ? (
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={s.diskusi ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, "")
+                          const parts = val.split(".")
+                          const sanitized = parts[0] + (parts.length > 1 ? "." + parts[1].slice(0, 2) : "")
+                          onUpdateSession(s.id, "diskusi", sanitized)
+                        }}
+                        className="h-8 w-14 text-[11px] font-bold text-center placeholder:text-center mx-auto tabular-nums min-h-0 px-1 bg-background focus:ring-1 focus:ring-primary border-muted-foreground/20"
+                        placeholder="—"
+                      />
+                    ) : (
+                      <div className="h-8 flex items-center justify-center">
+                        <span className="text-muted-foreground/20 text-[10px]">—</span>
+                      </div>
+                    )}
+                  </td>
+                )
+              })}
               <td className="px-4 py-2.5 text-center bg-primary/5 font-bold tabular-nums text-primary text-[11px]">
                 {(() => {
                   const vals = sessions
-                    .filter((s) => s.diskusi !== null)
+                    .filter((s) => s.diskusi !== null && !tugasSessions.includes(s.sesiNumber))
                     .map((s) => s.diskusi!)
                   return vals.length > 0
                     ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)

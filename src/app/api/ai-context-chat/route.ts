@@ -1,67 +1,23 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { OpenAI } from "openai"
-import { AIMessage } from "@/lib/ai"
+import { GoogleGenAI } from "@google/genai"
+import Groq from "groq-sdk"
 
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPEN_ROUTER_API,
-  defaultHeaders: {
-    "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-    "X-Title": "Vest AI Finance Tracker",
-  },
-})
+const googleAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-function extractAIContent(message?: AIMessage): string {
-  if (!message?.content) return "Tidak ada respon."
-
-  // Case: OpenAI lama
-  if (typeof message.content === "string") {
-    return message.content.trim() || "Tidak ada respon."
-  }
-
-  // Case: OpenRouter / DeepSeek / Llama
-  if (Array.isArray(message.content)) {
-    const text = message.content
-      .map((block) => {
-        if (typeof block.text === "string") return block.text
-
-        if (Array.isArray(block.content)) {
-          return block.content
-            .map((inner) => inner.text ?? "")
-            .join("")
-        }
-
-        return ""
-      })
-      .join("")
-      .trim()
-
-    return text || "Tidak ada respon."
-  }
-
-  return "Tidak ada respon."
-}
-
-// Simple in-memory daily rate limit to avoid unexpected cost
 const DAILY_LIMIT = 20
 const WINDOW_MS = 24 * 60 * 60 * 1000
+const HISTORY_WINDOW = 10
+const LOW_POWER_THRESHOLD = 0.8
+
 const usageMap = new Map<string, { count: number; resetAt: number }>()
 
-const okApiKey = !!process.env.OPEN_ROUTER_API
-
-// Model ID mapping: key -> OpenRouter model ID
-const MODEL_MAP: Record<string, string> = {
-  "deepseek/deepseek-r1-0528": "deepseek/deepseek-r1-0528:free",
-  "deepseek/deepseek-v3": "deepseek/deepseek-chat-v3-0324:free",
-  "mistralai/mistral-small-3.2-24b-instruct": "mistralai/mistral-small-3.2-24b-instruct:free",
-  "google/gemini-2.5-pro-exp-03-25": "google/gemini-2.5-pro-exp-03-25:free",
-  "meta-llama/llama-4-maverick": "meta-llama/llama-4-maverick:free",
-}
-
-const allowedModels = Object.keys(MODEL_MAP)
+import { AI_MODELS } from "../data"
+const allowedModels = Object.keys(AI_MODELS)
 
 const limitNumber = (value: number, decimals = 2) =>
   Number.isFinite(value) ? Number(value.toFixed(decimals)) : 0
@@ -73,11 +29,8 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value)
 
-// ============================================================================
-// Build user context — financial + kuliah data
-// ============================================================================
 async function buildUserContext(userId: string) {
-  const [assets, balances, expenses, incomes, budgets, transfers, semesters, kuliahSettings] = await Promise.all([
+  const [assets, balances, expenses, incomes, budgets, transfers, semestersResult, kuliahSettings] = await Promise.all([
     prisma.asset.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
@@ -113,13 +66,11 @@ async function buildUserContext(userId: string) {
       take: 10,
       select: { id: true, amount: true, note: true, date: true, fromAccountId: true, toAccountId: true },
     }),
-    // Kuliah data
     prisma.semester.findMany({
       where: { userId },
       include: {
         mataKuliah: {
           include: { sessions: { orderBy: { sesiNumber: "asc" } } },
-          orderBy: { createdAt: "asc" },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -130,18 +81,24 @@ async function buildUserContext(userId: string) {
     }),
   ])
 
+  const semesters = semestersResult.map(sem => ({
+    ...sem,
+    mataKuliah: sem.mataKuliah.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+  }))
+
   const totalBalance = balances.reduce((sum, b) => sum + (b.balance ?? 0), 0)
   const expenseMonth = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0)
   const incomeMonth = incomes.reduce((sum, i) => sum + (i.amount ?? 0), 0)
+  const netCashFlow = incomeMonth - expenseMonth
 
-  // Build kuliah summary
   const kuliahSummary = semesters.map((sem) => ({
     semester: sem.nama,
     tanggalMulai: sem.tanggalMulai.toISOString().slice(0, 10),
     mataKuliah: sem.mataKuliah.map((mk) => {
+      const tugasSessions = mk.sesiTugasList ? mk.sesiTugasList.split(',').map(Number) : [3,5,7]
       const kehadiranCount = mk.sessions.filter((s) => s.kehadiran).length
-      const diskusiVals = mk.sessions.filter((s) => s.diskusi !== null).map((s) => s.diskusi!)
-      const tugasVals = mk.sessions.filter((s) => s.tugas !== null && [3, 5, 7].includes(s.sesiNumber)).map((s) => s.tugas!)
+      const diskusiVals = mk.sessions.filter((s) => s.diskusi !== null && !tugasSessions.includes(s.sesiNumber)).map((s) => s.diskusi!)
+      const tugasVals = mk.sessions.filter((s) => s.tugas !== null && tugasSessions.includes(s.sesiNumber)).map((s) => s.tugas!)
       const avgDiskusi = diskusiVals.length > 0 ? diskusiVals.reduce((a, b) => a + b, 0) / diskusiVals.length : 0
       const avgTugas = tugasVals.length > 0 ? tugasVals.reduce((a, b) => a + b, 0) / tugasVals.length : 0
       return {
@@ -149,7 +106,9 @@ async function buildUserContext(userId: string) {
         nama: mk.nama,
         sks: mk.sks,
         jenis: mk.jenis,
-        kehadiran: `${kehadiranCount}/8`,
+        jumlahSesi: mk.jumlahSesi,
+        sesiTugasList: mk.sesiTugasList,
+        kehadiran: `${kehadiranCount}/${mk.jumlahSesi}`,
         rataRataDiskusi: limitNumber(avgDiskusi),
         rataRataTugas: limitNumber(avgTugas),
         uasJumlahSoal: mk.uasJumlahSoal,
@@ -158,12 +117,47 @@ async function buildUserContext(userId: string) {
     }),
   }))
 
+  // Pre-compute expense breakdown by category for delta analysis
+  const expenseByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+    const cat = e.category || "Lainnya"
+    acc[cat] = (acc[cat] ?? 0) + (e.amount ?? 0)
+    return acc
+  }, {})
+
+  // Compute budget utilization
+  const budgetUtilization = budgets.map(b => {
+    const spent = expenses
+      .filter(e => e.budgetId === b.id)
+      .reduce((sum, e) => sum + (e.amount ?? 0), 0)
+    return {
+      name: b.name,
+      category: b.category,
+      limit: b.limit,
+      spent,
+      remaining: (b.limit ?? 0) - spent,
+      utilizationPct: b.limit ? limitNumber((spent / b.limit) * 100) : 0,
+      month: b.month.toISOString().slice(0, 7),
+    }
+  })
+
+  // Financial runway: how many months can user sustain at current burn rate
+  const financialRunway = netCashFlow < 0 && totalBalance > 0
+    ? limitNumber(totalBalance / Math.abs(netCashFlow))
+    : null
+
   return {
     financialSummary: {
       totalBalance: formatCurrency(totalBalance),
+      totalBalanceRaw: totalBalance,
       expenseRecentTotal: formatCurrency(expenseMonth),
+      expenseRecentRaw: expenseMonth,
       incomeRecentTotal: formatCurrency(incomeMonth),
-      netRecent: formatCurrency(incomeMonth - expenseMonth),
+      incomeRecentRaw: incomeMonth,
+      netCashFlow: formatCurrency(netCashFlow),
+      netCashFlowRaw: netCashFlow,
+      financialRunwayMonths: financialRunway,
+      expenseByCategory,
+      budgetUtilization,
     },
     assets: assets.map((a) => ({
       id: a.id,
@@ -192,7 +186,14 @@ async function buildUserContext(userId: string) {
   }
 }
 
-function checkRateLimit(userId: string) {
+function getUsageInfo(userId: string): { count: number; resetAt: number } {
+  const now = Date.now()
+  const current = usageMap.get(userId)
+  if (current && now < current.resetAt) return current
+  return { count: 0, resetAt: now + WINDOW_MS }
+}
+
+function checkRateLimit(userId: string): boolean {
   const now = Date.now()
   const current = usageMap.get(userId)
   if (current && now < current.resetAt) {
@@ -204,10 +205,60 @@ function checkRateLimit(userId: string) {
   return true
 }
 
+function buildSystemPrompt(context: Awaited<ReturnType<typeof buildUserContext>>, isLowPower: boolean): string {
+  const { financialSummary } = context
+  const deficit = financialSummary.netCashFlowRaw < 0
+
+  const baseRole = `Anda adalah Financial Strategist & AI Assistant dengan akses read-only ke data keuangan dan akademik user.`
+
+  const financialProtocol = `
+## FINANCIAL ANALYSIS PROTOCOL
+**Precision First:** Jangan berikan saran generik (e.g., "kurangi pengeluaran"). Lakukan **delta analysis**: bandingkan income vs fixed costs vs discretionary spending secara spesifik.
+**Constraint Awareness:** Identifikasi budget gap yang spesifik. ${deficit ? "⚠️ USER SAAT INI DEFISIT — prioritaskan penyesuaian high-impact, bukan penghematan kecil." : ""}
+**Liquidity Assessment:** Evaluasi Total Balance vs Monthly Cash Flow untuk menentukan financial runway user secara aktual.
+**Format Output:** Gunakan tabel Markdown, bold headers, dan horizontal dividers (---) untuk memisahkan analisis data dari saran teknis.`
+
+  const capabilities = `
+## KEMAMPUAN:
+1. **Keuangan**: Delta analysis, budget gap detection, liquidity runway, anomali spending
+2. **Kuliah/Akademik**: Review progress kuliah UT, analisis nilai tuton, saran perbaikan nilai
+3. **General**: Pertanyaan umum, tips produktivitas, perencanaan`
+
+  const rules = isLowPower
+    ? `\n## MODE: LOW-POWER (>80% kuota harian)\nBerikan jawaban **sangat ringkas** — maksimal 3-4 bullet points. Prioritaskan insight tertinggi nilainya saja.`
+    : `\n## RULES:\n- Bahasa Indonesia ringkas dan mudah dipahami\n- Untuk analisis keuangan: sertakan angka spesifik, bukan persentase abstrak\n- Untuk konteks kuliah: pahami sistem UT (Tuton = Kehadiran + Diskusi + Tugas, Nilai Akhir = UAS + Tuton)\n- Berikan saran actionable dan spesifik berdasarkan data user`
+
+  return `${baseRole}
+${financialProtocol}
+${capabilities}
+${rules}
+
+## DATA USER:
+${JSON.stringify(context, null, 2)}`
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const info = getUsageInfo(session.user.id)
+    return NextResponse.json({
+      usage: {
+        current: info.count,
+        limit: DAILY_LIMIT,
+        percentage: Math.round((info.count / DAILY_LIMIT) * 100),
+        resetAt: info.resetAt,
+      }
+    })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error"
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    if (!okApiKey) return NextResponse.json({ error: "OpenRouter API key missing" }, { status: 503 })
-
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -218,54 +269,88 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const userMessage: string = body.message
     const modelKey: string = body.model || allowedModels[0]
+    const history: { role: "user" | "assistant"; content: string }[] = Array.isArray(body.history)
+      ? body.history.slice(-HISTORY_WINDOW)
+      : []
 
     if (!userMessage || typeof userMessage !== "string") {
       return NextResponse.json({ error: "Message diperlukan" }, { status: 400 })
     }
 
-    // Resolve model ID — accept any key that maps to a known model
-    const apiModelId = MODEL_MAP[modelKey]
-    if (!apiModelId) {
+    const modelConfig = AI_MODELS[modelKey as keyof typeof AI_MODELS]
+    if (!modelConfig) {
       return NextResponse.json({ error: `Model tidak diizinkan: ${modelKey}` }, { status: 400 })
     }
 
+    const usageInfo = getUsageInfo(session.user.id)
+    const usagePct = usageInfo.count / DAILY_LIMIT
+    const isLowPower = usagePct >= LOW_POWER_THRESHOLD
+
     const context = await buildUserContext(session.user.id)
+    const systemPrompt = buildSystemPrompt(context, isLowPower)
 
-    const systemPrompt = `Anda adalah AI Assistant serba bisa yang bisa membantu user dalam berbagai konteks. Anda memiliki akses read-only ke data user berikut:
+    let content: string
 
-## Kemampuan Anda:
-1. **Keuangan**: Analisis pengeluaran, saran budget, ringkasan keuangan, deteksi anomali spending
-2. **Kuliah/Akademik**: Review progress kuliah UT, analisis nilai tuton, saran perbaikan nilai, reminder deadline sesi
-3. **General**: Pertanyaan umum, tips produktivitas, perencanaan
+    if (modelConfig.provider === "gemini") {
+      try {
+        // Build Gemini contents array with history
+        const historyContents = history.map(m => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        }))
 
-## Rules:
-- Gunakan bahasa Indonesia yang ringkas dan mudah dipahami
-- Format jawaban dengan bullet points atau paragraf pendek
-- Jangan berikan saran investasi spesifik
-- Untuk konteks kuliah, pahami sistem UT: 8 sesi per semester, Kehadiran/Diskusi/Tugas, bobot Tuton (Kehadiran + Diskusi + Tugas), Nilai Akhir = UAS + Tuton
-- Berikan saran yang actionable dan spesifik berdasarkan data user
+        const response = await googleAi.models.generateContent({
+          model: modelConfig.model,
+          contents: [
+            { role: "user", parts: [{ text: systemPrompt }] },
+            { role: "model", parts: [{ text: "Saya siap membantu." }] },
+            ...historyContents,
+            { role: "user", parts: [{ text: userMessage }] },
+          ],
+          config: {
+            temperature: 0.4,
+            maxOutputTokens: isLowPower ? 512 : 1024,
+          }
+        })
+        content = response.text || "Tidak ada respon dari AI."
+      } catch (err: any) {
+        console.error("Gemini API Error:", err)
+        if (err.message?.includes('quota')) {
+          content = "Maaf, kuota Gemini telah habis. Silakan coba model lain seperti Groq."
+        } else if (err.message?.includes('retry')) {
+          content = "Mohon tunggu sebentar, lalu coba lagi."
+        } else {
+          content = "Terjadi kesalahan dengan model Gemini. Silakan coba model lain."
+        }
+      }
+    } else if (modelConfig.provider === "groq") {
+      const chatCompletion = await groq.chat.completions.create({
+        model: modelConfig.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...history.map(m => ({ role: m.role, content: m.content })),
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.4,
+        max_tokens: isLowPower ? 512 : 1024,
+      })
+      content = chatCompletion.choices[0]?.message?.content || "Tidak ada respon dari AI."
+    } else {
+      content = "Provider tidak didukung."
+    }
 
-## DATA USER:
-${JSON.stringify(context, null, 2)}`
-
-    const completion = await openai.chat.completions.create({
-      model: apiModelId,
-      stream: false,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.4,
-      max_tokens: 1024,
+    const updatedUsage = getUsageInfo(session.user.id)
+    return NextResponse.json({
+      content,
+      usage: {
+        current: updatedUsage.count,
+        limit: DAILY_LIMIT,
+        percentage: Math.round((updatedUsage.count / DAILY_LIMIT) * 100),
+        isLowPower,
+      },
     })
-
-    const rawMessage = completion.choices?.[0]?.message as AIMessage | undefined
-    const content = extractAIContent(rawMessage)
-
-    return NextResponse.json({ content })
   } catch (error: unknown) {
     console.error("AI context chat error:", error)
-    // Return more useful error info
     const message = error instanceof Error ? error.message : "Unknown error"
     return NextResponse.json({ error: `AI Error: ${message}` }, { status: 500 })
   }

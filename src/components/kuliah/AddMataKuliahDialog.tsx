@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -46,7 +46,22 @@ export function AddMataKuliahDialog({
     nama: "",
     sks: 3,
     jenis: "reguler" as "reguler" | "praktik" | "tuweb",
+    jumlahSesi: 8,
+    sesiTugasList: "3,5,7",
   })
+
+  useEffect(() => {
+    const defaults = {
+      reguler: { jumlahSesi: 8, sesiTugasList: "3,5,7" },
+      praktik: { jumlahSesi: 8, sesiTugasList: "3,5,7" },
+      tuweb: { jumlahSesi: 15, sesiTugasList: "4,8,12" },
+    }
+    setForm((prev) => ({
+      ...prev,
+      jumlahSesi: defaults[form.jenis].jumlahSesi,
+      sesiTugasList: defaults[form.jenis].sesiTugasList,
+    }))
+  }, [form.jenis])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,7 +75,7 @@ export function AddMataKuliahDialog({
       })
       if (!res.ok) throw new Error("Failed")
       const data: MataKuliahData = await res.json()
-      setForm({ kode: "", nama: "", sks: 3, jenis: "reguler" })
+      setForm({ kode: "", nama: "", sks: 3, jenis: "reguler", jumlahSesi: 8, sesiTugasList: "3,5,7" })
       onSuccess(data)
       onOpenChange(false)
     } catch (err) {
@@ -148,6 +163,39 @@ export function AddMataKuliahDialog({
             <p className="text-[10px] text-muted-foreground">
               {JENIS_DESCRIPTIONS[form.jenis]}
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="jumlah-sesi" className="text-xs font-medium">
+                Jumlah Sesi/Aktivitas
+              </Label>
+              <Input
+                id="jumlah-sesi"
+                type="number"
+                min={1}
+                max={30}
+                value={form.jumlahSesi}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, jumlahSesi: Number(e.target.value) || 1 }))
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sesi-tugas" className="text-xs font-medium">
+                Sesi Tugas (pisah dengan koma)
+              </Label>
+              <Input
+                id="sesi-tugas"
+                placeholder="3,5,7"
+                value={form.sesiTugasList}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, sesiTugasList: e.target.value }))
+                }
+                className="h-9 text-sm"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

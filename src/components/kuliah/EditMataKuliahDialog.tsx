@@ -46,6 +46,8 @@ export function EditMataKuliahDialog({
     nama: "",
     sks: 3,
     jenis: "reguler" as "reguler" | "praktik" | "tuweb",
+    jumlahSesi: 8,
+    sesiTugasList: "3,5,7",
   })
 
   useEffect(() => {
@@ -55,6 +57,8 @@ export function EditMataKuliahDialog({
         nama: mataKuliah.nama,
         sks: mataKuliah.sks,
         jenis: mataKuliah.jenis,
+        jumlahSesi: mataKuliah.jumlahSesi,
+        sesiTugasList: mataKuliah.sesiTugasList,
       })
     }
   }, [mataKuliah, open])
@@ -156,6 +160,39 @@ export function EditMataKuliahDialog({
             <p className="text-[10px] text-muted-foreground">
               {JENIS_DESCRIPTIONS[form.jenis]}
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-jumlah-sesi" className="text-xs font-medium">
+                Jumlah Sesi/Aktivitas
+              </Label>
+              <Input
+                id="edit-jumlah-sesi"
+                type="number"
+                min={1}
+                max={30}
+                value={form.jumlahSesi}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, jumlahSesi: Number(e.target.value) || 1 }))
+                }
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-sesi-tugas" className="text-xs font-medium">
+                Sesi Tugas (pisah dengan koma)
+              </Label>
+              <Input
+                id="edit-sesi-tugas"
+                placeholder="3,5,7"
+                value={form.sesiTugasList}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, sesiTugasList: e.target.value }))
+                }
+                className="h-9 text-sm"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

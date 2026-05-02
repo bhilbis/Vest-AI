@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { semesterId, kode, nama, sks, jenis } = await req.json();
+  const { semesterId, kode, nama, sks, jenis, jumlahSesi: reqJumlahSesi, sesiTugasList: reqSesiTugasList } = await req.json();
 
   if (!semesterId || !kode || !nama)
     return NextResponse.json(
@@ -28,9 +28,9 @@ export async function POST(req: Request) {
 
   const resolvedJenis: string = jenis || "reguler";
 
-  // Defaults based on jenis
-  const jumlahSesi = resolvedJenis === "tuweb" ? 15 : 8;
-  const sesiTugasList = resolvedJenis === "tuweb" ? "4,8,12" : "3,5,7";
+  // Use provided values or defaults based on jenis
+  const jumlahSesi = reqJumlahSesi || (resolvedJenis === "tuweb" ? 15 : 8);
+  const sesiTugasList = reqSesiTugasList || (resolvedJenis === "tuweb" ? "4,8,12" : "3,5,7");
 
   const mataKuliah = await prisma.mataKuliah.create({
     data: {
