@@ -31,18 +31,6 @@ jobs:
           echo "Checking secrets availability..."
           [ -z "${{ secrets.GROQ_API_KEY }}" ] && echo "❌ GROQ_API_KEY IS EMPTY" || echo "✅ GROQ_API_KEY IS SET"
           [ -z "${{ secrets.GEMINI_API_KEY }}" ] && echo "❌ GEMINI_API_KEY IS EMPTY" || echo "✅ GEMINI_API_KEY IS SET"
-    # Buat file .env.production dari secrets
-      # - name: Create .env.production
-      #   run: |
-      #     echo "NODE_ENV=production" >> .env.production
-      #     echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.production
-      #     echo "OPEN_ROUTER_API=${{ secrets.OPEN_ROUTER_API }}" >> .env.production
-      #     echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.production
-      #     echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.production
-      #     echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env.production
-      #     echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env.production
-      #     echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.production
-      #     echo "NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}" >> .env.production
 
       # Build & Push image Next.js
       - name: Build and push multi platform image

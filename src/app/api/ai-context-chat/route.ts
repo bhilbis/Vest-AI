@@ -6,8 +6,18 @@ import { prisma } from "@/lib/prisma"
 import { GoogleGenAI } from "@google/genai"
 import Groq from "groq-sdk"
 
-const googleAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+let _googleAi: GoogleGenAI | null = null
+let _groq: Groq | null = null
+
+function getGoogleAi() {
+  if (!_googleAi) _googleAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" })
+  return _googleAi
+}
+
+function getGroq() {
+  if (!_groq) _groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "" })
+  return _groq
+}
 
 const DAILY_LIMIT = 20
 const WINDOW_MS = 24 * 60 * 60 * 1000
@@ -299,7 +309,7 @@ export async function POST(req: NextRequest) {
           parts: [{ text: m.content }],
         }))
 
-        const response = await googleAi.models.generateContent({
+        const response = await getGoogleAi().models.generateContent({
           model: modelConfig.model,
           contents: [
             { role: "user", parts: [{ text: systemPrompt }] },
@@ -324,7 +334,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else if (modelConfig.provider === "groq") {
-      const chatCompletion = await groq.chat.completions.create({
+      const chatCompletion = await getGroq().chat.completions.create({
         model: modelConfig.model,
         messages: [
           { role: "system", content: systemPrompt },
