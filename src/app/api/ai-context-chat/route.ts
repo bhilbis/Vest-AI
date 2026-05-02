@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
@@ -7,17 +8,18 @@ import { GoogleGenAI } from "@google/genai"
 import Groq from "groq-sdk"
 import { GEMINI_API_KEY, GROQ_API_KEY } from "@/lib/env"
 
-let _googleAi: GoogleGenAI | null = null
-let _groq: Groq | null = null 
-
 function getGoogleAi() {
-  if (!_googleAi) _googleAi = new GoogleGenAI({ apiKey: GEMINI_API_KEY ?? "" })
-  return _googleAi
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === "BUILD_DUMMY") {
+    throw new Error("GEMINI_API_KEY belum diset")
+  }
+  return new GoogleGenAI({ apiKey: GEMINI_API_KEY })
 }
 
 function getGroq() {
-  if (!_groq) _groq = new Groq({ apiKey: GROQ_API_KEY ?? "" })
-  return _groq
+  if (!GROQ_API_KEY || GROQ_API_KEY === "BUILD_DUMMY") {
+    throw new Error("GROQ_API_KEY belum diset")
+  }
+  return new Groq({ apiKey: GROQ_API_KEY })
 }
 
 const DAILY_LIMIT = 20
