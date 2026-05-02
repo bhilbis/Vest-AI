@@ -5,17 +5,18 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { GoogleGenAI } from "@google/genai"
 import Groq from "groq-sdk"
+import { GEMINI_API_KEY, GROQ_API_KEY } from "@/lib/env"
 
 let _googleAi: GoogleGenAI | null = null
-let _groq: Groq | null = null
+let _groq: Groq | null = null 
 
 function getGoogleAi() {
-  if (!_googleAi) _googleAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? "" })
+  if (!_googleAi) _googleAi = new GoogleGenAI({ apiKey: GEMINI_API_KEY ?? "" })
   return _googleAi
 }
 
 function getGroq() {
-  if (!_groq) _groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "" })
+  if (!_groq) _groq = new Groq({ apiKey: GROQ_API_KEY ?? "" })
   return _groq
 }
 
