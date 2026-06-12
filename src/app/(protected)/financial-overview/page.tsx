@@ -40,6 +40,7 @@ import { EXPENSE_CATEGORIES, formatCurrency, calculateExpenseSummary } from "@/l
 import { Budget, Expense } from "@/types/types"
 import { PageWrapper } from "@/components/layout/page-wrapper"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 // ==================== TYPES ====================
 interface AccountBalance {
@@ -267,8 +268,19 @@ export default function FinancialOverviewPage() {
   }, [filters])
 
   const handleDeleteAccount = useCallback(async (id: string) => {
-    if (!confirm("Hapus akun?")) return
-    try { await fetch(`/api/account-balance/${id}`, { method: "DELETE" }); await fetchAccounts() } catch { /* ignore */ }
+    if (!confirm("Hapus akun ini?")) return
+    try {
+      const res = await fetch(`/api/account-balance/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error || "Gagal menghapus akun")
+        return
+      }
+      await fetchAccounts()
+      toast.success("Akun berhasil dihapus")
+    } catch {
+      toast.error("Gagal menghapus akun")
+    }
   }, [fetchAccounts])
 
   const handleDeleteBudget = useCallback(async (id: string) => {
