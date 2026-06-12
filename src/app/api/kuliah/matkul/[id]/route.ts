@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { parseSesiTugasList } from "@/lib/kuliah-types";
 
-// PUT — Update mata kuliah (kode, nama, sks, jenis, UAS data)
+// PUT — Update mata kuliah
 export async function PUT(
   req: Request,
   context: { params: Promise<{ id: string }> | { id: string } }
@@ -14,85 +15,78 @@ export async function PUT(
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Verify ownership through semester
   const existing = await prisma.mataKuliah.findFirst({
     where: { id },
-    include: { semester: { select: { userId: true } } },
+    include: { semester: { select: { userId: true } }, sessions: true },
   });
   if (!existing || existing.semester.userId !== session.user.id)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
 
-  const oldData = await prisma.mataKuliah.findFirst({
-    where: { id },
-    include: { sessions: true },
-  });
-  if (!oldData) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  const newJumlahSesi = body.jumlahSesi ?? existing.jumlahSesi;
+  const newSesiTugasList = body.sesiTugasList ?? existing.sesiTugasList;
+  const resolvedJenis = body.jenis ?? existing.jenis;
 
-  const newJumlahSesi = body.jumlahSesi ?? oldData.jumlahSesi;
-  const newSesiTugasList = body.sesiTugasList ?? oldData.sesiTugasList;
+  const newTugaSesiNumbers: number[] =
+    body.tugaSesiNumbers ?? parseSesiTugasList(newSesiTugasList);
+  const tugasListChanged =
+    body.tugaSesiNumbers !== undefined || body.sesiTugasList !== undefined;
+
+  // diskusiSesiNumbers: explicit list for tuweb (null = no change / use default)
+  const newDiskusiSesiNumbers: number[] | null = body.diskusiSesiNumbers ?? null;
+  const diskusiListChanged = body.diskusiSesiNumbers !== undefined;
+
+  const sessions = existing.sessions;
+  const currentMax = sessions.length;
+  const jumlahSesiChanged = newJumlahSesi !== existing.jumlahSesi;
+
+  const baseData = {
+    ...(body.kode !== undefined && { kode: body.kode }),
+    ...(body.nama !== undefined && { nama: body.nama }),
+    ...(body.sks !== undefined && { sks: body.sks }),
+    ...(body.jenis !== undefined && { jenis: body.jenis }),
+    jumlahSesi: newJumlahSesi,
+    sesiTugasList: body.tugaSesiNumbers
+      ? newTugaSesiNumbers.join(",")
+      : newSesiTugasList,
+    ...(body.uasJumlahSoal !== undefined && { uasJumlahSoal: body.uasJumlahSoal }),
+    ...(body.uasJumlahBenar !== undefined && { uasJumlahBenar: body.uasJumlahBenar }),
+    ...("gradingPresetId" in body && { gradingPresetId: body.gradingPresetId }),
+    ...("gradingOverride" in body && { gradingOverride: body.gradingOverride }),
+  };
 
   let updated;
 
-  if (newJumlahSesi !== oldData.jumlahSesi) {
-    const sessions = oldData.sessions;
-    const currentMax = sessions.length;
-
+  if (jumlahSesiChanged) {
     if (newJumlahSesi > currentMax) {
-      const sessionsToCreate = Array.from(
-        { length: newJumlahSesi - currentMax },
-        (_, i) => ({
-          sesiNumber: currentMax + i + 1,
-        })
-      );
-
       updated = await prisma.mataKuliah.update({
         where: { id },
         data: {
-          ...(body.kode !== undefined && { kode: body.kode }),
-          ...(body.nama !== undefined && { nama: body.nama }),
-          ...(body.sks !== undefined && { sks: body.sks }),
-          ...(body.jenis !== undefined && { jenis: body.jenis }),
-          jumlahSesi: newJumlahSesi,
-          sesiTugasList: newSesiTugasList,
-          ...(body.uasJumlahSoal !== undefined && {
-            uasJumlahSoal: body.uasJumlahSoal,
-          }),
-          ...(body.uasJumlahBenar !== undefined && {
-            uasJumlahBenar: body.uasJumlahBenar,
-          }),
+          ...baseData,
           sessions: {
-            create: sessionsToCreate,
+            create: Array.from({ length: newJumlahSesi - currentMax }, (_, i) => {
+              const sesiNumber = currentMax + i + 1;
+              const hasTugas = newTugaSesiNumbers.includes(sesiNumber);
+              const diskusiNA =
+                resolvedJenis === "tuweb" && newDiskusiSesiNumbers !== null
+                  ? !hasTugas && !newDiskusiSesiNumbers.includes(sesiNumber)
+                  : false;
+              return { sesiNumber, hasTugas, diskusiNA };
+            }),
           },
         },
         include: { sessions: { orderBy: { sesiNumber: "asc" } } },
       });
     } else {
-      const sessionsToDelete = sessions
+      const toDelete = sessions
         .filter((s) => s.sesiNumber > newJumlahSesi)
         .map((s) => s.id);
-
       updated = await prisma.mataKuliah.update({
         where: { id },
         data: {
-          ...(body.kode !== undefined && { kode: body.kode }),
-          ...(body.nama !== undefined && { nama: body.nama }),
-          ...(body.sks !== undefined && { sks: body.sks }),
-          ...(body.jenis !== undefined && { jenis: body.jenis }),
-          jumlahSesi: newJumlahSesi,
-          sesiTugasList: newSesiTugasList,
-          ...(body.uasJumlahSoal !== undefined && {
-            uasJumlahSoal: body.uasJumlahSoal,
-          }),
-          ...(body.uasJumlahBenar !== undefined && {
-            uasJumlahBenar: body.uasJumlahBenar,
-          }),
-          sessions: {
-            deleteMany: { id: { in: sessionsToDelete } },
-          },
+          ...baseData,
+          sessions: { deleteMany: { id: { in: toDelete } } },
         },
         include: { sessions: { orderBy: { sesiNumber: "asc" } } },
       });
@@ -100,20 +94,41 @@ export async function PUT(
   } else {
     updated = await prisma.mataKuliah.update({
       where: { id },
-      data: {
-        ...(body.kode !== undefined && { kode: body.kode }),
-        ...(body.nama !== undefined && { nama: body.nama }),
-        ...(body.sks !== undefined && { sks: body.sks }),
-        ...(body.jenis !== undefined && { jenis: body.jenis }),
-        jumlahSesi: newJumlahSesi,
-        sesiTugasList: newSesiTugasList,
-        ...(body.uasJumlahSoal !== undefined && {
-          uasJumlahSoal: body.uasJumlahSoal,
-        }),
-        ...(body.uasJumlahBenar !== undefined && {
-          uasJumlahBenar: body.uasJumlahBenar,
-        }),
-      },
+      data: baseData,
+      include: { sessions: { orderBy: { sesiNumber: "asc" } } },
+    });
+  }
+
+  // Sync hasTugas flags when tugas assignment changed
+  if (tugasListChanged) {
+    await Promise.all(
+      (updated.sessions as { id: string; sesiNumber: number }[]).map((s) =>
+        prisma.sesiKuliah.update({
+          where: { id: s.id },
+          data: { hasTugas: newTugaSesiNumbers.includes(s.sesiNumber) },
+        })
+      )
+    );
+  }
+
+  // Sync diskusiNA flags for tuweb when diskusi assignment changed
+  if (diskusiListChanged && resolvedJenis === "tuweb" && newDiskusiSesiNumbers !== null) {
+    await Promise.all(
+      (updated.sessions as { id: string; sesiNumber: number }[]).map((s) => {
+        const hasTugas = newTugaSesiNumbers.includes(s.sesiNumber);
+        const diskusiNA = !hasTugas && !newDiskusiSesiNumbers.includes(s.sesiNumber);
+        return prisma.sesiKuliah.update({
+          where: { id: s.id },
+          data: { diskusiNA },
+        });
+      })
+    );
+  }
+
+  // Re-fetch if any flags were synced
+  if (tugasListChanged || diskusiListChanged) {
+    updated = await prisma.mataKuliah.findUnique({
+      where: { id },
       include: { sessions: { orderBy: { sesiNumber: "asc" } } },
     });
   }
@@ -123,7 +138,7 @@ export async function PUT(
 
 // DELETE — Delete mata kuliah (cascades sessions)
 export async function DELETE(
-  req: Request,
+  _req: Request,
   context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   const params = await context.params;

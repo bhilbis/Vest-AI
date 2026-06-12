@@ -36,9 +36,11 @@ export async function PUT(
       ...(body.diskusi !== undefined && {
         diskusi: body.diskusi === null ? null : Number(body.diskusi),
       }),
+      ...(body.diskusiNA !== undefined && { diskusiNA: body.diskusiNA }),
       ...(body.tugas !== undefined && {
         tugas: body.tugas === null ? null : Number(body.tugas),
       }),
+      ...(body.tugasNA !== undefined && { tugasNA: body.tugasNA }),
     },
   });
 
