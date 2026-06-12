@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "SesiKuliah" ADD COLUMN     "diskusiNA" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "tugasNA" BOOLEAN NOT NULL DEFAULT false;
