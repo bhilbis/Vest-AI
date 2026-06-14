@@ -62,10 +62,12 @@ export async function deleteIncome(id: string) {
 
     await prisma.$transaction(async (tx) => {
       await tx.income.delete({ where: { id } });
-      await tx.accountBalance.update({
-        where: { id: existing.accountId },
-        data: { balance: { decrement: existing.amount } },
-      });
+      if (existing.accountId) {
+        await tx.accountBalance.update({
+          where: { id: existing.accountId },
+          data: { balance: { decrement: existing.amount } },
+        });
+      }
     });
 
     revalidatePath("/financial-overview");

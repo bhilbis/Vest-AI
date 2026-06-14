@@ -84,11 +84,13 @@ export async function updateExpense(id: string, formData: FormData) {
     if (!existing) return { error: "Pengeluaran tidak ditemukan" };
 
     await prisma.$transaction(async (tx) => {
-      // Restore old amount to old account
-      await tx.accountBalance.update({
-        where: { id: existing.accountId },
-        data: { balance: { increment: existing.amount } },
-      });
+      // Restore old amount to old account hanya jika akun masih ada
+      if (existing.accountId) {
+        await tx.accountBalance.update({
+          where: { id: existing.accountId },
+          data: { balance: { increment: existing.amount } },
+        });
+      }
 
       // Update expense
       await tx.expense.update({
@@ -131,10 +133,12 @@ export async function deleteExpense(id: string) {
 
     await prisma.$transaction(async (tx) => {
       await tx.expense.delete({ where: { id } });
-      await tx.accountBalance.update({
-        where: { id: existing.accountId },
-        data: { balance: { increment: existing.amount } },
-      });
+      if (existing.accountId) {
+        await tx.accountBalance.update({
+          where: { id: existing.accountId },
+          data: { balance: { increment: existing.amount } },
+        });
+      }
     });
 
     revalidatePath("/financial-overview");
