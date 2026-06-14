@@ -19,11 +19,13 @@ export async function DELETE(
   if (!income || income.userId !== session.user.id)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // balikan saldo
-  await prisma.accountBalance.update({
-    where: { id: income.accountId },
-    data: { balance: { decrement: income.amount } },
-  });
+  // balikan saldo hanya jika akun masih ada
+  if (income.accountId) {
+    await prisma.accountBalance.update({
+      where: { id: income.accountId },
+      data: { balance: { decrement: income.amount } },
+    });
+  }
 
   await prisma.income.delete({ where: { id } });
   return NextResponse.json({ success: true });
@@ -53,11 +55,13 @@ export async function PUT(
 
   try {
     const updated = await prisma.$transaction(async (tx: any) => {
-      // rollback saldo lama
-      await tx.accountBalance.update({
-        where: { id: income.accountId },
-        data: { balance: { decrement: income.amount } },
-      });
+      // rollback saldo lama hanya jika akun masih ada
+      if (income.accountId) {
+        await tx.accountBalance.update({
+          where: { id: income.accountId },
+          data: { balance: { decrement: income.amount } },
+        });
+      }
 
       // update income
       const result = await tx.income.update({

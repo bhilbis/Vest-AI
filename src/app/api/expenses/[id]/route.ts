@@ -73,11 +73,13 @@ export async function PUT(
   }
 
   const result = await prisma.$transaction(async (tx: any) => {
-      // Balikin saldo lama
-      await tx.accountBalance.update({
-        where: { id: old.accountId },
-        data: { balance: { increment: old.amount } },
-      });
+      // Balikin saldo lama hanya jika akun masih ada
+      if (old.accountId) {
+        await tx.accountBalance.update({
+          where: { id: old.accountId },
+          data: { balance: { increment: old.amount } },
+        });
+      }
 
       // Photo handling
       let photoUrl = old.photoUrl;
@@ -156,11 +158,13 @@ export async function DELETE(
   if (old.userId !== session.user.id)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  // balikin saldo
-  await prisma.accountBalance.update({
-    where: { id: old.accountId },
-    data: { balance: { increment: old.amount } },
-  });
+  // balikin saldo hanya jika akun masih ada
+  if (old.accountId) {
+    await prisma.accountBalance.update({
+      where: { id: old.accountId },
+      data: { balance: { increment: old.amount } },
+    });
+  }
 
   await prisma.expense.delete({ where: { id } });
 
