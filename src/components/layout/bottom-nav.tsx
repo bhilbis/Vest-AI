@@ -5,19 +5,19 @@ import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import {
   LayoutDashboard,
-  ArrowLeftRight,
-  Target,
+  Wallet,
   Settings,
   GraduationCap,
+  LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { title: "Dashboard", url: "/financial-overview", icon: LayoutDashboard },
-  { title: "Transaksi", url: "/financial-overview/transactions", icon: ArrowLeftRight },
-  { title: "Budget", url: "/financial-overview/budgets", icon: Target },
-  { title: "Kuliah", url: "/kuliah", icon: GraduationCap },
-  { title: "Settings", url: "/tracker/settings", icon: Settings },
+  { title: "Home", url: "/dashboard", icon: LayoutDashboard, exact: true },
+  { title: "Keuangan", url: "/financial-overview", icon: Wallet, exact: false },
+  { title: "Kuliah", url: "/kuliah", icon: GraduationCap, exact: false },
+  { title: "Tracker", url: "/tracker", icon: LineChart, exact: true },
+  { title: "Settings", url: "/tracker/settings", icon: Settings, exact: false },
 ];
 
 export function BottomNav() {
@@ -30,16 +30,15 @@ export function BottomNav() {
     >
       <nav className="mx-3 mb-2 flex items-center justify-around rounded-2xl border border-border bg-background/80 backdrop-blur-xl px-1 py-1.5 shadow-lg shadow-black/5 dark:shadow-none">
         {navItems.map((item) => {
-          const isActive =
-            item.url === "/financial-overview"
-              ? pathname === "/financial-overview"
-              : pathname.startsWith(item.url);
+          const isActive = item.exact
+            ? pathname === item.url
+            : pathname.startsWith(item.url);
 
           return (
             <Link
               key={item.title}
               href={item.url}
-              className="relative flex flex-col items-center gap-0.5 px-4 py-2 min-h-[44px] min-w-[44px] justify-center"
+              className="relative flex flex-col items-center gap-0.5 px-4 py-2 min-h-11 min-w-11 justify-center"
             >
               {isActive && (
                 <motion.div

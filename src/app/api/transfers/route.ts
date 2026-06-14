@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { fromAccountId, toAccountId, amount, note } = await req.json();
+    const { fromAccountId, toAccountId, amount, note, mode, adminFee = 0 } = await req.json();
 
     if (!fromAccountId || !toAccountId || !amount) {
       return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
@@ -80,14 +80,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Akun tidak ditemukan" }, { status: 404 });
     }
 
-    if (from.balance < amount) {
+    const totalDeducted = amount + (adminFee || 0);
+    if (from.balance < totalDeducted) {
       return NextResponse.json(
         { error: "Saldo akun asal tidak mencukupi" },
         { status: 400 }
       );
     }
 
-    // 🔥 Jalankan transfer dalam 1 Transaksi
+    // Jalankan transfer dalam 1 Transaksi
     const result = await prisma.$transaction(async (tx: any) => {
       await tx.accountBalance.update({
         where: { id: fromAccountId },
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
         data: { balance: { increment: amount } },
       });
 
-      return await tx.accountTransfer.create({
+      const transfer = await tx.accountTransfer.create({
         data: {
           userId: session.user.id,
           fromAccountId,
@@ -108,6 +109,28 @@ export async function POST(req: Request) {
           note,
         },
       });
+
+      if (adminFee && adminFee > 0) {
+        await tx.accountBalance.update({
+          where: { id: fromAccountId },
+          data: { balance: { decrement: adminFee } },
+        });
+
+        const modeLabel =
+          mode === "withdraw" ? "Tarik Tunai" : mode === "topup" ? "Top Up" : "Transfer";
+        await tx.expense.create({
+          data: {
+            title: `Biaya Admin - ${modeLabel}`,
+            amount: adminFee,
+            category: "Biaya Admin",
+            date: new Date(),
+            userId: session.user.id,
+            accountId: fromAccountId,
+          },
+        });
+      }
+
+      return transfer;
     });
 
     return NextResponse.json(result, { status: 201 });

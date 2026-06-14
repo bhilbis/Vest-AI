@@ -41,6 +41,7 @@ import { Budget, Expense } from "@/types/types"
 import { PageWrapper } from "@/components/layout/page-wrapper"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { useConfirmStore } from "@/lib/confirm-store"
 
 // ==================== TYPES ====================
 interface AccountBalance {
@@ -82,6 +83,7 @@ const formatMonth = (s: string) => {
 
 // ==================== MAIN ====================
 export default function FinancialOverviewPage() {
+  const { openConfirm } = useConfirmStore()
   const [data, setData] = useState({
     expenses: [] as Expense[],
     incomes: [] as any[],
@@ -244,13 +246,14 @@ export default function FinancialOverviewPage() {
   }, [formData, editingExpense, removePhoto, fetchExpenses, fetchBudgets, fetchAccounts, resetForm])
 
   const handleDeleteExpense = useCallback(async (id: string) => {
-    if (!confirm("Hapus pengeluaran ini?")) return
+    const ok = await openConfirm({ title: "Hapus pengeluaran ini?", confirmLabel: "Hapus", variant: "destructive" })
+    if (!ok) return
     try {
       const r = await fetch(`/api/expenses/${id}`, { method: "DELETE" })
       if (!r.ok) throw new Error("Failed")
       await Promise.all([fetchExpenses(), fetchBudgets(), fetchAccounts()])
     } catch { /* ignore */ }
-  }, [fetchExpenses, fetchBudgets, fetchAccounts])
+  }, [fetchExpenses, fetchBudgets, fetchAccounts, openConfirm])
 
   const handleEditExpense = useCallback((expense: Expense) => { handleEdit(expense); setDialogs((p) => ({ ...p, expense: true })) }, [handleEdit])
 
@@ -268,7 +271,13 @@ export default function FinancialOverviewPage() {
   }, [filters])
 
   const handleDeleteAccount = useCallback(async (id: string) => {
-    if (!confirm("Hapus akun ini?")) return
+    const ok = await openConfirm({
+      title: "Hapus akun ini?",
+      description: "Riwayat pengeluaran dan pemasukan tetap tersimpan. Data transfer antar akun akan dihapus.",
+      confirmLabel: "Hapus",
+      variant: "destructive",
+    })
+    if (!ok) return
     try {
       const res = await fetch(`/api/account-balance/${id}`, { method: "DELETE" })
       if (!res.ok) {
@@ -281,12 +290,13 @@ export default function FinancialOverviewPage() {
     } catch {
       toast.error("Gagal menghapus akun")
     }
-  }, [fetchAccounts])
+  }, [fetchAccounts, openConfirm])
 
   const handleDeleteBudget = useCallback(async (id: string) => {
-    if (!confirm("Hapus budget?")) return
+    const ok = await openConfirm({ title: "Hapus budget ini?", confirmLabel: "Hapus", variant: "destructive" })
+    if (!ok) return
     try { await fetch(`/api/budgets/${id}`, { method: "DELETE" }); await fetchBudgets() } catch { /* ignore */ }
-  }, [fetchBudgets])
+  }, [fetchBudgets, openConfirm])
 
   const isLoading = loading.expenses || loading.accounts || loading.budgets
 

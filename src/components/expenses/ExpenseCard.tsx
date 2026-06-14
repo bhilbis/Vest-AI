@@ -91,7 +91,7 @@ function ExpenseCardComponent({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 hover:bg-blue-50 hover:text-blue-600"
+                  className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
                   onClick={handleEdit}
                   title="Edit"
                 >

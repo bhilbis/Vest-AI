@@ -1,60 +1,63 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { formatCurrency } from "@/lib/expenseUtils";
 import { Progress } from "@/components/ui/progress";
-import { Target, AlertCircle } from "lucide-react";
+import { Target, AlertCircle, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog";
 
-export const dynamic = "force-dynamic";
+type BudgetItem = {
+  id: string;
+  name: string;
+  category: string | null;
+  limit: number;
+  notes: string | null;
+  month: string;
+  monthKey: string;
+  spent: number;
+  remaining: number;
+};
 
-export default async function BudgetsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/login");
+function toMonthParam(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
-  const userId = session.user.id;
-
-  // Get current month's budgets
+export default function BudgetsPage() {
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const currentMonth = toMonthParam(now);
 
-  const [budgets, spending] = await Promise.all([
-    prisma.budget.findMany({
-      where: {
-        userId,
-        month: {
-          gte: startOfMonth,
-          lt: endOfMonth,
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.expense.groupBy({
-      by: ["budgetId"],
-      where: {
-        userId,
-        budgetId: { not: null },
-        budget: {
-          month: {
-            gte: startOfMonth,
-            lt: endOfMonth,
-          },
-        },
-      },
-      _sum: { amount: true },
-    }),
-  ]);
+  const [budgets, setBudgets] = useState<BudgetItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const budgetsWithUsage = budgets.map((budget) => {
-    const spentRecord = spending.find((s) => s.budgetId === budget.id);
-    const spent = spentRecord?._sum.amount || 0;
-    const usage =
-      budget.limit > 0 ? Math.min((spent / budget.limit) * 100, 100) : 0;
-    return { ...budget, spent, usage };
-  });
+  const fetchBudgets = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/budgets?month=${currentMonth}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setBudgets(data.budgets ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentMonth]);
+
+  useEffect(() => {
+    fetchBudgets();
+  }, [fetchBudgets]);
+
+  const budgetsWithUsage = budgets.map((b) => ({
+    ...b,
+    usage: b.limit > 0 ? Math.min((b.spent / b.limit) * 100, 100) : 0,
+  }));
+
+  const knownLabels = useMemo(
+    () => [...new Set(budgets.map((b) => b.category).filter(Boolean))] as string[],
+    [budgets]
+  );
 
   const totalLimit = budgetsWithUsage.reduce((sum, b) => sum + b.limit, 0);
   const totalSpent = budgetsWithUsage.reduce((sum, b) => sum + b.spent, 0);
@@ -76,9 +79,13 @@ export default async function BudgetsPage() {
             })}
           </p>
         </div>
+        <Button onClick={() => setDialogOpen(true)} className="self-start sm:self-auto">
+          <Plus size={16} className="mr-1.5" />
+          Tambah Budget
+        </Button>
       </header>
 
-      {budgetsWithUsage.length > 0 && (
+      {!loading && budgetsWithUsage.length > 0 && (
         <div className="rounded-xl shadow-xs border border-border bg-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-semibold">
             Total Penggunaan Budget
@@ -108,14 +115,21 @@ export default async function BudgetsPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {budgetsWithUsage.length === 0 ? (
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-border bg-card p-5 animate-pulse h-40"
+            />
+          ))
+        ) : budgetsWithUsage.length === 0 ? (
           <div className="col-span-full rounded-xl shadow-xs border border-border bg-card p-12 text-center">
             <Target className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
             <p className="text-base font-medium text-foreground">
               Belum ada budget bulan ini
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Buat budget baru di halaman Overview.
+              Klik <strong>Tambah Budget</strong> untuk mulai mengatur pengeluaran.
             </p>
           </div>
         ) : (
@@ -188,6 +202,15 @@ export default async function BudgetsPage() {
           })
         )}
       </div>
+
+      <BudgetFormDialog
+        isOpen={dialogOpen}
+        onOpenChange={setDialogOpen}
+        defaultMonth={currentMonth}
+        editing={null}
+        knownLabels={knownLabels}
+        onSuccess={fetchBudgets}
+      />
     </PageWrapper>
   );
 }

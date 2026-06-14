@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn, formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
+import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 
 type TransferMode = "transfer" | "withdraw" | "topup";
 
@@ -47,6 +48,8 @@ export function TransferFormDialog({
   const [toId, setToId] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [hasAdminFee, setHasAdminFee] = useState(false);
+  const [adminFee, setAdminFee] = useState("");
   const [loading, setLoading] = useState(false);
 
   const cashAccount = useMemo(
@@ -64,13 +67,15 @@ export function TransferFormDialog({
     setToId("");
     setAmount("");
     setNote("");
+    setHasAdminFee(false);
+    setAdminFee("");
   };
 
   const submitTransfer = async () => {
     const numAmount = parseFloat(amount);
 
     if (!numAmount || numAmount <= 0) {
-      alert("Jumlah harus lebih dari 0.");
+      toast.error("Jumlah harus lebih dari 0.");
       return;
     }
 
@@ -79,11 +84,11 @@ export function TransferFormDialog({
 
     if (mode === "transfer") {
       if (!fromId || !toId) {
-        alert("Pilih akun asal dan tujuan.");
+        toast.error("Pilih akun asal dan tujuan.");
         return;
       }
       if (fromId === toId) {
-        alert("Akun asal dan tujuan tidak boleh sama.");
+        toast.error("Akun asal dan tujuan tidak boleh sama.");
         return;
       }
       fromAccountId = fromId;
@@ -92,11 +97,11 @@ export function TransferFormDialog({
 
     if (mode === "withdraw") {
       if (!cashAccount) {
-        alert('Akun "cash" belum dibuat.');
+        toast.error('Akun "cash" belum dibuat.');
         return;
       }
       if (!fromId) {
-        alert("Pilih akun asal untuk tarik tunai.");
+        toast.error("Pilih akun asal untuk tarik tunai.");
         return;
       }
       fromAccountId = fromId;
@@ -105,11 +110,11 @@ export function TransferFormDialog({
 
     if (mode === "topup") {
       if (!cashAccount) {
-        alert('Akun "cash" belum dibuat.');
+        toast.error('Akun "cash" belum dibuat.');
         return;
       }
       if (!toId) {
-        alert("Pilih akun tujuan untuk top up.");
+        toast.error("Pilih akun tujuan untuk top up.");
         return;
       }
       fromAccountId = cashAccount.id;
@@ -119,6 +124,8 @@ export function TransferFormDialog({
     try {
       setLoading(true);
 
+      const numAdminFee = hasAdminFee && adminFee ? parseFloat(adminFee) : 0;
+
       const res = await fetch("/api/transfers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,7 +134,8 @@ export function TransferFormDialog({
           toAccountId,
           amount: numAmount,
           note,
-          mode, // info tambahan, kalau mau dipakai di API
+          mode,
+          adminFee: numAdminFee,
         }),
       });
 
@@ -141,7 +149,7 @@ export function TransferFormDialog({
       onOpenChange(false);
     } catch (err: any) {
       console.error(err);
-      alert(err?.message || "Transfer gagal.");
+      toast.error(err?.message || "Transfer gagal.");
     } finally {
       setLoading(false);
     }
@@ -302,11 +310,7 @@ export function TransferFormDialog({
             type="button"
             size="sm"
             variant={mode === "transfer" ? "default" : "outline"}
-            className={cn(
-              "flex-1",
-              mode === "transfer" &&
-                "bg-linear-to-r from-blue-600 to-purple-600",
-            )}
+            className="flex-1"
             onClick={() => setMode("transfer")}
           >
             Transfer
@@ -315,11 +319,7 @@ export function TransferFormDialog({
             type="button"
             size="sm"
             variant={mode === "withdraw" ? "default" : "outline"}
-            className={cn(
-              "flex-1",
-              mode === "withdraw" &&
-                "bg-linear-to-r from-amber-500 to-orange-500",
-            )}
+            className="flex-1"
             onClick={() => setMode("withdraw")}
           >
             Tarik Tunai
@@ -328,11 +328,7 @@ export function TransferFormDialog({
             type="button"
             size="sm"
             variant={mode === "topup" ? "default" : "outline"}
-            className={cn(
-              "flex-1",
-              mode === "topup" &&
-                "bg-linear-to-r from-emerald-500 to-teal-500",
-            )}
+            className="flex-1"
             onClick={() => setMode("topup")}
           >
             Top Up
@@ -374,6 +370,47 @@ export function TransferFormDialog({
             />
           </div>
 
+          {/* Admin Fee */}
+          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setHasAdminFee(!hasAdminFee);
+                if (hasAdminFee) setAdminFee("");
+              }}
+              className="flex w-full items-center justify-between gap-3 cursor-pointer"
+            >
+              <span className="text-sm text-foreground">Biaya admin</span>
+              <div
+                className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${
+                  hasAdminFee ? "bg-primary" : "bg-muted-foreground/30"
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                    hasAdminFee ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </div>
+            </button>
+            {hasAdminFee && (
+              <div className="mt-2.5 pt-2.5 border-t border-border space-y-1.5">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={formatCurrencyInput(adminFee)}
+                  onChange={(e) => setAdminFee(parseCurrencyInput(e.target.value))}
+                  placeholder="Contoh: 2.500"
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tercatat sebagai pengeluaran terpisah
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Buttons */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
@@ -387,7 +424,6 @@ export function TransferFormDialog({
               type="button"
               onClick={submitTransfer}
               disabled={loading}
-              className="bg-linear-to-r from-blue-600 to-purple-600"
             >
               {loading ? "Memproses..." : "Simpan"}
             </Button>

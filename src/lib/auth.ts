@@ -48,18 +48,28 @@ export const authOptions: AuthOptions = {
         token.id = user.id;
         token.role = (user as { role?: string }).role || "USER";
         token.isActive = (user as { isActive?: boolean }).isActive ?? true;
+        token.refreshedAt = Date.now();
       }
 
-      // On subsequent requests, refresh role/isActive from DB periodically
-      if (trigger === "update" || (!user && token.id)) {
+      // Refresh role/isActive from DB: on explicit update OR every 5 minutes
+      const shouldRefresh =
+        trigger === "update" ||
+        (token.id && Date.now() - ((token.refreshedAt as number) || 0) > 5 * 60 * 1000);
+
+      if (shouldRefresh) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           select: { role: true, isActive: true },
         });
-        if (dbUser) {
-          token.role = dbUser.role;
-          token.isActive = dbUser.isActive;
+
+        if (!dbUser) {
+          // User was deleted — invalidate the session
+          return { ...token, id: undefined };
         }
+
+        token.role = dbUser.role;
+        token.isActive = dbUser.isActive;
+        token.refreshedAt = Date.now();
       }
 
       return token;

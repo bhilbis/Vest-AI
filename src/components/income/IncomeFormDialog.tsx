@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Loader2 } from "lucide-react"
 import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Account {
   id: string
@@ -75,7 +76,7 @@ export function IncomeFormDialog({
       onSuccess()
     } catch (err) {
       console.error("Error creating income:", err)
-      alert("Gagal menyimpan pemasukan")
+      toast.error("Gagal menyimpan pemasukan")
     } finally {
       setLoading(false)
     }

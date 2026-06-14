@@ -131,7 +131,7 @@ export default function Page() {
           <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Asset Portfolio</h1>
           <p className="text-muted-foreground mt-2">Manage and track your investment holdings with AI-powered insights</p>
         </div>
-        <Button className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+        <Button className="gap-2">
           <PlusIcon className="h-4 w-4" />
           Add Asset
         </Button>

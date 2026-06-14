@@ -66,36 +66,12 @@ export async function DELETE(
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Cek apakah dipakai income / expense
-  const used = await prisma.expense.findFirst({
-    where: { accountId: id },
-  });
-
-  if (used)
-    return NextResponse.json(
-      {
-        error:
-          "Akun ini masih dipakai pada transaksi pengeluaran. Tidak bisa dihapus.",
-      },
-      { status: 400 }
-    );
-
-  const usedIncome = await prisma.income.findFirst({
-    where: { accountId: id },
-  });
-
-  if (usedIncome)
-    return NextResponse.json(
-      {
-        error:
-          "Akun ini masih dipakai pada transaksi pemasukan. Tidak bisa dihapus.",
-      },
-      { status: 400 }
-    );
-
-  // Bisa dihapus
-  await prisma.accountBalance.delete({
-    where: { id: id },
+  // Hapus transfer terkait (expense/income tetap ada, accountId akan di-null otomatis via onDelete: SetNull)
+  await prisma.$transaction(async (tx: any) => {
+    await tx.accountTransfer.deleteMany({
+      where: { OR: [{ fromAccountId: id }, { toAccountId: id }] },
+    });
+    await tx.accountBalance.delete({ where: { id } });
   });
 
   return NextResponse.json({ success: true });

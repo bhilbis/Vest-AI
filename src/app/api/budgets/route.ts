@@ -125,6 +125,7 @@ export async function POST(req: Request) {
     const limit = Number(body.limit);
     const category = (body.category as string | null)?.trim() || null;
     const notes = (body.notes as string | null)?.trim() || null;
+    const isRecurring = Boolean(body.isRecurring);
 
     if (!name || Number.isNaN(limit) || limit <= 0) {
       return NextResponse.json(
@@ -141,26 +142,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Format bulan tidak valid" }, { status: 400 });
     }
 
-    // Optimize: Select only fields needed by frontend response
+    const budgetData = { name, category, limit, notes, userId: session.user.id };
+    const selectFields = {
+      id: true,
+      name: true,
+      category: true,
+      limit: true,
+      notes: true,
+      month: true,
+      createdAt: true,
+      updatedAt: true,
+    };
+
+    if (isRecurring) {
+      const months = Array.from({ length: 12 }, (_, i) =>
+        new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + i, 1))
+      );
+      await prisma.budget.createMany({
+        data: months.map((m) => ({ ...budgetData, month: m })),
+        skipDuplicates: true,
+      });
+      const budget = await prisma.budget.findFirst({
+        where: { name, month: monthStart, userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        select: selectFields,
+      });
+      return NextResponse.json(budget, { status: 201 });
+    }
+
     const budget = await prisma.budget.create({
-      data: {
-        name,
-        category,
-        limit,
-        notes,
-        month: monthStart,
-        userId: session.user.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        category: true,
-        limit: true,
-        notes: true,
-        month: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      data: { ...budgetData, month: monthStart },
+      select: selectFields,
     });
 
     return NextResponse.json(budget, { status: 201 });

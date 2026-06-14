@@ -250,7 +250,7 @@ ${rules}
 ${JSON.stringify(context, null, 2)}`
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

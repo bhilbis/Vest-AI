@@ -40,6 +40,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
 import Image from "next/image"
 import { PageWrapper } from "@/components/layout/page-wrapper"
+import { useConfirmStore } from "@/lib/confirm-store"
 
 interface UserRecord {
   id: string
@@ -52,6 +53,7 @@ interface UserRecord {
 }
 
 export default function AdminPage() {
+  const { openConfirm } = useConfirmStore()
   const { data: session, status } = useSession()
   const router = useRouter()
   const [users, setUsers] = useState<UserRecord[]>([])
@@ -82,7 +84,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (status === "loading") return
     if (!session || !isAdmin) {
-      router.replace("/tracker")
+      router.replace("/dashboard")
       return
     }
     fetchUsers()
@@ -160,7 +162,13 @@ export default function AdminPage() {
   }
 
   const handleDeleteUser = async (user: UserRecord) => {
-    if (!confirm(`Hapus pengguna "${user.name || user.email}"? Semua data akan dihapus.`)) return
+    const ok = await openConfirm({
+      title: `Hapus pengguna "${user.name || user.email}"?`,
+      description: "Semua data pengguna akan dihapus secara permanen.",
+      confirmLabel: "Hapus",
+      variant: "destructive",
+    })
+    if (!ok) return
     setActionLoading(user.id)
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -205,7 +213,7 @@ export default function AdminPage() {
             className="mb-8"
           >
             <Link
-              href="/tracker"
+              href="/dashboard"
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
             >
               <ArrowLeft size={16} />

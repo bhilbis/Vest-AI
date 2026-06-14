@@ -112,7 +112,6 @@ export function TrackerForm({onAdd}: { onAdd: (asset: Assets) => void}){
                 <h3 className="text-xl font-semibold text-gray-800">Tambah Asset Baru</h3>
                 <Button
                     onClick={() => setShowForm(!showForm)}
-                    className="bg-linear-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                     <Plus className="w-4 h-4 mr-2" />
                     {showForm ? 'Batal' : 'Tambah Asset'}

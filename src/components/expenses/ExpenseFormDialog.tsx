@@ -79,7 +79,7 @@ export function ExpenseFormDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button className="gap-2 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all">
+        <Button className="gap-2">
           <PlusIcon className="h-4 w-4" />
           Tambah Pengeluaran
         </Button>
@@ -250,7 +250,7 @@ export function ExpenseFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Batal
             </Button>
-            <Button className="bg-linear-to-r from-blue-600 to-purple-600">
+            <Button>
               {isEditing ? "Update" : "Simpan"}
             </Button>
           </div>

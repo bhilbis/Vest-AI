@@ -125,8 +125,8 @@ model Income {
   userId   String
   user     User @relation(fields: [userId], references: [id])
 
-  accountId String
-  account   AccountBalance @relation(fields: [accountId], references: [id])
+  accountId String?
+  account   AccountBalance? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
 }
@@ -142,8 +142,8 @@ model Expense {
   createdAt   DateTime @default(now())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  accountId   String               // ← sumber saldo
-  account     AccountBalance @relation(fields: [accountId], references: [id])
+  accountId   String?
+  account     AccountBalance? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
   budgetId    String?
   budget      Budget?   @relation(fields: [budgetId], references: [id], onDelete: SetNull)

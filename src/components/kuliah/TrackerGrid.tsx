@@ -34,6 +34,7 @@ import {
   MessageSquarePlus,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useConfirmStore } from "@/lib/confirm-store"
 import {
   Tooltip,
   TooltipContent,
@@ -53,7 +54,6 @@ import {
 } from "@/lib/kuliah-types"
 import { cn } from "@/lib/utils"
 import { useKuliahLayout } from "@/app/(protected)/kuliah/layout"
-import { useIsMobile } from "@/hooks/use-mobile"
 
 // ─────────────────────────────────────────────────────────────────────────────
 const JENIS_CONFIG: Record<string, { label: string; colLabel: string; badgeClass: string }> = {
@@ -64,6 +64,7 @@ const JENIS_CONFIG: Record<string, { label: string; colLabel: string; badgeClass
 
 // ─────────────────────────────────────────────────────────────────────────────
 export function TrackerGrid() {
+  const { openConfirm } = useConfirmStore()
   const [semesters, setSemesters] = useState<SemesterData[]>([])
   const [activeSemesterId, setActiveSemesterId] = useState<string>("")
   const [loading, setLoading] = useState(true)
@@ -71,7 +72,6 @@ export function TrackerGrid() {
   const [editMk, setEditMk] = useState<MataKuliahData | null>(null)
   const [activeMobileSession, setActiveMobileSession] = useState(1)
   const [mobileView, setMobileView] = useState<"minggu-ini" | "semua-sesi">("minggu-ini")
-  const isMobile = useIsMobile()
   const [newSemester, setNewSemester] = useState({
     show: false, nama: "", tanggalMulai: "", totalSKS: "",
   })
@@ -152,7 +152,13 @@ export function TrackerGrid() {
   const handleDeleteSemester = async (id: string) => {
     const sem = semesters.find((s) => s.id === id)
     if (!sem) return
-    if (!confirm(`Hapus semester "${sem.nama}" beserta semua mata kuliah di dalamnya?`)) return
+    const ok = await openConfirm({
+      title: `Hapus semester "${sem.nama}"?`,
+      description: "Semua mata kuliah di dalamnya juga akan dihapus.",
+      confirmLabel: "Hapus",
+      variant: "destructive",
+    })
+    if (!ok) return
     const promise = fetch(`/api/kuliah/semester/${id}`, { method: "DELETE" }).then(async (res) => {
       if (!res.ok) throw new Error("Gagal menghapus")
       setSemesters((prev) => prev.filter((s) => s.id !== id))
@@ -188,7 +194,8 @@ export function TrackerGrid() {
   }, [])
 
   const handleDeleteMatkul = async (id: string) => {
-    if (!confirm("Hapus mata kuliah ini?")) return
+    const ok = await openConfirm({ title: "Hapus mata kuliah ini?", confirmLabel: "Hapus", variant: "destructive" })
+    if (!ok) return
     const promise = fetch(`/api/kuliah/matkul/${id}`, { method: "DELETE" }).then(async (res) => {
       if (!res.ok) throw new Error("Gagal menghapus")
       setSemesters((prev) =>

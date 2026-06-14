@@ -80,7 +80,6 @@ export function AddMataKuliahDialog({
       tugaSesiNumbers: defaults.tugaSesiNumbers,
       diskusiSesiNumbers: null, // reset to "all non-tugas"
     }))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.jenis])
 
   // When jumlahSesi changes for tuweb, clamp tugaSesiNumbers and reset diskusi

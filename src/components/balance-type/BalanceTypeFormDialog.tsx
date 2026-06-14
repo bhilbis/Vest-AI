@@ -153,7 +153,7 @@ export function AccountBalanceFormDialog({
             >
               Batal
             </Button>
-            <Button type="submit" className="bg-linear-to-r from-blue-600 to-purple-600">
+            <Button type="submit">
               {editing ? "Update" : "Simpan"}
             </Button>
           </div>

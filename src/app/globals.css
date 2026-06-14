@@ -54,110 +54,127 @@
 
   --color-success: hsl(var(--success));
   --color-success-foreground: hsl(var(--success-foreground));
+
+  /* AI Chat Panel — always dark-themed, matching login page left card */
+  --color-chat-bg: hsl(var(--chat-bg));
+  --color-chat-surface: hsl(var(--chat-surface));
+  --color-chat-border: hsl(var(--chat-border));
+  --color-chat-fg: hsl(var(--chat-fg));
+  --color-chat-fg-muted: hsl(var(--chat-fg-muted));
+  --color-chat-fg-dim: hsl(var(--chat-fg-dim));
 }
 
 /* ==================== LIGHT MODE ==================== */
+/* Palette derived from login page: #f3fcee bg, #4caf50 primary, #4ade80 accent, #0d1a0f text */
 :root {
-  --background: 0 0% 100%; /* #FFFFFF */
-  --foreground: 224 71.4% 4.1%; /* #020817 */
+  /* AI Chat Panel variables — same in both modes since panel is always dark */
+  --chat-bg: 135 35% 6%;          /* ~#080f09, login left card bg */
+  --chat-surface: 135 30% 11%;    /* ~#0e1a10, bubbles & icon bg */
+  --chat-border: 135 25% 14%;     /* ~#152018, borders & dividers */
+  --chat-fg: 142 35% 86%;         /* light greenish-white, primary text */
+  --chat-fg-muted: 128 12% 58%;   /* #7a9a7e, secondary text */
+  --chat-fg-dim: 128 8% 36%;      /* very dim, timestamps & hints */
+
+  --background: 99 70% 96%;    /* #f3fcee — login page base background */
+  --foreground: 129 34% 8%;    /* #0d1a0f — deep forest green text */
 
   --card: 0 0% 100%;
-  --card-foreground: 224 71.4% 4.1%;
-  
+  --card-foreground: 129 34% 8%;
+
   --popover: 0 0% 100%;
-  --popover-foreground: 224 71.4% 4.1%;
+  --popover-foreground: 129 34% 8%;
 
-  /* Vibrant Purple/Indigo for primary interactions */
-  --primary: 262.1 83.3% 57.8%; /* #7c3aed */
-  --primary-foreground: 210 40% 98%;
+  /* Forest green — matches login CTA (#4caf50) */
+  --primary: 122 39% 49%;      /* #4caf50 */
+  --primary-foreground: 105 70% 8%; /* #0d2206 — dark text on green button */
 
-  /* Soft playful blue for secondary */
-  --secondary: 214.3 31.8% 91.4%; /* #e2e8f0 */
-  --secondary-foreground: 222.2 47.4% 11.2%; /* #0f172a */
+  /* Soft sage green for secondary (#d0e8d0) */
+  --secondary: 120 34% 86%;    /* #d0e8d0 */
+  --secondary-foreground: 128 25% 14%; /* #1a2b1d */
 
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
+  --muted: 120 45% 94%;
+  --muted-foreground: 128 14% 54%; /* #7a9a7e */
 
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --accent: 120 45% 94%;
+  --accent-foreground: 128 25% 14%;
 
   --destructive: 0 84.2% 60.2%; /* #ef4444 */
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 100%;
 
-  --success: 142.1 76.2% 36.3%; /* #16a34a */
-  --success-foreground: 210 40% 98%;
+  --success: 142 69% 42%;
+  --success-foreground: 0 0% 100%;
 
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 262.1 83.3% 57.8%;
+  --border: 120 34% 86%;       /* #d0e8d0 */
+  --input: 120 34% 86%;
+  --ring: 122 39% 49%;         /* #4caf50 */
 
   --radius: 0.75rem;
 
-  --chart-1: 262.1 83.3% 57.8%; /* Purple */
-  --chart-2: 199 89% 48%; /* Bright Blue */
-  --chart-3: 142.1 76.2% 36.3%; /* Green */
-  --chart-4: 43 96% 56%; /* Yellow / Orange */
-  --chart-5: 346 87% 53%; /* Pink / Red */
+  --chart-1: 122 39% 49%;      /* Forest green #4caf50 */
+  --chart-2: 168 85% 36%;      /* Teal */
+  --chart-3: 85 59% 51%;       /* Lime #8fcc3a */
+  --chart-4: 43 96% 56%;       /* Amber */
+  --chart-5: 346 87% 53%;      /* Rose */
 
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 5.3% 26.1%;
-  --sidebar-primary: 240 5.9% 10%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 4.8% 95.9%;
-  --sidebar-accent-foreground: 240 5.9% 10%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-ring: 262.1 83.3% 57.8%;
+  --sidebar: 99 60% 98%;
+  --sidebar-foreground: 128 25% 20%;
+  --sidebar-primary: 122 39% 49%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 120 45% 94%;
+  --sidebar-accent-foreground: 128 25% 14%;
+  --sidebar-border: 120 34% 88%;
+  --sidebar-ring: 122 39% 49%;
 }
 
 /* ==================== DARK MODE ==================== */
+/* Palette derived from login page left card: #080f09 bg, #4ade80 accent, rgba(12,28,16) card */
 .dark {
-  --background: 222.2 84% 4.9%; /* #020817 Deep Navy Noir */
-  --foreground: 210 40% 98%; /* #f8fafc */
+  --background: 128 30% 5%;    /* #080f09 — deep forest near-black */
+  --foreground: 142 40% 96%;   /* very light greenish-white */
 
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
+  --card: 135 35% 8%;          /* rgba(12,28,16) — login left card bg */
+  --card-foreground: 142 40% 96%;
 
-  /* Vibrant Violet for Dark mode */
-  --primary: 263.4 70% 50.4%; /* #7c3aed */
-  --primary-foreground: 210 40% 98%;
+  --popover: 135 35% 8%;
+  --popover-foreground: 142 40% 96%;
 
-  --secondary: 217.2 32.6% 17.5%; /* #1e293b */
-  --secondary-foreground: 210 40% 98%;
+  /* Bright emerald for dark mode (#4ade80) */
+  --primary: 142 69% 58%;      /* #4ade80 */
+  --primary-foreground: 128 70% 6%;
 
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
+  --secondary: 135 30% 12%;
+  --secondary-foreground: 142 40% 96%;
 
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --muted: 135 25% 15%;
+  --muted-foreground: 128 12% 62%;
+
+  --accent: 135 25% 14%;
+  --accent-foreground: 142 40% 96%;
 
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 0 0% 100%;
 
-  /* Smooth green for positive */
-  --success: 142.1 70.6% 45.3%; 
-  --success-foreground: 210 40% 98%;
+  --success: 142 69% 45%;
+  --success-foreground: 0 0% 100%;
 
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 263.4 70% 50.4%;
+  --border: 135 25% 14%;
+  --input: 135 25% 14%;
+  --ring: 142 69% 58%;         /* #4ade80 */
 
-  --chart-1: 263.4 70% 50.4%;
-  --chart-2: 199 89% 48%;
-  --chart-3: 142.1 70.6% 45.3%;
-  --chart-4: 43 96% 56%;
-  --chart-5: 346 87% 53%;
+  --chart-1: 142 69% 58%;      /* Bright emerald #4ade80 */
+  --chart-2: 168 85% 50%;      /* Teal */
+  --chart-3: 85 60% 58%;       /* Lime */
+  --chart-4: 43 96% 56%;       /* Amber */
+  --chart-5: 346 87% 53%;      /* Rose */
 
-  --sidebar: 222.2 84% 4.9%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 263.4 70% 50.4%;
+  --sidebar: 128 30% 4%;
+  --sidebar-foreground: 142 30% 90%;
+  --sidebar-primary: 142 69% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217.2 32.6% 17.5%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 217.2 32.6% 17.5%;
-  --sidebar-ring: 263.4 70% 50.4%;
+  --sidebar-accent: 135 25% 12%;
+  --sidebar-accent-foreground: 142 30% 90%;
+  --sidebar-border: 135 25% 12%;
+  --sidebar-ring: 142 69% 58%;
 }
 
 /* ==================== BASE STYLES ==================== */

@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { useConfirmStore } from "@/lib/confirm-store";
 import { AssetDetailModal } from "@/components/tracker/AssetModal";
 import { Card } from "@/components/ui/card";
 import { DashboardHeader } from "./DashboardHeader";
@@ -13,32 +15,28 @@ import type { AssetProps } from "./types";
 
 export function PortfolioDashboard() {
   const { assets, setAssets, loading, error, reload } = usePortfolioAssets();
+  const { openConfirm } = useConfirmStore();
   const [selectedAsset, setSelectedAsset] = useState<AssetProps | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'dashboard' | 'canvas'>('dashboard');
 
   const handleRemoveAsset = useCallback(async (id: string) => {
-    const confirmed = confirm("Apakah Anda yakin ingin menghapus aset ini?");
-    if (!confirmed) return;
+    const ok = await openConfirm({ title: "Hapus aset ini?", confirmLabel: "Hapus", variant: "destructive" });
+    if (!ok) return;
 
     try {
-      const response = await fetch(`/api/assets/${id}`, {
-        method: "DELETE",
-      });
-
+      const response = await fetch(`/api/assets/${id}`, { method: "DELETE" });
       if (!response.ok) {
-        const error = await response.json();
-        console.error("Gagal menghapus aset:", error);
-        alert(`Gagal menghapus: ${error.error}`);
+        const err = await response.json();
+        toast.error(err.error || "Gagal menghapus aset.");
         return;
       }
-
       setAssets((prev) => prev.filter((asset) => asset.id !== id));
-    } catch (err) {
-      console.error("Terjadi kesalahan saat menghapus aset:", err);
-      alert("Terjadi kesalahan saat menghapus aset.");
+      toast.success("Aset berhasil dihapus.");
+    } catch {
+      toast.error("Terjadi kesalahan saat menghapus aset.");
     }
-  }, [setAssets]);
+  }, [setAssets, openConfirm]);
 
   const handleUpdate = useCallback(async (updatedAsset: AssetProps) => {
     try {
@@ -135,7 +133,7 @@ export function PortfolioDashboard() {
             assets={assets} 
             loading={loading}
             onAssetClick={handleAssetClick}
-            onAddAsset={() => alert("Gunakan menu '+' di navbar untuk menambah aset baru.")} 
+            onAddAsset={() => toast.info("Gunakan menu '+' di navbar untuk menambah aset baru.")}
         />
       ) : (
         <div className="space-y-8">

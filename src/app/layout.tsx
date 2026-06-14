@@ -5,6 +5,7 @@ import { SessionProviderWrapper } from "@/components/layout/session-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { VestAIStructuredData } from "@/components/seo/JsonLd";
 import { Toaster } from "@/components/ui/sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
 import "katex/dist/katex.min.css";
 
@@ -122,6 +123,7 @@ export default function RootLayout({
           <SessionProviderWrapper>
             {children}
             <Toaster position="top-center" richColors />
+            <ConfirmDialog />
           </SessionProviderWrapper>
           <script
             dangerouslySetInnerHTML={{

@@ -75,13 +75,13 @@ function UsageMeter({ usage }: { usage: UsageInfo }) {
         <TooltipTrigger asChild>
           <div className="flex items-center gap-1.5 cursor-help">
             {usage.isLowPower && <Zap size={10} className="text-amber-400 shrink-0" />}
-            <div className="w-16 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+            <div className="w-16 h-1.5 bg-chat-border rounded-full overflow-hidden">
               <div
                 className={cn('h-full rounded-full transition-all', barColor)}
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <span className="text-[9px] text-zinc-500 tabular-nums">
+            <span className="text-[9px] text-chat-fg-dim tabular-nums">
               {usage.current}/{usage.limit}
             </span>
           </div>
@@ -107,8 +107,8 @@ function MessageBubble({ msg }: { msg: Message }) {
         className={cn(
           'px-3 py-2.5 text-[12px] leading-relaxed rounded-xl break-words',
           isUser
-            ? 'bg-zinc-700 text-foreground rounded-tr-sm'
-            : 'bg-zinc-800/80 text-zinc-300 rounded-tl-sm'
+            ? 'bg-primary/25 text-chat-fg rounded-tr-sm'
+            : 'bg-chat-surface/80 text-chat-fg rounded-tl-sm'
         )}
       >
         {isUser ? (
@@ -118,21 +118,21 @@ function MessageBubble({ msg }: { msg: Message }) {
             remarkPlugins={[remarkGfm]}
             components={{
               p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
-              strong: ({ children }) => <strong className="text-zinc-100 font-semibold">{children}</strong>,
+              strong: ({ children }) => <strong className="text-chat-fg font-semibold">{children}</strong>,
               ul: ({ children }) => <ul className="list-disc pl-4 mb-1.5 space-y-0.5">{children}</ul>,
               ol: ({ children }) => <ol className="list-decimal pl-4 mb-1.5 space-y-0.5">{children}</ol>,
               li: ({ children }) => <li className="leading-snug">{children}</li>,
-              h1: ({ children }) => <h1 className="text-sm font-bold text-zinc-100 mb-1 mt-2">{children}</h1>,
-              h2: ({ children }) => <h2 className="text-[13px] font-bold text-zinc-100 mb-1 mt-2">{children}</h2>,
-              h3: ({ children }) => <h3 className="text-[12px] font-semibold text-zinc-200 mb-0.5 mt-1.5">{children}</h3>,
-              hr: () => <hr className="border-zinc-600 my-2" />,
+              h1: ({ children }) => <h1 className="text-sm font-bold text-chat-fg mb-1 mt-2">{children}</h1>,
+              h2: ({ children }) => <h2 className="text-[13px] font-bold text-chat-fg mb-1 mt-2">{children}</h2>,
+              h3: ({ children }) => <h3 className="text-[12px] font-semibold text-chat-fg mb-0.5 mt-1.5">{children}</h3>,
+              hr: () => <hr className="border-chat-border my-2" />,
               code: ({ children }) => (
-                <code className="bg-zinc-700 text-zinc-200 rounded px-1 py-0.5 text-[11px] font-mono">
+                <code className="bg-chat-surface/70 text-chat-fg rounded px-1 py-0.5 text-[11px] font-mono">
                   {children}
                 </code>
               ),
               pre: ({ children }) => (
-                <pre className="bg-zinc-700 rounded-lg p-2 overflow-x-auto text-[11px] my-1.5 font-mono">
+                <pre className="bg-chat-surface/70 rounded-lg p-2 overflow-x-auto text-[11px] my-1.5 font-mono">
                   {children}
                 </pre>
               ),
@@ -141,15 +141,15 @@ function MessageBubble({ msg }: { msg: Message }) {
                   <table className="w-full text-[11px] border-collapse">{children}</table>
                 </div>
               ),
-              thead: ({ children }) => <thead className="border-b border-zinc-600">{children}</thead>,
+              thead: ({ children }) => <thead className="border-b border-chat-border">{children}</thead>,
               th: ({ children }) => (
-                <th className="text-left px-2 py-1 font-semibold text-zinc-200">{children}</th>
+                <th className="text-left px-2 py-1 font-semibold text-chat-fg">{children}</th>
               ),
               td: ({ children }) => (
-                <td className="px-2 py-1 border-t border-zinc-700/50 text-zinc-300">{children}</td>
+                <td className="px-2 py-1 border-t border-chat-border/50 text-chat-fg">{children}</td>
               ),
               blockquote: ({ children }) => (
-                <blockquote className="border-l-2 border-zinc-600 pl-3 text-zinc-400 italic my-1">
+                <blockquote className="border-l-2 border-chat-border pl-3 text-chat-fg-muted italic my-1">
                   {children}
                 </blockquote>
               ),
@@ -159,7 +159,7 @@ function MessageBubble({ msg }: { msg: Message }) {
           </ReactMarkdown>
         )}
       </div>
-      <span className="text-[9px] text-zinc-600 px-1">
+      <span className="text-[9px] text-chat-fg-dim px-1">
         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </span>
     </div>
@@ -197,7 +197,6 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
     }
   }, [input])
 
-  // Fetch current usage on open
   useEffect(() => {
     if (!isOpen) return
     fetch('/api/ai-context-chat')
@@ -220,7 +219,6 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
     setInput('')
     setIsTyping(true)
 
-    // Build history from the last HISTORY_WINDOW messages (exclude initial greeting)
     const historyPayload = messages
       .filter(m => m.id !== messages[0]?.id || messages[0]?.role !== 'assistant')
       .slice(-10)
@@ -291,7 +289,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           className={cn(
             'fixed z-50 flex flex-col overflow-hidden',
-            'border border-zinc-800 bg-zinc-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40',
+            'border border-chat-border bg-chat-bg/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/40',
             'top-4 bottom-4',
             position === 'left' ? 'left-4' : 'right-4',
             isExpanded
@@ -300,14 +298,14 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-chat-border shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-8 w-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
-                <Bot size={16} className="text-zinc-400" />
+              <div className="h-8 w-8 rounded-lg bg-chat-surface flex items-center justify-center shrink-0">
+                <Bot size={16} className="text-chat-fg-muted" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground">Financial Assistant</p>
-                <p className="text-[10px] text-zinc-500">AI-powered · Read-only</p>
+                <p className="text-sm font-medium text-chat-fg">Financial Assistant</p>
+                <p className="text-[10px] text-chat-fg-dim">AI-powered · Read-only</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -315,7 +313,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
               <div className="flex gap-0.5 ml-1">
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="h-7 w-7 rounded flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="h-7 w-7 rounded flex items-center justify-center text-chat-fg-muted hover:text-chat-fg hover:bg-chat-surface transition-colors cursor-pointer"
                 >
                   {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                 </button>
@@ -323,7 +321,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                   type="button"
                   title="Start New Chat"
                   onClick={startNewChat}
-                  className="h-7 w-7 rounded flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+                  className="h-7 w-7 rounded flex items-center justify-center text-chat-fg-muted hover:text-chat-fg hover:bg-chat-surface transition-colors cursor-pointer"
                 >
                   <Plus size={14} />
                 </button>
@@ -331,7 +329,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                   type="button"
                   title="Close"
                   onClick={onClose}
-                  className="h-7 w-7 rounded flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-zinc-800 transition-colors"
+                  className="h-7 w-7 rounded flex items-center justify-center text-chat-fg-muted hover:text-red-400 hover:bg-chat-surface transition-colors cursor-pointer"
                 >
                   <X size={14} />
                 </button>
@@ -360,7 +358,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
               >
                 {msg.role === 'assistant' && (
                   <Avatar className="h-7 w-7 mt-0.5 shrink-0">
-                    <AvatarFallback className="bg-zinc-800 text-zinc-400">
+                    <AvatarFallback className="bg-chat-surface text-chat-fg-muted">
                       <Bot size={12} />
                     </AvatarFallback>
                   </Avatar>
@@ -368,7 +366,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                 <MessageBubble msg={msg} />
                 {msg.role === 'user' && (
                   <Avatar className="h-7 w-7 mt-0.5 shrink-0">
-                    <AvatarFallback className="bg-zinc-800 text-zinc-400">
+                    <AvatarFallback className="bg-chat-surface text-chat-fg-muted">
                       <User size={12} />
                     </AvatarFallback>
                   </Avatar>
@@ -379,14 +377,14 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
             {isTyping && (
               <div className="flex gap-2.5">
                 <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarFallback className="bg-zinc-800 text-zinc-400">
+                  <AvatarFallback className="bg-chat-surface text-chat-fg-muted">
                     <Bot size={12} />
                   </AvatarFallback>
                 </Avatar>
-                <div className="bg-zinc-800/80 rounded-xl rounded-tl-sm px-3 py-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                  <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                  <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce" />
+                <div className="bg-chat-surface/80 rounded-xl rounded-tl-sm px-3 py-2 flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 bg-chat-fg-muted rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-chat-fg-muted rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-chat-fg-muted rounded-full animate-bounce" />
                 </div>
               </div>
             )}
@@ -394,10 +392,10 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
           </div>
 
           {/* Input */}
-          <div className="p-3 border-t border-zinc-800 shrink-0">
+          <div className="p-3 border-t border-chat-border shrink-0">
             <div className="flex gap-2 mb-2 items-center">
               <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger className="h-7 text-[11px] w-auto bg-zinc-800 border-zinc-700 text-zinc-400 min-h-7 min-w-7">
+                <SelectTrigger className="h-7 text-[11px] w-auto bg-chat-surface border-chat-border text-chat-fg-muted min-h-7 min-w-7">
                   <SelectValue>
                     {selectedModel.split('/')[1]?.split('-').slice(0, 3).join('-') || selectedModel}
                   </SelectValue>
@@ -408,7 +406,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                       <div className="flex flex-col items-start">
                         <span>{key.split('/')[1]}</span>
                         {config.description && (
-                          <span className="text-[9px] text-zinc-500 mt-0.5">{config.description}</span>
+                          <span className="text-[9px] text-chat-fg-dim mt-0.5">{config.description}</span>
                         )}
                       </div>
                     </SelectItem>
@@ -418,7 +416,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info size={12} className="text-zinc-500 cursor-help" />
+                    <Info size={12} className="text-chat-fg-dim cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-[10px] max-w-[200px]">{AI_MODELS[selectedModel]?.description}</p>
@@ -427,13 +425,13 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
               </TooltipProvider>
             </div>
 
-            <div className="relative rounded-xl border border-zinc-700 bg-zinc-800/50 focus-within:border-zinc-600 transition-colors">
+            <div className="relative rounded-xl border border-chat-border bg-chat-surface/50 focus-within:border-chat-fg-dim transition-colors">
               <Textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Tanya tentang keuangan, kuliah, atau apapun..."
-                className="min-h-11 max-h-[100px] w-full resize-none border-0 bg-transparent py-2.5 px-3 pr-10 text-[13px] focus-visible:ring-0 placeholder:text-zinc-600"
+                className="min-h-11 max-h-[100px] w-full resize-none border-0 bg-transparent py-2.5 px-3 pr-10 text-[13px] text-chat-fg focus-visible:ring-0 placeholder:text-chat-fg-dim"
                 disabled={isTyping}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -443,20 +441,21 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                 }}
               />
               <Button
+                type="button"
                 onClick={handleSend}
                 disabled={!input.trim() || isTyping}
                 size="icon"
                 className={cn(
                   'absolute right-1.5 bottom-1.5 h-7 w-7 rounded-lg min-h-7 min-w-7 transition-colors',
                   input.trim()
-                    ? 'bg-foreground text-background hover:bg-zinc-300'
-                    : 'bg-zinc-700 text-zinc-500'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/80'
+                    : 'bg-chat-surface text-chat-fg-dim'
                 )}
               >
                 <Send size={12} />
               </Button>
             </div>
-            <p className="text-[9px] text-zinc-600 text-center mt-1.5">
+            <p className="text-[9px] text-chat-fg-dim text-center mt-1.5">
               AI bisa salah. Verifikasi informasi penting.
             </p>
           </div>

@@ -35,7 +35,7 @@ export default function KuliahLayout({
 }) {
   const pathname = usePathname()
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const [initialMessage, setInitialMessage] = useState("")
+  const [, setInitialMessage] = useState("")
 
   return (
     <KuliahLayoutContext.Provider value={{ isChatOpen, setIsChatOpen, setInitialMessage }}>

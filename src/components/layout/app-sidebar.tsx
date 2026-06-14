@@ -6,26 +6,26 @@ import { useSession, signOut } from "next-auth/react";
 import { motion } from "motion/react";
 import {
   LayoutDashboard,
-  ArrowLeftRight,
-  Target,
+  Wallet,
   LogOut,
   ChevronLeft,
   GraduationCap,
+  Settings,
+  LineChart,
 } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { ModeToggle } from "@/components/mode-toggle";
-import { Settings } from "lucide-react";
 import { useGuestStore } from "@/lib/guest-store";
 
 const navItems = [
-  { title: "Dashboard", url: "/financial-overview", icon: LayoutDashboard },
-  { title: "Transaksi", url: "/financial-overview/transactions", icon: ArrowLeftRight },
-  { title: "Budget", url: "/financial-overview/budgets", icon: Target },
-  { title: "Kuliah", url: "/kuliah", icon: GraduationCap },
-  { title: "Settings", url: "/tracker/settings", icon: Settings },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, exact: true },
+  { title: "Keuangan", url: "/financial-overview", icon: Wallet, exact: false },
+  { title: "Kuliah", url: "/kuliah", icon: GraduationCap, exact: false },
+  { title: "Tracker", url: "/tracker", icon: LineChart, exact: true },
+  { title: "Settings", url: "/tracker/settings", icon: Settings, exact: false },
 ];
 
 export function AppSidebar() {
@@ -99,10 +99,9 @@ export function AppSidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive =
-            item.url === "/financial-overview"
-              ? pathname === "/financial-overview"
-              : pathname.startsWith(item.url);
+          const isActive = item.exact
+            ? pathname === item.url
+            : pathname.startsWith(item.url);
 
           return (
             <Link
@@ -168,6 +167,7 @@ export function AppSidebar() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
                 title="Log out"
