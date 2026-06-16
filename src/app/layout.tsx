@@ -99,9 +99,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  // verification: {
-  //   google: "isi-dengan-kode-dari-google-search-console",
-  // },
+  verification: {
+    google: "cM4VTnnUD5rbwJY7oJ2_rYWqEOwroXBM8-DRdT7C-UY",
+  },
 };
 
 export default function RootLayout({
