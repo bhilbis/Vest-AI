@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { createContext, useContext, useState } from "react"
 import { cn } from "@/lib/utils"
-import { GraduationCap, BookOpen, BarChart3, Settings2, MessageSquare } from "lucide-react"
+import { GraduationCap, BookOpen, BarChart3, Settings2, MessageSquare, ClipboardList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MessagesPanel } from "@/components/layout/messages-panel"
 
@@ -25,6 +25,7 @@ export const useKuliahLayout = () => {
 const kuliahNav = [
   { title: "Tracker", url: "/kuliah/tracker", icon: BookOpen },
   { title: "Nilai", url: "/kuliah/nilai", icon: BarChart3 },
+  { title: "UAS Prep", url: "/kuliah/uas-prep", icon: ClipboardList },
   { title: "Pengaturan", url: "/kuliah/settings", icon: Settings2 },
 ]
 
