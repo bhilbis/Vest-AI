@@ -30,13 +30,6 @@ export function SessionWrapper({ children }: { children: ReactNode }) {
     }
   }, [status, isGuest, logoutGuest])
 
-  useEffect(() => {
-    if (!_hydrated) return
-    if (status === "unauthenticated" && !isGuest) {
-      router.replace("/login")
-    }
-  }, [status, router, isGuest, _hydrated])
-
   // Sign out if the account was deactivated mid-session
   useEffect(() => {
     if (status === "authenticated" && session?.user?.isActive === false) {
