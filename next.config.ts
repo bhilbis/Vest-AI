@@ -2,6 +2,24 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     output: 'standalone',
+    serverExternalPackages: ['pdf-parse', 'mammoth'],
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'assets.coingecko.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'coin-images.coingecko.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'lh3.googleusercontent.com',
+            },
+        ],
+        formats: ['image/avif', 'image/webp'],
+    },
     async headers() {
         return [
             {
@@ -18,11 +36,14 @@ const nextConfig: NextConfig = {
                     },
                 ],
             },
+            {
+                // Cache static assets aggressively
+                source: '/(.*)\\.(png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2)',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
         ];
-    },
-    env: {
-        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-        GROQ_API_KEY: process.env.GROQ_API_KEY,
     },
 };
 
