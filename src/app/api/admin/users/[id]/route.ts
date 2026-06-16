@@ -39,7 +39,6 @@ export async function PATCH(
     const updateData: Record<string, unknown> = {};
 
     if (typeof body.isActive === "boolean") {
-      // Prevent admin from deactivating themselves
       if (id === auth.user.id && !body.isActive) {
         return NextResponse.json(
           { error: "Cannot deactivate your own account" },
@@ -47,6 +46,16 @@ export async function PATCH(
         );
       }
       updateData.isActive = body.isActive;
+    }
+
+    if (typeof body.isBlocked === "boolean") {
+      if (id === auth.user.id && body.isBlocked) {
+        return NextResponse.json(
+          { error: "Cannot block your own account" },
+          { status: 400 }
+        );
+      }
+      updateData.isBlocked = body.isBlocked;
     }
 
     if (body.role === "ADMIN" || body.role === "USER") {
@@ -76,6 +85,8 @@ export async function PATCH(
         email: true,
         role: true,
         isActive: true,
+        isBlocked: true,
+        lastLoginAt: true,
         createdAt: true,
       },
     });

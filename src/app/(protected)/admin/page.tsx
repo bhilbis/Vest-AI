@@ -17,6 +17,8 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  Ban,
+  KeyRound,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,8 +50,39 @@ interface UserRecord {
   email: string | null
   role: string
   isActive: boolean
+  isBlocked: boolean
+  lastLoginAt: string | null
   image: string | null
   createdAt: string
+  hasPassword: boolean
+  providers: string[]
+}
+
+function timeAgo(date: string | null): string {
+  if (!date) return "Belum pernah"
+  const diff = Date.now() - new Date(date).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return "Baru saja"
+  if (mins < 60) return `${mins} menit lalu`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours} jam lalu`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days} hari lalu`
+  return new Date(date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+}
+
+function ProviderBadge({ provider }: { provider: string }) {
+  if (provider === "google")
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+        G Google
+      </span>
+    )
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-muted text-muted-foreground">
+      <KeyRound size={9} /> Credentials
+    </span>
+  )
 }
 
 export default function AdminPage() {
@@ -120,13 +153,13 @@ export default function AdminPage() {
     }
   }
 
-  const handleToggleActive = async (user: UserRecord) => {
-    setActionLoading(user.id)
+  const patch = async (userId: string, body: Record<string, unknown>) => {
+    setActionLoading(userId)
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
+      const res = await fetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !user.isActive }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const data = await res.json()
@@ -134,28 +167,7 @@ export default function AdminPage() {
       }
       fetchUsers()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengubah status")
-    } finally {
-      setActionLoading(null)
-    }
-  }
-
-  const handleToggleRole = async (user: UserRecord) => {
-    setActionLoading(user.id)
-    const newRole = user.role === "ADMIN" ? "USER" : "ADMIN"
-    try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: newRole }),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || "Failed")
-      }
-      fetchUsers()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengubah role")
+      setError(err instanceof Error ? err.message : "Gagal memperbarui pengguna")
     } finally {
       setActionLoading(null)
     }
@@ -171,9 +183,7 @@ export default function AdminPage() {
     if (!ok) return
     setActionLoading(user.id)
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE",
-      })
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || "Failed")
@@ -205,7 +215,7 @@ export default function AdminPage() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-muted">
-      <PageWrapper className="space-y-0">
+        <PageWrapper className="space-y-0">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -255,13 +265,7 @@ export default function AdminPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="add-email">Email *</Label>
-                      <Input
-                        id="add-email"
-                        name="email"
-                        type="email"
-                        placeholder="user@example.com"
-                        required
-                      />
+                      <Input id="add-email" name="email" type="email" placeholder="user@example.com" required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="add-password">Password *</Label>
@@ -298,9 +302,7 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {addError && (
-                      <p className="text-sm text-destructive">{addError}</p>
-                    )}
+                    {addError && <p className="text-sm text-destructive">{addError}</p>}
 
                     <DialogFooter>
                       <Button type="submit" disabled={addLoading} className="w-full">
@@ -328,9 +330,7 @@ export default function AdminPage() {
                 className="mb-6 p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20 flex items-center justify-between"
               >
                 <span>{error}</span>
-                <button onClick={() => setError("")} className="text-destructive hover:text-destructive/80">
-                  ✕
-                </button>
+                <button type="button" aria-label="Tutup pesan error" onClick={() => setError("")} className="text-destructive hover:text-destructive/80">✕</button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -362,14 +362,14 @@ export default function AdminPage() {
                     <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pengguna
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Role
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">
+                      Login Via
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Status
+                      Role & Status
                     </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
-                      Dibuat
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
+                      Login Terakhir
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Aksi
@@ -392,7 +392,7 @@ export default function AdminPage() {
                         {/* User Info */}
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 border border-border">
+                            <Avatar className="h-9 w-9 border border-border shrink-0">
                               {user.image && (
                                 <AvatarImage asChild>
                                   <Image
@@ -417,60 +417,57 @@ export default function AdminPage() {
                                   </span>
                                 )}
                               </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {user.email}
-                              </p>
+                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                             </div>
                           </div>
                         </td>
 
-                        {/* Role */}
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${
-                              user.role === "ADMIN"
-                                ? "bg-chart-2/10 text-chart-2"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {user.role === "ADMIN" ? (
-                              <ShieldCheck size={12} />
-                            ) : (
-                              <ShieldOff size={12} />
+                        {/* Login Providers */}
+                        <td className="py-3 px-4 hidden md:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {user.hasPassword && <ProviderBadge provider="credentials" />}
+                            {user.providers.map((p) => (
+                              <ProviderBadge key={p} provider={p} />
+                            ))}
+                            {!user.hasPassword && user.providers.length === 0 && (
+                              <span className="text-xs text-muted-foreground">—</span>
                             )}
-                            {user.role}
-                          </span>
+                          </div>
                         </td>
 
-                        {/* Status */}
+                        {/* Role & Status */}
                         <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold ${
-                              user.isActive
-                                ? "bg-chart-1/10 text-chart-1"
-                                : "bg-destructive/10 text-destructive"
-                            }`}
-                          >
-                            {user.isActive ? (
-                              <>
-                                <UserCheck size={12} /> Active
-                              </>
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold w-fit ${
+                                user.role === "ADMIN"
+                                  ? "bg-chart-2/10 text-chart-2"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {user.role === "ADMIN" ? <ShieldCheck size={11} /> : <ShieldOff size={11} />}
+                              {user.role}
+                            </span>
+                            {user.isBlocked ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold w-fit bg-destructive/10 text-destructive">
+                                <Ban size={11} /> Blocked
+                              </span>
+                            ) : user.isActive ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold w-fit bg-chart-1/10 text-chart-1">
+                                <UserCheck size={11} /> Active
+                              </span>
                             ) : (
-                              <>
-                                <UserX size={12} /> Inactive
-                              </>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold w-fit bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                <UserX size={11} /> Inactive
+                              </span>
                             )}
-                          </span>
+                          </div>
                         </td>
 
-                        {/* Created */}
-                        <td className="py-3 px-4 hidden sm:table-cell">
+                        {/* Last Login */}
+                        <td className="py-3 px-4 hidden lg:table-cell">
                           <span className="text-xs text-muted-foreground">
-                            {new Date(user.createdAt).toLocaleDateString("id-ID", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {timeAgo(user.lastLoginAt)}
                           </span>
                         </td>
 
@@ -481,52 +478,65 @@ export default function AdminPage() {
                               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                             ) : (
                               <>
+                                {/* Toggle Active */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button
-                                      onClick={() => handleToggleActive(user)}
+                                      type="button"
+                                      aria-label={user.isActive ? "Nonaktifkan pengguna" : "Aktifkan pengguna"}
+                                      onClick={() => patch(user.id, { isActive: !user.isActive })}
                                       disabled={isSelf}
                                       className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                     >
-                                      {user.isActive ? (
-                                        <UserX size={15} />
-                                      ) : (
-                                        <UserCheck size={15} />
-                                      )}
+                                      {user.isActive ? <UserX size={15} /> : <UserCheck size={15} />}
                                     </button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    {isSelf
-                                      ? "Tidak bisa mengubah akun sendiri"
-                                      : user.isActive
-                                      ? "Nonaktifkan"
-                                      : "Aktifkan"}
+                                    {isSelf ? "Tidak bisa mengubah akun sendiri" : user.isActive ? "Nonaktifkan" : "Aktifkan"}
                                   </TooltipContent>
                                 </Tooltip>
 
+                                {/* Block / Unblock */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button
-                                      onClick={() => handleToggleRole(user)}
+                                      type="button"
+                                      aria-label={user.isBlocked ? "Buka blokir pengguna" : "Blokir pengguna"}
+                                      onClick={() => patch(user.id, { isBlocked: !user.isBlocked })}
                                       disabled={isSelf}
-                                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                      className={`p-1.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
+                                        user.isBlocked
+                                          ? "text-destructive hover:bg-destructive/10"
+                                          : "text-muted-foreground hover:bg-muted hover:text-destructive"
+                                      }`}
                                     >
-                                      {user.role === "ADMIN" ? (
-                                        <ShieldOff size={15} />
-                                      ) : (
-                                        <ShieldCheck size={15} />
-                                      )}
+                                      <Ban size={15} />
                                     </button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    {isSelf
-                                      ? "Tidak bisa mengubah role sendiri"
-                                      : user.role === "ADMIN"
-                                      ? "Ubah ke User"
-                                      : "Ubah ke Admin"}
+                                    {isSelf ? "Tidak bisa memblokir akun sendiri" : user.isBlocked ? "Buka blokir" : "Blokir akun"}
                                   </TooltipContent>
                                 </Tooltip>
 
+                                {/* Toggle Role */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      aria-label={user.role === "ADMIN" ? "Ubah ke User" : "Ubah ke Admin"}
+                                      onClick={() => patch(user.id, { role: user.role === "ADMIN" ? "USER" : "ADMIN" })}
+                                      disabled={isSelf}
+                                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      {user.role === "ADMIN" ? <ShieldOff size={15} /> : <ShieldCheck size={15} />}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {isSelf ? "Tidak bisa mengubah role sendiri" : user.role === "ADMIN" ? "Ubah ke User" : "Ubah ke Admin"}
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                {/* Delete */}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <button

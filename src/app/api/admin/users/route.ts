@@ -37,13 +37,23 @@ export async function GET() {
       email: true,
       role: true,
       isActive: true,
+      isBlocked: true,
+      lastLoginAt: true,
       image: true,
+      password: true,
       createdAt: true,
+      accounts: { select: { provider: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ users });
+  const sanitized = users.map(({ password, accounts, ...u }) => ({
+    ...u,
+    hasPassword: !!password,
+    providers: accounts.map((a) => a.provider),
+  }));
+
+  return NextResponse.json({ users: sanitized });
 }
 
 // POST /api/admin/users — Create a new user
