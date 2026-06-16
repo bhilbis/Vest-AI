@@ -59,11 +59,14 @@ export const authOptions: AuthOptions = {
       if (shouldRefresh) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, isActive: true },
+          select: { role: true, isActive: true, isBlocked: true },
         });
 
         if (!dbUser) {
-          // User was deleted — invalidate the session
+          return { ...token, id: undefined };
+        }
+
+        if (!dbUser.isActive || dbUser.isBlocked) {
           return { ...token, id: undefined };
         }
 
@@ -85,11 +88,19 @@ export const authOptions: AuthOptions = {
     },
 
     async signIn({ user }) {
-      // Block deactivated users from signing in via any provider
       const dbUser = await prisma.user.findUnique({
         where: { email: user.email! },
+        select: { isActive: true, isBlocked: true, id: true },
       });
-      if (dbUser && !dbUser.isActive) return false;
+      if (!dbUser) return true; // new user via OAuth — let adapter create them
+      if (!dbUser.isActive || dbUser.isBlocked) return false;
+
+      // Track last login
+      await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { lastLoginAt: new Date() },
+      });
+
       return true;
     },
   },
