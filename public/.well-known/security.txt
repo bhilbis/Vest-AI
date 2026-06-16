@@ -1,0 +1,5 @@
+Contact: mailto:lbbpramuka@gmail.com
+Expires: 2027-06-16T00:00:00.000Z
+Preferred-Languages: id, en
+Canonical: https://go-aoixsy.my.id/.well-known/security.txt
+Policy: https://go-aoixsy.my.id/.well-known/security.txt
