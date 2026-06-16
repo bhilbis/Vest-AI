@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git diff *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "PowerShell(git push origin main)",
+      "Bash(New-Item -ItemType Directory -Force \"d:\\\\Something\\\\vest-ai\\\\src\\\\app\\\\\\(protected\\)\\\\dashboard\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Output \"done\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"d:\\\\Something\\\\vest-ai\\\\src\\\\app\\\\\\(protected\\)\\\\dashboard\")",
+      "Skill(code-review)",
+      "Skill(code-review:*)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(bun add *)",
+      "Bash(mkdir -p \"d:/Something/vest-ai/src/app/api/uas-prep/extract\" \"d:/Something/vest-ai/src/app/api/uas-prep/generate\" \"d:/Something/vest-ai/src/app/api/uas-prep/[id]\")",
+      "Bash(bunx prisma *)",
+      "WebSearch",
+      "Bash(Remove-Item \"d:\\\\Something\\\\vest-ai\\\\src\\\\app\\\\\\(protected\\)\\\\loading.tsx\")",
+      "PowerShell(Rename-Item \"d:\\\\Something\\\\vest-ai\\\\src\\\\middleware.ts\" \"proxy.ts\")"
+    ],
+    "additionalDirectories": [
+      "d:\\Something\\vest-ai\\src\\app\\api\\uas-prep"
+    ]
+  }
+}
