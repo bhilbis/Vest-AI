@@ -72,7 +72,9 @@ export async function PUT(
     validatedBudgetId = budget.id;
   }
 
-  const result = await prisma.$transaction(async (tx: any) => {
+  let result;
+  try {
+    result = await prisma.$transaction(async (tx: any) => {
       // Balikin saldo lama hanya jika akun masih ada
       if (old.accountId) {
         await tx.accountBalance.update({
@@ -80,6 +82,14 @@ export async function PUT(
           data: { balance: { increment: old.amount } },
         });
       }
+
+      // Check new account balance (after restore, in case same account)
+      const newAccount = await tx.accountBalance.findFirst({
+        where: { id: accountId },
+        select: { balance: true },
+      });
+      if (!newAccount) throw new Error("Akun tidak ditemukan");
+      if (newAccount.balance < amount) throw new Error("Saldo tidak mencukupi");
 
       // Photo handling
       let photoUrl = old.photoUrl;
@@ -140,6 +150,13 @@ export async function PUT(
 
       return updated;
     });
+  } catch (error) {
+    console.error("Error updating expense:", error);
+    if (error instanceof Error && error.message === "Saldo tidak mencukupi") {
+      return NextResponse.json({ error: "Saldo tidak mencukupi" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 
   return NextResponse.json(result);
 }

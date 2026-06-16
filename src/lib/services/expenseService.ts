@@ -131,11 +131,15 @@ export async function createExpense({
   return prisma.$transaction(async (tx) => {
     const account = await tx.accountBalance.findFirst({
       where: { id: accountId, userId },
-      select: { id: true },
+      select: { id: true, balance: true },
     });
 
     if (!account) {
       throw new Error("Account not found");
+    }
+
+    if (account.balance < amount) {
+      throw new Error("Saldo tidak mencukupi");
     }
 
     await tx.accountBalance.update({

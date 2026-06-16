@@ -29,6 +29,13 @@ export async function createExpense(formData: FormData) {
     const { title, amount, category, description, date, accountId, budgetId } = parsed.data;
 
     await prisma.$transaction(async (tx) => {
+      const account = await tx.accountBalance.findFirst({
+        where: { id: accountId, userId: session.user.id },
+        select: { balance: true },
+      });
+      if (!account) throw new Error("Akun tidak ditemukan");
+      if (account.balance < amount) throw new Error("Saldo tidak mencukupi");
+
       await tx.expense.create({
         data: {
           title,
@@ -52,6 +59,9 @@ export async function createExpense(formData: FormData) {
     return { success: true };
   } catch (err) {
     console.error("createExpense error:", err);
+    if (err instanceof Error && err.message === "Saldo tidak mencukupi") {
+      return { error: "Saldo tidak mencukupi" };
+    }
     return { error: "Gagal menyimpan pengeluaran" };
   }
 }
@@ -92,6 +102,14 @@ export async function updateExpense(id: string, formData: FormData) {
         });
       }
 
+      // Check new account balance (after restore, in case same account)
+      const newAccount = await tx.accountBalance.findFirst({
+        where: { id: accountId, userId: session.user.id },
+        select: { balance: true },
+      });
+      if (!newAccount) throw new Error("Akun tidak ditemukan");
+      if (newAccount.balance < amount) throw new Error("Saldo tidak mencukupi");
+
       // Update expense
       await tx.expense.update({
         where: { id },
@@ -117,6 +135,9 @@ export async function updateExpense(id: string, formData: FormData) {
     return { success: true };
   } catch (err) {
     console.error("updateExpense error:", err);
+    if (err instanceof Error && err.message === "Saldo tidak mencukupi") {
+      return { error: "Saldo tidak mencukupi" };
+    }
     return { error: "Gagal mengupdate pengeluaran" };
   }
 }

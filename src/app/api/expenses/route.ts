@@ -148,6 +148,9 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error creating expense:", error);
+    if (error instanceof Error && error.message === "Saldo tidak mencukupi") {
+      return NextResponse.json({ error: "Saldo tidak mencukupi" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
