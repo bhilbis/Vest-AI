@@ -1,405 +1,875 @@
 "use client"
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { ArrowUpIcon, ArrowDownIcon, PlusIcon, TrendingUpIcon, DollarSignIcon, EyeIcon, MoreHorizontalIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { motion } from "motion/react"
+import {
+  Plus, RefreshCw, Search, TrendingUp, TrendingDown,
+  BarChart3, ArrowUpRight, ArrowDownRight,
+  Pencil, Trash2, Loader2, AlertCircle, Wallet,
+} from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
-const cryptoAssets = [
-  {
-    id: 1,
-    symbol: 'BTC',
-    name: 'Bitcoin',
-    amount: 1.5,
-    price: 45000,
-    value: 67500,
-    change24h: 3.2,
-    allocation: 42,
-    color: 'from-orange-400 to-orange-600'
-  },
-  {
-    id: 2,
-    symbol: 'ETH',
-    name: 'Ethereum',
-    amount: 15.7,
-    price: 2800,
-    value: 43960,
-    change24h: -1.8,
-    allocation: 26,
-    color: 'from-blue-400 to-blue-600'
-  },
-  {
-    id: 3,
-    symbol: 'ADA',
-    name: 'Cardano',
-    amount: 5000,
-    price: 0.85,
-    value: 4250,
-    change24h: 5.1,
-    allocation: 3,
-    color: 'from-purple-400 to-purple-600'
-  }
-];
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command, CommandEmpty, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command"
+import { usePortfolioAssets } from "@/components/tracker/dashboard/usePortfolioAssets"
+import type { AssetProps } from "@/components/tracker/dashboard/types"
+import { formatCurrency } from "@/lib/expenseUtils"
+import { useDebounce } from "use-debounce"
+import Image from "next/image"
 
-const stockAssets = [
-  {
-    id: 1,
-    symbol: 'AAPL',
-    name: 'Apple Inc.',
-    shares: 50,
-    price: 175.25,
-    value: 8762.50,
-    change24h: 1.2,
-    allocation: 8,
-    color: 'from-gray-400 to-gray-600'
-  },
-  {
-    id: 2,
-    symbol: 'TSLA',
-    name: 'Tesla Inc.',
-    shares: 25,
-    price: 245.80,
-    value: 6145,
-    change24h: -2.4,
-    allocation: 6,
-    color: 'from-red-400 to-red-600'
-  },
-  {
-    id: 3,
-    symbol: 'NVDA',
-    name: 'NVIDIA Corp.',
-    shares: 15,
-    price: 420.15,
-    value: 6302.25,
-    change24h: 4.8,
-    allocation: 6,
-    color: 'from-green-400 to-green-600'
-  }
-];
+// ── Types ──────────────────────────────────────────────
 
-const aiTrades = [
-  {
-    id: 1,
-    date: '2024-01-15',
-    action: 'Buy',
-    asset: 'MSFT',
-    amount: 20,
-    price: 385.50,
-    profit: 1250,
-    status: 'Completed',
-    confidence: 94
-  },
-  {
-    id: 2,
-    date: '2024-01-14',
-    action: 'Sell',
-    asset: 'GOOGL',
-    amount: 5,
-    price: 142.80,
-    profit: -125,
-    status: 'Completed',
-    confidence: 78
-  },
-  {
-    id: 3,
-    date: '2024-01-13',
-    action: 'Buy',
-    asset: 'BTC',
-    amount: 0.1,
-    price: 44500,
-    profit: 850,
-    status: 'Completed',
-    confidence: 86
-  }
-];
+type AssetRow = AssetProps & {
+  val: number
+  cost: number
+  profit: number
+  pct: number
+}
 
-export default function Page() {
-  const [activeTab, setActiveTab] = useState('overview');
+type Coin = { id: string; name: string; symbol: string; thumb: string }
 
-  const totalPortfolioValue = 108000;
-  const totalCrypto = cryptoAssets.reduce((sum, asset) => sum + asset.value, 0);
-  const totalStocks = stockAssets.reduce((sum, asset) => sum + asset.value, 0);
-  const cashValue = 13000;
+interface FormState {
+  name: string
+  amount: string
+  buyPrice: string
+  currentPrice: string
+  type: string
+  category: string
+  coinId: string
+}
+
+const EMPTY_FORM: FormState = {
+  name: "", amount: "", buyPrice: "", currentPrice: "",
+  type: "crypto", category: "cryptocurrency", coinId: "",
+}
+
+// ── Category helpers ───────────────────────────────────
+
+type CatConfig = { label: string; pill: string; gradient: string }
+
+const CAT_MAP: Record<string, CatConfig> = {
+  cryptocurrency: {
+    label: "Crypto",
+    pill: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
+    gradient: "from-amber-400 to-orange-500",
+  },
+  stocks: {
+    label: "Saham",
+    pill: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
+    gradient: "from-blue-400 to-indigo-500",
+  },
+  "reksa dana": {
+    label: "Reksa Dana",
+    pill: "bg-teal-500/10 text-teal-600 border-teal-500/20 dark:text-teal-400",
+    gradient: "from-teal-400 to-emerald-500",
+  },
+  bonds: {
+    label: "Obligasi",
+    pill: "bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400",
+    gradient: "from-green-400 to-emerald-500",
+  },
+  etf: {
+    label: "ETF",
+    pill: "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
+    gradient: "from-purple-400 to-violet-500",
+  },
+  gold: {
+    label: "Emas",
+    pill: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 dark:text-yellow-400",
+    gradient: "from-yellow-400 to-amber-500",
+  },
+}
+
+function catCfg(category: string): CatConfig {
+  return (
+    CAT_MAP[category?.toLowerCase()] ?? {
+      label: category || "Lainnya",
+      pill: "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400",
+      gradient: "from-slate-400 to-slate-500",
+    }
+  )
+}
+
+// ── CoinGecko live search ──────────────────────────────
+
+function useCoinSearch() {
+  const [query, setQuery] = useState("")
+  const [debouncedQuery] = useDebounce(query, 400)
+  // Track which query the fetched coins belong to so loading can be derived
+  const [fetchedFor, setFetchedFor] = useState("")
+  const [fetchedCoins, setFetchedCoins] = useState<Coin[]>([])
+
+  const trimmed = debouncedQuery.trim()
+  // Derive: empty when no query; loading when query differs from last completed fetch
+  const coins = trimmed ? fetchedCoins : []
+  const loading = trimmed !== "" && trimmed !== fetchedFor
+
+  useEffect(() => {
+    const q = debouncedQuery.trim()
+    if (!q) return
+    const controller = new AbortController()
+    fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`, {
+      signal: controller.signal,
+    })
+      .then(r => r.json())
+      .then(data => {
+        setFetchedFor(q)
+        setFetchedCoins(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (data.coins ?? []).slice(0, 12).map((c: any) => ({
+            id: c.id, name: c.name, symbol: c.symbol, thumb: c.thumb,
+          }))
+        )
+      })
+      .catch(err => {
+        if (err?.name !== "AbortError") {
+          setFetchedFor(q)
+          setFetchedCoins([])
+        }
+      })
+    return () => controller.abort()
+  }, [debouncedQuery])
+
+  return { query, setQuery, coins, loading }
+}
+
+// ── Stat mini-card ──────────────────────────────────────
+
+function Stat({
+  icon: Icon, label, value, sub, up,
+}: {
+  icon: React.ElementType
+  label: string
+  value: string
+  sub?: string
+  up?: boolean
+}) {
+  return (
+    <Card className="p-4 sm:p-5 border-border/50 bg-card flex flex-col gap-1 hover-lift">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <p className={`text-lg sm:text-xl font-bold tabular-nums leading-tight ${
+        up === true ? "text-chart-1" : up === false ? "text-destructive" : "text-foreground"
+      }`}>
+        {value}
+      </p>
+      {sub && <p className="text-[11px] text-muted-foreground">{sub}</p>}
+    </Card>
+  )
+}
+
+// ── Form content (shared add / edit) ───────────────────
+
+function AssetForm({
+  form, setForm, isEdit, coinSearch, coinOpen, setCoinOpen, selectedCoin, setSelectedCoin,
+}: {
+  form: FormState
+  setForm: React.Dispatch<React.SetStateAction<FormState>>
+  isEdit: boolean
+  coinSearch: ReturnType<typeof useCoinSearch>
+  coinOpen: boolean
+  setCoinOpen: (v: boolean) => void
+  selectedCoin: Coin | null
+  setSelectedCoin: (c: Coin | null) => void
+}) {
+  const totalCost = parseFloat(form.amount || "0") * parseFloat(form.buyPrice || "0")
+  const totalVal = parseFloat(form.amount || "0") * parseFloat(form.currentPrice || "0")
+  const hasCurr = parseFloat(form.currentPrice) > 0 && parseFloat(form.amount) > 0
+  const pl = totalVal - totalCost
+  const plPct = totalCost > 0 ? (pl / totalCost) * 100 : 0
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">Asset Portfolio</h1>
-          <p className="text-muted-foreground mt-2">Manage and track your investment holdings with AI-powered insights</p>
+    <div className="space-y-4 pt-1">
+      {/* Asset type (only on add) */}
+      {!isEdit && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Jenis Aset</Label>
+          <Select
+            value={form.type}
+            onValueChange={v =>
+              setForm(f => ({
+                ...f, type: v,
+                category: v === "crypto" ? "cryptocurrency" : f.category,
+              }))
+            }
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="crypto">Kripto (live price)</SelectItem>
+              <SelectItem value="stock">Saham</SelectItem>
+              <SelectItem value="manual">Lainnya</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Button className="gap-2">
-          <PlusIcon className="h-4 w-4" />
-          Add Asset
-        </Button>
+      )}
+
+      {/* Coin picker (crypto + new only) */}
+      {form.type === "crypto" && !isEdit && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Koin</Label>
+          <Popover open={coinOpen} onOpenChange={setCoinOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
+                {selectedCoin ? (
+                  <span className="flex items-center gap-2">
+                    <Image src={selectedCoin.thumb} alt={selectedCoin.symbol} width={16} height={16} className="rounded-full" />
+                    {selectedCoin.name}
+                    <span className="text-muted-foreground text-xs ml-auto">{selectedCoin.symbol.toUpperCase()}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Cari Bitcoin, Ethereum…</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-72" align="start">
+              <Command>
+                <CommandInput
+                  value={coinSearch.query}
+                  onValueChange={coinSearch.setQuery}
+                  placeholder="Nama koin atau ticker…"
+                />
+                <CommandList className="max-h-56">
+                  {coinSearch.loading && (
+                    <div className="py-3 flex justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  <CommandEmpty>Tidak ditemukan</CommandEmpty>
+                  {coinSearch.coins.map(coin => (
+                    <CommandItem
+                      key={coin.id}
+                      value={coin.id}
+                      onSelect={() => {
+                        setSelectedCoin(coin)
+                        setForm(f => ({
+                          ...f,
+                          name: `${coin.name} (${coin.symbol.toUpperCase()})`,
+                          coinId: coin.id,
+                          category: "cryptocurrency",
+                        }))
+                        setCoinOpen(false)
+                      }}
+                      className="flex items-center gap-2.5 cursor-pointer"
+                    >
+                      <Image src={coin.thumb} alt={coin.symbol} width={20} height={20} className="rounded-full shrink-0" />
+                      <span className="flex-1 truncate">{coin.name}</span>
+                      <span className="text-muted-foreground text-xs shrink-0">{coin.symbol.toUpperCase()}</span>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
+
+      {/* Manual name */}
+      {(form.type !== "crypto" || isEdit) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Nama Aset</Label>
+          <Input
+            value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            placeholder="Contoh: Apple Inc. (AAPL)"
+            className="h-9"
+          />
+        </div>
+      )}
+
+      {/* Category */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Kategori</Label>
+        <Input
+          value={form.category}
+          onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+          placeholder="cryptocurrency, stocks, bonds, reksa dana…"
+          className="h-9"
+          disabled={form.type === "crypto" && !isEdit}
+        />
       </div>
 
-      {/* Portfolio Summary - Enhanced Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -translate-y-8 translate-x-8"></div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Value</CardTitle>
-            <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
-              <DollarSignIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">${totalPortfolioValue.toLocaleString()}</div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Total portfolio value</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-transparent rounded-full -translate-y-8 translate-x-8"></div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Cryptocurrency</CardTitle>
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg">
-              <TrendingUpIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">${totalCrypto.toLocaleString()}</div>
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">{Math.round((totalCrypto / totalPortfolioValue) * 100)}% of portfolio</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -translate-y-8 translate-x-8"></div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">Stocks</CardTitle>
-            <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-lg">
-              <TrendingUpIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">${totalStocks.toLocaleString()}</div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">{Math.round((totalStocks / totalPortfolioValue) * 100)}% of portfolio</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -translate-y-8 translate-x-8"></div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-300">Cash</CardTitle>
-            <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg">
-              <DollarSignIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">${cashValue.toLocaleString()}</div>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{Math.round((cashValue / totalPortfolioValue) * 100)}% of portfolio</p>
-          </CardContent>
-        </Card>
+      {/* Lots + Buy Price */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Jumlah / Lots</Label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            value={form.amount}
+            onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+            placeholder="1.5"
+            className="h-9"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Harga Beli (Rp)</Label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            value={form.buyPrice}
+            onChange={e => setForm(f => ({ ...f, buyPrice: e.target.value }))}
+            placeholder="1000000"
+            className="h-9"
+          />
+        </div>
       </div>
 
-      {/* Enhanced Asset Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/50 p-1 h-12">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
-          <TabsTrigger value="crypto" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Crypto</TabsTrigger>
-          <TabsTrigger value="stocks" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Stocks</TabsTrigger>
-          <TabsTrigger value="ai-trades" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">AI Trades</TabsTrigger>
-        </TabsList>
+      {/* Manual current price (non-crypto or edit) */}
+      {(form.type !== "crypto" || isEdit) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">
+            Harga Saat Ini (Rp)
+            <span className="text-muted-foreground font-normal ml-1">— opsional</span>
+          </Label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            value={form.currentPrice}
+            onChange={e => setForm(f => ({ ...f, currentPrice: e.target.value }))}
+            placeholder="Kosongkan jika belum tahu"
+            className="h-9"
+          />
+        </div>
+      )}
 
-        <TabsContent value="overview" className="space-y-6">
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-            <CardHeader className="pb-6">
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                  <EyeIcon className="h-5 w-5 text-white" />
-                </div>
-                Asset Allocation
-              </CardTitle>
-              <CardDescription>Visual breakdown of your investment portfolio</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"></div>
-                      Cryptocurrency
-                    </span>
-                    <span className="font-medium">{Math.round((totalCrypto / totalPortfolioValue) * 100)}%</span>
-                  </div>
-                  <Progress value={(totalCrypto / totalPortfolioValue) * 100} className="h-3 bg-emerald-100 dark:bg-emerald-900" />
-                </div>
-                
-                <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full"></div>
-                      Stocks
-                    </span>
-                    <span className="font-medium">{Math.round((totalStocks / totalPortfolioValue) * 100)}%</span>
-                  </div>
-                  <Progress value={(totalStocks / totalPortfolioValue) * 100} className="h-3 bg-purple-100 dark:bg-purple-900" />
-                </div>
-                
-                <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full"></div>
-                      Cash
-                    </span>
-                    <span className="font-medium">{Math.round((cashValue / totalPortfolioValue) * 100)}%</span>
-                  </div>
-                  <Progress value={(cashValue / totalPortfolioValue) * 100} className="h-3 bg-amber-100 dark:bg-amber-900" />
-                </div>
+      {/* P/L preview */}
+      {totalCost > 0 && (
+        <div className="rounded-lg bg-muted/50 border border-border/40 p-3 space-y-2 text-sm">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Total Modal</span>
+            <span className="tabular-nums font-medium text-foreground">{formatCurrency(totalCost)}</span>
+          </div>
+          {hasCurr && (
+            <>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Nilai Saat Ini</span>
+                <span className="tabular-nums font-medium text-foreground">{formatCurrency(totalVal)}</span>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="crypto" className="space-y-6">
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg">
-                  <DollarSignIcon className="h-5 w-5 text-white" />
-                </div>
-                Cryptocurrency Holdings
-              </CardTitle>
-              <CardDescription>Your digital asset portfolio with real-time performance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {cryptoAssets.map((asset) => (
-                  <div key={asset.id} className="group p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${asset.color} flex items-center justify-center text-white shadow-lg`}>
-                          <span className="font-bold text-lg">{asset.symbol.charAt(0)}</span>
-                        </div>
-                        <div>
-                          <div className="font-semibold text-lg">{asset.name}</div>
-                          <div className="text-sm text-muted-foreground">{asset.amount} {asset.symbol} • ${asset.price.toLocaleString()}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-xl">${asset.value.toLocaleString()}</div>
-                        <div className={`text-sm flex items-center justify-end gap-1 ${asset.change24h > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {asset.change24h > 0 ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />}
-                          {Math.abs(asset.change24h)}%
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                      <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-700">
-                        {asset.allocation}% allocation
-                      </Badge>
-                      <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontalIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className={`flex justify-between font-semibold border-t border-border/40 pt-2 ${pl >= 0 ? "text-chart-1" : "text-destructive"}`}>
+                <span>Estimasi P/L</span>
+                <span className="tabular-nums">
+                  {pl >= 0 ? "+" : ""}{formatCurrency(pl)} ({plPct >= 0 ? "+" : ""}{plPct.toFixed(2)}%)
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="stocks" className="space-y-6">
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                  <TrendingUpIcon className="h-5 w-5 text-white" />
-                </div>
-                Stock Holdings
-              </CardTitle>
-              <CardDescription>Your equity investments and market performance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {stockAssets.map((asset) => (
-                  <div key={asset.id} className="group p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${asset.color} flex items-center justify-center text-white shadow-lg`}>
-                          <span className="font-bold text-lg">{asset.symbol.charAt(0)}</span>
-                        </div>
-                        <div>
-                          <div className="font-semibold text-lg">{asset.name}</div>
-                          <div className="text-sm text-muted-foreground">{asset.shares} shares • ${asset.price}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-xl">${asset.value.toLocaleString()}</div>
-                        <div className={`text-sm flex items-center justify-end gap-1 ${asset.change24h > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {asset.change24h > 0 ? <ArrowUpIcon className="h-4 w-4" /> : <ArrowDownIcon className="h-4 w-4" />}
-                          {Math.abs(asset.change24h)}%
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                      <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-700">
-                        {asset.allocation}% allocation
-                      </Badge>
-                      <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontalIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="ai-trades" className="space-y-6">
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
-                  <TrendingUpIcon className="h-5 w-5 text-white" />
-                </div>
-                AI-Powered Trades
-              </CardTitle>
-              <CardDescription>Intelligent trades executed by your AI assistant</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {aiTrades.map((trade) => (
-                  <div key={trade.id} className="group p-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-all duration-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col gap-2">
-                          <Badge 
-                            variant={trade.action === 'Buy' ? 'default' : 'secondary'}
-                            className={trade.action === 'Buy' ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}
-                          >
-                            {trade.action}
-                          </Badge>
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                            AI {trade.confidence}%
-                          </Badge>
-                        </div>
-                        <div>
-                          <div className="font-semibold text-lg">{trade.asset}</div>
-                          <div className="text-sm text-muted-foreground">{trade.date} • {trade.amount} units @ ${trade.price}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`font-bold text-xl ${trade.profit > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {trade.profit > 0 ? '+' : ''}${trade.profit}
-                        </div>
-                        <Badge variant="outline" className="bg-slate-50 dark:bg-slate-800 mt-1">
-                          {trade.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </>
+          )}
+        </div>
+      )}
     </div>
-  );
+  )
+}
+
+// ── Page ───────────────────────────────────────────────
+
+export default function AssetsPage() {
+  const { assets, loading, error, reload } = usePortfolioAssets()
+
+  const [search, setSearch] = useState("")
+  const [activeCategory, setActiveCategory] = useState("all")
+
+  // Add modal
+  const [addOpen, setAddOpen] = useState(false)
+  const [addForm, setAddForm] = useState<FormState>(EMPTY_FORM)
+  const [addCoinOpen, setAddCoinOpen] = useState(false)
+  const [addCoin, setAddCoin] = useState<Coin | null>(null)
+  const addCoinSearch = useCoinSearch()
+  const [adding, setAdding] = useState(false)
+
+  // Edit modal
+  const [editTarget, setEditTarget] = useState<AssetRow | null>(null)
+  const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  // ── Derived data ──
+
+  const rows: AssetRow[] = useMemo(() =>
+    assets.map(a => {
+      const val = a.value ?? a.lots * (a.currentPrice ?? 0)
+      const cost = a.lots * (a.buyPrice ?? 0)
+      const profit = val - cost
+      const pct = cost > 0 ? (profit / cost) * 100 : 0
+      return { ...a, val, cost, profit, pct }
+    }),
+    [assets]
+  )
+
+  const categories = useMemo(() => {
+    const uniq = new Set(assets.map(a => a.category?.toLowerCase()).filter(Boolean))
+    return Array.from(uniq) as string[]
+  }, [assets])
+
+  const filtered = useMemo(() => {
+    let list = activeCategory === "all" ? rows : rows.filter(a => a.category?.toLowerCase() === activeCategory)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(a => a.name.toLowerCase().includes(q))
+    }
+    return list.sort((a, b) => b.val - a.val)
+  }, [rows, activeCategory, search])
+
+  const stats = useMemo(() => {
+    const totalVal = rows.reduce((s, a) => s + a.val, 0)
+    const totalCost = rows.reduce((s, a) => s + a.cost, 0)
+    const totalProfit = totalVal - totalCost
+    const totalPct = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0
+    const byPct = [...rows].sort((a, b) => b.pct - a.pct)
+    return {
+      totalVal,
+      totalProfit,
+      totalPct,
+      best: byPct[0] ?? null,
+      worst: byPct[byPct.length - 1] ?? null,
+    }
+  }, [rows])
+
+  // ── Handlers ──
+
+  const openAdd = useCallback(() => {
+    setAddForm(EMPTY_FORM)
+    setAddCoin(null)
+    addCoinSearch.setQuery("")
+    setAddOpen(true)
+  }, [addCoinSearch])
+
+  const openEdit = useCallback((asset: AssetRow) => {
+    setEditTarget(asset)
+    setEditForm({
+      name: asset.name,
+      amount: String(asset.lots),
+      buyPrice: String(asset.buyPrice),
+      currentPrice: String(asset.currentPrice ?? 0),
+      type: asset.type ?? "manual",
+      category: asset.category ?? "",
+      coinId: asset.coinId ?? "",
+    })
+  }, [])
+
+  const handleAdd = async () => {
+    if (!addForm.name || !addForm.amount || !addForm.buyPrice) return
+    setAdding(true)
+    try {
+      await fetch("/api/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: addForm.name,
+          amount: parseFloat(addForm.amount),
+          buyPrice: parseFloat(addForm.buyPrice),
+          type: addForm.type,
+          category: addForm.category,
+          color: "bg-primary",
+          coinId: addForm.coinId || undefined,
+        }),
+      })
+      setAddOpen(false)
+      reload()
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const handleUpdate = async () => {
+    if (!editTarget || !editForm.name || !editForm.amount || !editForm.buyPrice) return
+    setSaving(true)
+    try {
+      await fetch(`/api/assets/${editTarget.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editForm.name,
+          amount: parseFloat(editForm.amount),
+          buyPrice: parseFloat(editForm.buyPrice),
+          type: editForm.type,
+          category: editForm.category,
+          color: editTarget.color ?? "bg-primary",
+          coinId: editForm.coinId || undefined,
+        }),
+      })
+      setEditTarget(null)
+      reload()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!editTarget) return
+    setDeleting(true)
+    try {
+      await fetch(`/api/assets/${editTarget.id}`, { method: "DELETE" })
+      setEditTarget(null)
+      reload()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const isAddValid = addForm.name && addForm.amount && addForm.buyPrice
+  const isEditValid = editForm.name && editForm.amount && editForm.buyPrice
+
+  // ── Render ──
+
+  return (
+    <div className="space-y-6">
+
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl font-semibold tracking-tight">Aset Investasi</h1>
+          <p className="text-sm text-muted-foreground">Kelola portofolio crypto, saham, dan aset investasi lainnya</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={reload} disabled={loading}>
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={openAdd}>
+            <Plus className="h-3.5 w-3.5" /> Tambah Aset
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Stat
+          icon={Wallet}
+          label="Total Portofolio"
+          value={loading ? "—" : formatCurrency(stats.totalVal)}
+          sub={`${rows.length} aset`}
+        />
+        <Stat
+          icon={stats.totalProfit >= 0 ? TrendingUp : TrendingDown}
+          label="Total P/L"
+          value={loading ? "—" : `${stats.totalProfit >= 0 ? "+" : ""}${formatCurrency(stats.totalProfit)}`}
+          sub={loading ? undefined : `${stats.totalPct >= 0 ? "+" : ""}${stats.totalPct.toFixed(2)}% dari modal`}
+          up={rows.length > 0 ? stats.totalProfit >= 0 : undefined}
+        />
+        <Stat
+          icon={ArrowUpRight}
+          label="Best Performer"
+          value={loading ? "—" : stats.best ? `${stats.best.pct >= 0 ? "+" : ""}${stats.best.pct.toFixed(2)}%` : "—"}
+          sub={stats.best?.name}
+          up={stats.best ? true : undefined}
+        />
+        <Stat
+          icon={ArrowDownRight}
+          label="Worst Performer"
+          value={loading ? "—" : stats.worst && stats.worst !== stats.best ? `${stats.worst.pct.toFixed(2)}%` : "—"}
+          sub={stats.worst && stats.worst !== stats.best ? stats.worst.name : undefined}
+          up={stats.worst && stats.worst !== stats.best ? false : undefined}
+        />
+      </div>
+
+      {/* Filter + Search */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        {/* Category tabs */}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setActiveCategory("all")}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+              activeCategory === "all"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            Semua
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeCategory === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+              {rows.length}
+            </span>
+          </button>
+          {categories.map(cat => {
+            const cfg = catCfg(cat)
+            const count = rows.filter(a => a.category?.toLowerCase() === cat).length
+            return (
+              <button
+                type="button"
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                  activeCategory === cat
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {cfg.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeCategory === cat ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full sm:w-52">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cari aset…"
+            className="pl-8 h-8 text-sm bg-card"
+          />
+        </div>
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="flex items-center gap-2 text-sm text-destructive p-3 rounded-lg border border-destructive/20 bg-destructive/5">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Table card */}
+      <Card className="border-border/50 overflow-hidden">
+        {/* Table header — desktop only */}
+        <div className="hidden md:grid md:grid-cols-[minmax(0,2.5fr)_80px_1fr_1fr_1fr_1fr_40px] px-5 py-2.5 border-b border-border/40 bg-muted/30">
+          {["Aset", "Lots", "Harga Beli", "Harga Saat Ini", "Nilai", "P/L", ""].map((h, i) => (
+            <span key={i} className={`text-[10px] font-semibold text-muted-foreground uppercase tracking-wider ${i > 0 ? "text-right" : ""}`}>
+              {h}
+            </span>
+          ))}
+        </div>
+
+        <div className="divide-y divide-border/30">
+          {/* Skeleton */}
+          {loading && Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="px-5 py-4">
+              <div className="animate-shimmer h-12 rounded-lg" />
+            </div>
+          ))}
+
+          {/* Empty state */}
+          {!loading && filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <BarChart3 className="h-12 w-12 mb-3 opacity-10" />
+              <p className="text-sm font-medium">
+                {assets.length === 0 ? "Belum ada aset investasi" : "Tidak ada aset yang cocok"}
+              </p>
+              <p className="text-xs mt-1 max-w-xs">
+                {assets.length === 0
+                  ? "Mulai tambahkan aset kripto, saham, atau investasi lainnya"
+                  : "Coba ubah filter atau kata kunci pencarian"}
+              </p>
+              {assets.length === 0 && (
+                <Button variant="outline" size="sm" className="mt-5 gap-1.5 text-xs" onClick={openAdd}>
+                  <Plus className="h-3.5 w-3.5" /> Tambah Aset Pertama
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Rows */}
+          {!loading && filtered.map((asset, idx) => {
+            const cfg = catCfg(asset.category)
+            const up = asset.profit >= 0
+            const hasLivePrice = !!asset.coinId && asset.currentPrice > 0
+
+            return (
+              <motion.div
+                key={asset.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.025, duration: 0.25 }}
+                className="group px-5 py-4 hover:bg-muted/20 transition-colors cursor-default"
+              >
+                {/* Mobile layout */}
+                <div className="flex md:hidden items-center gap-3">
+                  {/* Avatar */}
+                  <div className={`w-10 h-10 rounded-xl bg-linear-to-br ${cfg.gradient} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm`}>
+                    {asset.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{asset.name}</p>
+                    <p className="text-xs text-muted-foreground">{asset.lots} lots</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold tabular-nums">{formatCurrency(asset.val)}</p>
+                    <p className={`text-xs flex items-center justify-end gap-0.5 tabular-nums ${up ? "text-chart-1" : "text-destructive"}`}>
+                      {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {Math.abs(asset.pct).toFixed(2)}%
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => openEdit(asset)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
+                {/* Desktop layout */}
+                <div className="hidden md:grid md:grid-cols-[minmax(0,2.5fr)_80px_1fr_1fr_1fr_1fr_40px] items-center gap-2">
+                  {/* Asset info */}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-10 h-10 rounded-xl bg-linear-to-br ${cfg.gradient} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm`}>
+                      {asset.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{asset.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={`inline-flex items-center text-[10px] px-1.5 py-px rounded-full border ${cfg.pill}`}>
+                          {cfg.label}
+                        </span>
+                        {hasLivePrice && (
+                          <span className="text-[10px] text-muted-foreground">live</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground text-right tabular-nums">{asset.lots}</p>
+                  <p className="text-sm text-right tabular-nums">{formatCurrency(asset.buyPrice)}</p>
+                  <p className="text-sm text-right tabular-nums">
+                    {asset.currentPrice > 0
+                      ? formatCurrency(asset.currentPrice)
+                      : <span className="text-muted-foreground text-xs">—</span>
+                    }
+                  </p>
+                  <p className="text-sm font-semibold text-right tabular-nums">{formatCurrency(asset.val)}</p>
+
+                  {/* P/L column */}
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold tabular-nums ${up ? "text-chart-1" : "text-destructive"}`}>
+                      {up ? "+" : ""}{formatCurrency(asset.profit)}
+                    </p>
+                    <p className={`text-[11px] flex items-center justify-end gap-0.5 tabular-nums ${up ? "text-chart-1" : "text-destructive"}`}>
+                      {up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      {Math.abs(asset.pct).toFixed(2)}%
+                    </p>
+                  </div>
+
+                  {/* Edit button */}
+                  <div className="flex justify-end">
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => openEdit(asset)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* Footer count */}
+        {!loading && filtered.length > 0 && (
+          <div className="px-5 py-3 border-t border-border/30 bg-muted/10 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">{filtered.length} aset ditampilkan</p>
+            <p className="text-xs text-muted-foreground font-medium tabular-nums">
+              Total: {formatCurrency(filtered.reduce((s, a) => s + a.val, 0))}
+            </p>
+          </div>
+        )}
+      </Card>
+
+      {/* ── Add Asset Dialog ── */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Plus className="h-4 w-4 text-primary" />
+              </div>
+              Tambah Aset Baru
+            </DialogTitle>
+          </DialogHeader>
+
+          <AssetForm
+            form={addForm}
+            setForm={setAddForm}
+            isEdit={false}
+            coinSearch={addCoinSearch}
+            coinOpen={addCoinOpen}
+            setCoinOpen={setAddCoinOpen}
+            selectedCoin={addCoin}
+            setSelectedCoin={setAddCoin}
+          />
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setAddOpen(false)} disabled={adding}>
+              Batal
+            </Button>
+            <Button size="sm" onClick={handleAdd} disabled={adding || !isAddValid} className="gap-1.5">
+              {adding && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Tambah
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Asset Dialog ── */}
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <div className={`w-7 h-7 rounded-lg bg-linear-to-br ${catCfg(editTarget?.category ?? "").gradient} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                {editTarget?.name.substring(0, 2).toUpperCase()}
+              </div>
+              Edit Aset
+            </DialogTitle>
+          </DialogHeader>
+
+          <AssetForm
+            form={editForm}
+            setForm={setEditForm}
+            isEdit={true}
+            coinSearch={addCoinSearch}
+            coinOpen={false}
+            setCoinOpen={() => {}}
+            selectedCoin={null}
+            setSelectedCoin={() => {}}
+          />
+
+          <div className="flex items-center justify-between pt-2 border-t border-border/40 mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10"
+              onClick={handleDelete}
+              disabled={deleting || saving}
+            >
+              {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Hapus
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditTarget(null)} disabled={saving}>
+                Batal
+              </Button>
+              <Button size="sm" onClick={handleUpdate} disabled={saving || !isEditValid} className="gap-1.5">
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
 }
