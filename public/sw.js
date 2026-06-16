@@ -1,20 +1,16 @@
-const CACHE_NAME = 'finance-tracker-v1';
+const CACHE_NAME = 'finance-tracker-v2';
 const STATIC_ASSETS = [
   '/vest.png',
+  '/manifest.json',
 ];
 
-// Install: cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -24,30 +20,37 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for static
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET
   if (request.method !== 'GET') return;
 
-  // API calls: network-first
-  if (url.pathname.startsWith('/api/')) {
+  // Never cache API calls — financial data must always be fresh
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Never cache auth routes
+  if (url.pathname.startsWith('/login') || url.pathname.startsWith('/api/auth')) return;
+
+  // Cache-first for static assets (images, fonts, etc.)
+  if (
+    url.pathname.match(/\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff|woff2|css)$/) ||
+    STATIC_ASSETS.includes(url.pathname)
+  ) {
     event.respondWith(
-      fetch(request)
-        .then((res) => {
+      caches.match(request).then((cached) => cached || fetch(request).then((res) => {
+        if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return res;
-        })
-        .catch(() => caches.match(request))
+        }
+        return res;
+      }))
     );
     return;
   }
 
-  // Static: cache-first
+  // Network-first for all other requests (pages, navigation)
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request))
+    fetch(request).catch(() => caches.match(request))
   );
 });
