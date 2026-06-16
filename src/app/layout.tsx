@@ -20,6 +20,8 @@ export const viewport: Viewport = {
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-jakarta",
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -97,9 +99,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    google: "your-google-verification-code",
-  },
+  // verification: {
+  //   google: "isi-dengan-kode-dari-google-search-console",
+  // },
 };
 
 export default function RootLayout({
