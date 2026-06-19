@@ -65,3 +65,28 @@ self.addEventListener('fetch', (event) => {
     fetch(request).catch(() => caches.match(request))
   );
 });
+
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() ?? {};
+  const title = data.title || 'Vest AI';
+  const options = {
+    body: data.body || 'Ada notifikasi baru untuk Anda.',
+    icon: '/vest.png',
+    badge: '/vest.png',
+    data: data.url ? { url: data.url } : undefined,
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) return client.focus();
+      }
+      return clients.openWindow(url);
+    })
+  );
+});

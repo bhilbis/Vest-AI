@@ -124,7 +124,7 @@ export function UnifiedDashboard() {
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Link href="/tracker/assets">
+          <Link href="/tracker/assets" className="flex items-center">
             <Button size="sm" className="gap-2">
               <Plus className="h-3.5 w-3.5" /> Tambah Aset
             </Button>

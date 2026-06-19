@@ -20,21 +20,23 @@ import {
   KeyRound,
   Smartphone,
   Download,
+  Upload,
   Trash2,
   Info,
   ExternalLink,
   ChevronRight,
   Globe,
-  Lock,
   Link2,
   Link2Off,
   Eye,
   EyeOff,
   Loader2,
   Check,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 
@@ -233,12 +235,85 @@ function SetPasswordForm({
   )
 }
 
+function PushNotificationToggle() {
+  const [status, setStatus] = useState<"loading" | "unsupported" | "denied" | "granted" | "default">("loading")
+  const [subscribing, setSubscribing] = useState(false)
+
+  useEffect(() => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setStatus("unsupported")
+      return
+    }
+    setStatus(Notification.permission as "denied" | "granted" | "default")
+  }, [])
+
+  const handleEnable = async () => {
+    if (subscribing) return
+    setSubscribing(true)
+    try {
+      const permission = await Notification.requestPermission()
+      setStatus(permission)
+      if (permission === "granted") {
+        const registration = await navigator.serviceWorker.ready
+        const existing = await registration.pushManager.getSubscription()
+        if (!existing) {
+          const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+          if (vapidKey) {
+            await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: vapidKey,
+            })
+          }
+        }
+        await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: existing || null }) })
+      }
+    } finally {
+      setSubscribing(false)
+    }
+  }
+
+  const handleDisable = async () => {
+    setSubscribing(true)
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const sub = await registration.pushManager.getSubscription()
+      if (sub) await sub.unsubscribe()
+      await fetch("/api/push/subscribe", { method: "DELETE" })
+      setStatus("default")
+    } finally {
+      setSubscribing(false)
+    }
+  }
+
+  if (status === "loading") return <Loader2 size={14} className="animate-spin text-muted-foreground" />
+  if (status === "unsupported") return <Badge variant="secondary" className="text-[10px]">Tidak Didukung</Badge>
+  if (status === "denied") return (
+    <div className="flex items-center gap-1.5 text-xs text-destructive">
+      <XCircle size={13} /> Diblokir browser
+    </div>
+  )
+  if (status === "granted") return (
+    <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleDisable} disabled={subscribing}>
+      {subscribing ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />} Nonaktifkan
+    </Button>
+  )
+  return (
+    <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5" onClick={handleEnable} disabled={subscribing}>
+      {subscribing ? <Loader2 size={11} className="animate-spin" /> : <Bell size={11} />} Aktifkan
+    </Button>
+  )
+}
+
 export default function SettingsPage() {
   const { data: session } = useSession()
   const { theme, setTheme } = useTheme()
   const [linked, setLinked] = useState<LinkedAccountsState | null>(null)
   const [unlinkLoading, setUnlinkLoading] = useState<string | null>(null)
   const [unlinkError, setUnlinkError] = useState("")
+  const [exportLoading, setExportLoading] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importResult, setImportResult] = useState<{ success?: string; error?: string } | null>(null)
+  const importFileRef = useRef<HTMLInputElement>(null)
 
   const fetchLinked = useCallback(async () => {
     const res = await fetch("/api/auth/linked-accounts")
@@ -267,6 +342,49 @@ export default function SettingsPage() {
   }
 
   const isGoogleLinked = linked?.providers.some((p) => p.provider === "google") ?? false
+
+  const handleExportAll = async () => {
+    setExportLoading(true)
+    try {
+      const res = await fetch("/api/export-all")
+      if (!res.ok) throw new Error("Gagal mengekspor data")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `vest-ai-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      // silently fail – user sees nothing changed
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportLoading(true)
+    setImportResult(null)
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      const res = await fetch("/api/import-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Gagal mengimpor data")
+      setImportResult({ success: json.message || "Data berhasil diimpor" })
+    } catch (err) {
+      setImportResult({ error: err instanceof Error ? err.message : "Format file tidak valid" })
+    } finally {
+      setImportLoading(false)
+      if (importFileRef.current) importFileRef.current.value = ""
+    }
+  }
 
   return (
     <PageWrapper maxWidth="lg" className="space-y-6">
@@ -426,8 +544,8 @@ export default function SettingsPage() {
             <SettingRow
               icon={<Bell size={15} />}
               label="Notifikasi Push"
-              description="Pengingat transaksi dan batas budget"
-              action={<Badge variant="secondary" className="text-[10px]">Segera Hadir</Badge>}
+              description="Aktifkan notifikasi browser untuk pengingat transaksi & budget"
+              action={<PushNotificationToggle />}
             />
             <SettingRow
               icon={<Globe size={15} />}
@@ -460,29 +578,42 @@ export default function SettingsPage() {
               description="Lihat perangkat yang login ke akun ini"
               action={<Badge variant="secondary" className="text-[10px]">Segera Hadir</Badge>}
             />
-            <SettingRow
-              icon={<Lock size={15} />}
-              label="Privasi Data"
-              description="Atur siapa yang bisa melihat data Anda"
-              action={<ChevronRight size={15} className="text-muted-foreground" />}
-            />
           </SectionCard>
         </section>
 
         {/* ── Data & Ekspor ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Data & Ekspor</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Data & Backup</h2>
           <SectionCard>
             <SettingRow
               icon={<Download size={15} />}
-              label="Ekspor Data Keuangan"
-              description="Unduh seluruh data transaksi sebagai CSV"
+              label="Ekspor Semua Data Aplikasi"
+              description="Unduh seluruh data (keuangan, aset, kuliah) sebagai JSON"
               action={
-                <Button type="button" variant="outline" size="sm" disabled className="text-xs h-7 gap-1.5">
-                  <Download size={12} /> Ekspor
+                <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5" onClick={handleExportAll} disabled={exportLoading}>
+                  {exportLoading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} Ekspor
                 </Button>
               }
             />
+            <div>
+              <SettingRow
+                icon={<Upload size={15} />}
+                label="Impor Data Aplikasi"
+                description="Pulihkan data dari file backup JSON"
+                action={
+                  <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5" onClick={() => importFileRef.current?.click()} disabled={importLoading}>
+                    {importLoading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} Impor
+                  </Button>
+                }
+              />
+              <input ref={importFileRef} type="file" accept=".json" aria-label="Pilih file backup JSON untuk diimpor" className="hidden" onChange={handleImportFile} />
+              {importResult && (
+                <div className={cn("px-5 pb-3 text-xs flex items-center gap-1.5", importResult.success ? "text-green-600" : "text-destructive")}>
+                  {importResult.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                  {importResult.success || importResult.error}
+                </div>
+              )}
+            </div>
             <SettingRow
               icon={<Trash2 size={15} />}
               label="Hapus Semua Data"
