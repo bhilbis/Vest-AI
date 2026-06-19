@@ -31,6 +31,7 @@ model User {
   accountBalances   AccountBalance[]
   accountTransfers  AccountTransfer[]
   budgets           Budget[]
+  expenseCategories ExpenseCategory[]
   semesters         Semester[]
   kuliahSettings    KuliahSettings?
   examPreps         ExamPrep[]
@@ -98,6 +99,20 @@ model Budget {
   expenses Expense[]
 
   @@index([userId, month, name])
+}
+
+model ExpenseCategory {
+  id        String   @id @default(cuid())
+  value     String
+  label     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, value])
+  @@index([userId, label])
 }
 
 model AccountBalance {
