@@ -61,13 +61,13 @@ export function SessionWrapper({ children }: { children: ReactNode }) {
       {/* Guest Mode Banner */}
       {isGuest && (
         <>
-          <div className="fixed top-0 left-0 right-0 z-60 bg-foreground text-background text-center py-2 px-4 text-xs font-medium flex items-center justify-center gap-3 border-b border-border">
+          <div className="fixed top-0 left-0 right-0 z-60 bg-foreground text-background text-center py-1.5 px-4 text-xs font-medium flex items-center justify-center gap-3 border-b border-border">
             <span>🔓 Mode Guest — Data hanya tersimpan di browser</span>
             <button
               onClick={handleLogoutGuest}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-background/20 hover:bg-background/30 text-background text-[11px] font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-9 rounded-md bg-background/20 hover:bg-background/30 text-background text-[11px] font-medium transition-colors cursor-pointer"
             >
-              <LogOut size={10} />
+              <LogOut size={11} />
               Keluar
             </button>
           </div>

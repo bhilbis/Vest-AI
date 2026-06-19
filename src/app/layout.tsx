@@ -7,6 +7,7 @@ import { VestAIStructuredData } from "@/components/seo/JsonLd";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { LanguageProvider } from "@/lib/i18n/context";
 import "katex/dist/katex.min.css";
 
@@ -48,13 +49,31 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://go-aoixsy.my.id"),
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // black-translucent lets content extend under the status bar;
+    // safe-area-inset-top in globals.css compensates for the notch.
+    statusBarStyle: "black-translucent",
     title: "Financial Tracker",
     startupImage: [
-      {
-        url: "/vest.png",
-        media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)",
-      },
+      // iPhone 15 Pro Max / 14 Pro Max (430×932 @3x)
+      { url: "/vest.png", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      // iPhone 15 / 14 / 13 / 12 (390×844 @3x)
+      { url: "/vest.png", media: "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      // iPhone 15 Plus / 14 Plus / 13 Pro Max / 12 Pro Max (428×926 @3x)
+      { url: "/vest.png", media: "(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      // iPhone 13 mini / 12 mini (375×812 @3x)
+      { url: "/vest.png", media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      // iPhone 11 / XR (414×896 @2x)
+      { url: "/vest.png", media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      // iPhone 11 Pro / X / XS (375×812 @3x — same logical size as mini but different DPR target)
+      { url: "/vest.png", media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
+      // iPhone SE 3rd gen / 8 / 7 / 6 (375×667 @2x)
+      { url: "/vest.png", media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      // iPad Pro 12.9" (1024×1366 @2x)
+      { url: "/vest.png", media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      // iPad Pro 11" / Air (834×1194 @2x)
+      { url: "/vest.png", media: "(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
+      // iPad mini / Air 9.7" (768×1024 @2x)
+      { url: "/vest.png", media: "(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" },
     ],
   },
   alternates: {
@@ -123,6 +142,7 @@ export default function RootLayout({
         >
           <LanguageProvider>
             <SplashScreen />
+            <InstallPrompt />
             <VestAIStructuredData />
             <SessionProviderWrapper>
               {children}

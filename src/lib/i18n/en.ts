@@ -218,4 +218,14 @@ export const en = {
   },
 } as const
 
-export type Translations = typeof en
+// Recursively replaces every leaf string literal with `string` so that
+// non-English translations can satisfy this type without widening the key shape.
+type DeepStringify<T> = {
+  [K in keyof T]: T[K] extends string
+    ? string
+    : T[K] extends object
+    ? DeepStringify<T[K]>
+    : T[K]
+}
+
+export type Translations = DeepStringify<typeof en>

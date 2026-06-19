@@ -1,7 +1,8 @@
-const CACHE_NAME = 'finance-tracker-v2';
+const CACHE_NAME = 'finance-tracker-v3';
 const STATIC_ASSETS = [
   '/vest.png',
-  '/manifest.json',
+  '/manifest.webmanifest',
+  '/offline.html',
 ];
 
 self.addEventListener('install', (event) => {
@@ -49,7 +50,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for all other requests (pages, navigation)
+  // Network-first for navigation — serve offline page on failure
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches.match('/offline.html').then((res) => res || new Response('Offline', { status: 503 }))
+      )
+    );
+    return;
+  }
+
+  // Network-first for everything else
   event.respondWith(
     fetch(request).catch(() => caches.match(request))
   );

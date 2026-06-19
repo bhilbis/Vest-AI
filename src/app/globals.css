@@ -186,11 +186,15 @@
   body {
     @apply bg-background text-foreground antialiased font-sans;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    /* Compensate for black-translucent iOS status bar overlapping content */
+    padding-top: env(safe-area-inset-top);
   }
 }
 
 html {
   scroll-behavior: smooth;
+  /* Prevent any stray element from causing horizontal page scroll */
+  overflow-x: clip;
 }
 
 /* ==================== ANIMATIONS ==================== */

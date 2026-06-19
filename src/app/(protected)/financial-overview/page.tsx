@@ -491,7 +491,7 @@ export default function FinancialOverviewPage() {
               return (
                 <div key={row.month} className="space-y-1">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">{formatMonth(row.month).split(" ")[0]}</span>
+                    <span className="text-muted-foreground">{formatMonth(row.month, dateLocale).split(" ")[0]}</span>
                     <span className="font-medium tabular-nums">{formatCurrency(row.total)}</span>
                   </div>
                   <Progress value={(row.total / max) * 100} className="h-1.5 bg-secondary" />

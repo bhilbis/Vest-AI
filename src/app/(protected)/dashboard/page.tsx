@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import Link from "next/link"
 import { motion } from "motion/react"
 import {
@@ -107,6 +108,7 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const { isGuest, guestName } = useGuestStore()
   const { t, dateLocale } = useLanguage()
+  const isMobile = useIsMobile()
 
   const [accounts, setAccounts] = useState<Account[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -222,7 +224,10 @@ export default function DashboardPage() {
 
   /* ════════════ RENDER ════════════ */
   return (
-    <div className="flex flex-col overflow-hidden" style={{ height: "calc(100svh - 0px)" }}>
+    <div
+      className={isMobile ? "flex flex-col" : "flex flex-col overflow-hidden"}
+      style={isMobile ? undefined : { height: "calc(100svh - 0px)" }}
+    >
       {/* ── Header bar ── */}
       <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-background/80 backdrop-blur-sm">
         <div>
@@ -242,17 +247,31 @@ export default function DashboardPage() {
 
       {/* ── Bento grid ── */}
       <div
-        className="flex-1 min-h-0 p-3 gap-3"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.15fr 1fr 1fr",
-          gridTemplateRows: "1fr 1fr 0.9fr",
-          gridTemplateAreas: `
-            "balance income  budget"
-            "balance expense budget"
-            "txns    txns    academic"
-          `,
-        }}
+        className={isMobile ? "p-3 gap-3 overflow-y-auto" : "flex-1 min-h-0 p-3 gap-3"}
+        style={
+          isMobile
+            ? {
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gridTemplateAreas: `
+                  "balance  balance"
+                  "income   expense"
+                  "budget   budget"
+                  "txns     txns"
+                  "academic academic"
+                `,
+              }
+            : {
+                display: "grid",
+                gridTemplateColumns: "1.15fr 1fr 1fr",
+                gridTemplateRows: "1fr 1fr 0.9fr",
+                gridTemplateAreas: `
+                  "balance income  budget"
+                  "balance expense budget"
+                  "txns    txns    academic"
+                `,
+              }
+        }
       >
 
         {/* ══ A: BALANCE HERO ══ */}
@@ -326,7 +345,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.07, ease: [0.22, 1, 0.36, 1] }}
           style={{ gridArea: "income" }}
-          className="rounded-2xl border border-border bg-card p-4 flex flex-col justify-between overflow-hidden"
+          className="rounded-2xl border border-border bg-card p-3 sm:p-4 flex flex-col justify-between overflow-hidden min-h-[120px]"
         >
           <div className="flex items-start justify-between">
             <div className="h-7 w-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
@@ -348,7 +367,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
           style={{ gridArea: "expense" }}
-          className="rounded-2xl border border-border bg-card p-4 flex flex-col justify-between overflow-hidden"
+          className="rounded-2xl border border-border bg-card p-3 sm:p-4 flex flex-col justify-between overflow-hidden min-h-[120px]"
         >
           <div className="flex items-start justify-between">
             <div className="h-7 w-7 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
@@ -403,7 +422,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">{budgets.length} {t.common.categories}</span>
+                  <span className="text-muted-foreground">{budgets.length} {t.financial.categories}</span>
                   <span className="font-semibold text-foreground">{formatCurrency(budgetTotals.limit)}</span>
                 </div>
               </div>
@@ -441,7 +460,10 @@ export default function DashboardPage() {
               <p className="text-xs text-muted-foreground">{t.dashboard.noTransactions}</p>
             </div>
           ) : (
-            <div className="flex-1 overflow-hidden grid gap-1.5" style={{ gridTemplateColumns: "1fr 1fr", alignContent: "start" }}>
+            <div
+              className="flex-1 overflow-hidden grid gap-1.5"
+              style={{ gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", alignContent: "start" }}
+            >
               {activity.map((tx) => {
                 const isInc = tx.type === "income"
                 const isTrf = tx.type === "transfer"
