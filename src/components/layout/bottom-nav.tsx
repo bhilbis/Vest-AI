@@ -11,17 +11,19 @@ import {
   LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { title: "Home", url: "/dashboard", icon: LayoutDashboard, exact: true },
-  { title: "Keuangan", url: "/financial-overview", icon: Wallet, exact: false },
-  { title: "Kuliah", url: "/kuliah", icon: GraduationCap, exact: false },
-  { title: "Tracker", url: "/tracker", icon: LineChart, exact: true },
-  { title: "Settings", url: "/tracker/settings", icon: Settings, exact: false },
-];
+import { useLanguage } from "@/lib/i18n/context";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { title: t.nav.home,      url: "/dashboard",          icon: LayoutDashboard, exact: true  },
+    { title: t.nav.finance,   url: "/financial-overview", icon: Wallet,          exact: false },
+    { title: t.nav.academic,  url: "/kuliah",             icon: GraduationCap,   exact: false },
+    { title: t.nav.portfolio, url: "/tracker",            icon: LineChart,       exact: true  },
+    { title: t.nav.settings,  url: "/tracker/settings",  icon: Settings,        exact: false },
+  ];
 
   return (
     <div
@@ -36,7 +38,7 @@ export function BottomNav() {
 
           return (
             <Link
-              key={item.title}
+              key={item.url}
               href={item.url}
               className="relative flex flex-col items-center gap-0.5 px-4 py-2 min-h-11 min-w-11 justify-center"
             >

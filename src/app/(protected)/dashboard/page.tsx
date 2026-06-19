@@ -9,30 +9,21 @@ import {
   Target, GraduationCap, TrendingUp, TrendingDown,
   Wallet, Plus, ChevronRight, BookOpen,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatCurrency } from "@/lib/expenseUtils"
 import { useGuestStore } from "@/lib/guest-store"
+import { useLanguage } from "@/lib/i18n/context"
 
 /* ─── helpers ─── */
 const getMonthKey = () => new Date().toISOString().slice(0, 7)
 
-const greetingByHour = () => {
-  const h = new Date().getHours()
-  if (h < 11) return "Selamat Pagi"
-  if (h < 15) return "Selamat Siang"
-  if (h < 18) return "Selamat Sore"
-  return "Selamat Malam"
-}
-
 const fmtShort = (n: number) => {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}M`
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}jt`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}rb`
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`
   return String(Math.round(n))
 }
-
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short" })
 
 /* ─── animated counter ─── */
 function Counter({ to, prefix = "Rp ", duration = 900 }: { to: number; prefix?: string; duration?: number }) {
@@ -104,6 +95,7 @@ interface Income { id: string; amount: number; title: string; date: string }
 interface Transfer { id: string; amount: number; date: string; fromAccount?: { name: string }; toAccount?: { name: string } }
 interface Budget { id: string; limit: number; spent: number; category?: string }
 interface Semester { id: string; name: string; gpa?: number; mataKuliah?: { id: string }[] }
+interface Asset { id: string; amount?: number | null; buyPrice?: number | null }
 
 type Activity =
   | { type: "expense"; id: string; title: string; amount: number; date: string; category: string }
@@ -114,6 +106,7 @@ type Activity =
 export default function DashboardPage() {
   const { data: session } = useSession()
   const { isGuest, guestName } = useGuestStore()
+  const { t, dateLocale } = useLanguage()
 
   const [accounts, setAccounts] = useState<Account[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -121,10 +114,22 @@ export default function DashboardPage() {
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [semesters, setSemesters] = useState<Semester[]>([])
+  const [assets, setAssets] = useState<Asset[]>([])
   const [ready, setReady] = useState(false)
 
   const monthKey = useMemo(() => getMonthKey(), [])
   const displayName = isGuest ? guestName : (session?.user?.name?.split(" ")[0] ?? "")
+
+  const greetingByHour = () => {
+    const h = new Date().getHours()
+    if (h < 11) return t.dashboard.greeting.morning
+    if (h < 15) return t.dashboard.greeting.afternoon
+    if (h < 18) return t.dashboard.greeting.evening
+    return t.dashboard.greeting.night
+  }
+
+  const fmtDate = (d: string) =>
+    new Date(d).toLocaleDateString(dateLocale, { day: "numeric", month: "short" })
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -136,18 +141,22 @@ export default function DashboardPage() {
       fetch(`/api/transfers?month=${monthKey}`).then(r => r.ok ? r.json() : []),
       fetch(`/api/budgets?month=${monthKey}`).then(r => r.ok ? r.json() : { budgets: [] }),
       fetch("/api/kuliah/semester").then(r => r.ok ? r.json() : []),
-    ]).then(([acc, exp, inc, trf, bud, sem]) => {
+      fetch("/api/assets").then(r => r.ok ? r.json() : []),
+    ]).then(([acc, exp, inc, trf, bud, sem, ast]) => {
       if (acc.status === "fulfilled") setAccounts(acc.value ?? [])
       if (exp.status === "fulfilled") setExpenses(exp.value ?? [])
       if (inc.status === "fulfilled") setIncomes(inc.value ?? [])
       if (trf.status === "fulfilled") setTransfers(trf.value ?? [])
       if (bud.status === "fulfilled") setBudgets(bud.value?.budgets ?? bud.value ?? [])
       if (sem.status === "fulfilled") setSemesters(sem.value ?? [])
+      if (ast.status === "fulfilled") setAssets(ast.value ?? [])
     }).finally(() => setReady(true))
   }, [monthKey, isGuest])
 
   /* ─── derived ─── */
   const totalBalance = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts])
+  const totalPortfolio = useMemo(() => assets.reduce((s, a) => s + (Number(a.amount) || 0) * (Number(a.buyPrice) || 0), 0), [assets])
+  const totalNetWorth = totalBalance + totalPortfolio
   const totalIncome = useMemo(() => incomes.reduce((s, i) => s + i.amount, 0), [incomes])
   const totalExpense = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses])
   const netFlow = totalIncome - totalExpense
@@ -161,7 +170,6 @@ export default function DashboardPage() {
   const latestSemester = useMemo(() => semesters[0] ?? null, [semesters])
   const totalCourses = useMemo(() => semesters.reduce((s, sem) => s + (sem.mataKuliah?.length ?? 0), 0), [semesters])
 
-  /* last 7 daily expense totals for sparkline */
   const expSparkline = useMemo(() => {
     const days: Record<string, number> = {}
     for (let i = 6; i >= 0; i--) {
@@ -186,10 +194,10 @@ export default function DashboardPage() {
     const all: Activity[] = [
       ...expenses.map(e => ({ type: "expense" as const, id: e.id, title: e.title, amount: e.amount, date: e.date, category: e.category })),
       ...incomes.map(i => ({ type: "income" as const, id: i.id, title: i.title, amount: i.amount, date: i.date })),
-      ...transfers.map(t => ({
-        type: "transfer" as const, id: t.id,
-        title: `${t.fromAccount?.name ?? "?"} → ${t.toAccount?.name ?? "?"}`,
-        amount: t.amount, date: t.date,
+      ...transfers.map(tr => ({
+        type: "transfer" as const, id: tr.id,
+        title: `${tr.fromAccount?.name ?? "?"} → ${tr.toAccount?.name ?? "?"}`,
+        amount: tr.amount, date: tr.date,
       })),
     ]
     return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
@@ -206,7 +214,7 @@ export default function DashboardPage() {
       <div className="h-[calc(100svh-3.5rem)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin" />
-          <p className="text-xs text-muted-foreground">Memuat dashboard…</p>
+          <p className="text-xs text-muted-foreground">{t.common.loadingDashboard}</p>
         </div>
       </div>
     )
@@ -214,28 +222,22 @@ export default function DashboardPage() {
 
   /* ════════════ RENDER ════════════ */
   return (
-    <div
-      className="flex flex-col overflow-hidden"
-      style={{ height: "calc(100svh - 0px)" }}
-    >
+    <div className="flex flex-col overflow-hidden" style={{ height: "calc(100svh - 0px)" }}>
       {/* ── Header bar ── */}
       <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-background/80 backdrop-blur-sm">
         <div>
           <p className="text-[11px] text-muted-foreground font-medium tracking-wide uppercase">
-            {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
+            {new Date().toLocaleDateString(dateLocale, { weekday: "long", day: "numeric", month: "long" })}
           </p>
           <h1 className="text-lg font-bold text-foreground leading-tight">
             {greetingByHour()}{displayName ? `, ${displayName}` : ""}
           </h1>
         </div>
-        <Link href="/financial-overview">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 bg-primary text-primary-foreground text-xs font-semibold px-3 h-8 rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
-          >
-            <Plus size={13} /> Tambah
-          </button>
-        </Link>
+        <Button asChild size="sm">
+          <Link href="/financial-overview">
+            <Plus size={13} /> {t.common.add}
+          </Link>
+        </Button>
       </div>
 
       {/* ── Bento grid ── */}
@@ -260,34 +262,27 @@ export default function DashboardPage() {
           style={{ gridArea: "balance" }}
           className="relative rounded-2xl overflow-hidden flex flex-col justify-between p-5 border border-border"
         >
-          {/* green radial gradient bg */}
           <div className="absolute inset-0 bg-primary/8 pointer-events-none" />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "radial-gradient(ellipse 90% 70% at 10% 110%, hsl(var(--primary)/0.18) 0%, transparent 65%)",
-            }}
-          />
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 90% 70% at 10% 110%, hsl(var(--primary)/0.18) 0%, transparent 65%)" }} />
 
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-4">
               <div className="h-7 w-7 rounded-lg bg-primary/15 flex items-center justify-center">
                 <Wallet size={14} className="text-primary" />
               </div>
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Saldo</span>
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t.dashboard.netWorth}</span>
             </div>
 
             <div className="mb-1">
               <span className="text-[11px] text-muted-foreground">Rp </span>
               <span className="text-3xl font-black text-foreground tracking-tight leading-none">
-                {ready ? <Counter to={totalBalance} prefix="" /> : "—"}
+                {ready ? <Counter to={totalNetWorth} prefix="" /> : "—"}
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground mb-4">
-              {accounts.length} rekening · {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
+              {t.dashboard.financePortfolio} · {new Date().toLocaleDateString(dateLocale, { month: "long", year: "numeric" })}
             </p>
 
-            {/* Account mini pills */}
             <div className="flex flex-wrap gap-1.5 mb-4">
               {accounts.slice(0, 3).map(acc => (
                 <div key={acc.id} className="flex items-center gap-1 bg-muted/80 rounded-full px-2 py-0.5">
@@ -297,30 +292,31 @@ export default function DashboardPage() {
                   <span className="text-[10px] font-semibold text-foreground">{fmtShort(acc.balance)}</span>
                 </div>
               ))}
+              {totalPortfolio > 0 && (
+                <div className="flex items-center gap-1 bg-muted/80 rounded-full px-2 py-0.5">
+                  <span className="text-[9px]">📈</span>
+                  <span className="text-[10px] font-medium text-foreground">{t.dashboard.portfolio}</span>
+                  <span className="text-[10px] text-muted-foreground">·</span>
+                  <span className="text-[10px] font-semibold text-foreground">{fmtShort(totalPortfolio)}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Net flow indicator */}
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-muted-foreground font-medium">Net bulan ini</span>
-              <span className={cn("text-xs font-bold flex items-center gap-0.5",
-                netFlow >= 0 ? "text-success" : "text-destructive"
-              )}>
+              <span className="text-[10px] text-muted-foreground font-medium">{t.dashboard.netThisMonth}</span>
+              <span className={cn("text-xs font-bold flex items-center gap-0.5", netFlow >= 0 ? "text-success" : "text-destructive")}>
                 {netFlow >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
                 {netFlow >= 0 ? "+" : ""}{formatCurrency(Math.abs(netFlow))}
               </span>
             </div>
-            {/* Income vs expense mini bar */}
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${totalIncome + totalExpense > 0 ? (totalIncome / (totalIncome + totalExpense)) * 100 : 0}%` }}
-              />
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${totalIncome + totalExpense > 0 ? (totalIncome / (totalIncome + totalExpense)) * 100 : 0}%` }} />
             </div>
             <div className="flex justify-between mt-1">
-              <span className="text-[9px] text-success">↑ Masuk</span>
-              <span className="text-[9px] text-destructive">↓ Keluar</span>
+              <span className="text-[9px] text-success">↑ {t.dashboard.incoming}</span>
+              <span className="text-[9px] text-destructive">↓ {t.dashboard.outgoing}</span>
             </div>
           </div>
         </motion.div>
@@ -339,11 +335,11 @@ export default function DashboardPage() {
             <Sparkline values={incSparkline} color="hsl(var(--success))" height={28} width={60} />
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-0.5">Pemasukan</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-0.5">{t.dashboard.income}</p>
             <p className="text-xl font-black text-foreground leading-tight">
               <Counter to={totalIncome} />
             </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{incomes.length} transaksi bulan ini</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{incomes.length} {t.dashboard.transactionsThisMonth}</p>
           </div>
         </motion.div>
 
@@ -361,11 +357,11 @@ export default function DashboardPage() {
             <Sparkline values={expSparkline} color="hsl(var(--destructive))" height={28} width={60} />
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-0.5">Pengeluaran</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mb-0.5">{t.dashboard.expenses}</p>
             <p className="text-xl font-black text-foreground leading-tight">
               <Counter to={totalExpense} />
             </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{expenses.length} transaksi bulan ini</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{expenses.length} {t.dashboard.transactionsThisMonth}</p>
           </div>
         </motion.div>
 
@@ -380,7 +376,7 @@ export default function DashboardPage() {
             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Target size={14} className="text-primary" />
             </div>
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Budget</span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.dashboard.budget}</span>
             <Link href="/financial-overview/budgets" className="ml-auto text-muted-foreground hover:text-foreground transition-colors">
               <ChevronRight size={13} />
             </Link>
@@ -392,22 +388,22 @@ export default function DashboardPage() {
                 <DonutRing pct={budgetPct} size={96} stroke={9} color={budgetColor} />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-lg font-black text-foreground leading-none">{Math.round(budgetPct)}%</span>
-                  <span className="text-[9px] text-muted-foreground">terpakai</span>
+                  <span className="text-[9px] text-muted-foreground">{t.dashboard.used}</span>
                 </div>
               </div>
               <div className="w-full space-y-1.5">
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">Dipakai</span>
+                  <span className="text-muted-foreground">{t.dashboard.usedLabel}</span>
                   <span className="font-semibold text-foreground">{formatCurrency(budgetTotals.spent)}</span>
                 </div>
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">Sisa</span>
+                  <span className="text-muted-foreground">{t.dashboard.remaining}</span>
                   <span className={cn("font-semibold", budgetPct >= 90 ? "text-destructive" : "text-success")}>
                     {formatCurrency(Math.max(budgetTotals.limit - budgetTotals.spent, 0))}
                   </span>
                 </div>
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-muted-foreground">{budgets.length} kategori</span>
+                  <span className="text-muted-foreground">{budgets.length} {t.common.categories}</span>
                   <span className="font-semibold text-foreground">{formatCurrency(budgetTotals.limit)}</span>
                 </div>
               </div>
@@ -417,9 +413,9 @@ export default function DashboardPage() {
               <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                 <Target size={20} className="text-muted-foreground" />
               </div>
-              <p className="text-xs text-muted-foreground">Belum ada budget</p>
+              <p className="text-xs text-muted-foreground">{t.dashboard.noBudget}</p>
               <Link href="/financial-overview/budgets">
-                <span className="text-[11px] text-primary font-medium hover:underline">+ Buat Budget</span>
+                <span className="text-[11px] text-primary font-medium hover:underline">{t.dashboard.createBudget}</span>
               </Link>
             </div>
           )}
@@ -433,16 +429,16 @@ export default function DashboardPage() {
           className="rounded-2xl border border-border bg-card p-4 overflow-hidden flex flex-col"
         >
           <div className="flex items-center justify-between mb-3 shrink-0">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Aktivitas Terbaru</span>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.dashboard.recentActivity}</span>
             <Link href="/financial-overview/transactions" className="text-[10px] text-primary hover:underline flex items-center gap-0.5 font-medium">
-              Semua <ChevronRight size={11} />
+              {t.dashboard.viewAll} <ChevronRight size={11} />
             </Link>
           </div>
 
           {activity.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
               <ArrowLeftRight size={18} className="text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground">Belum ada transaksi bulan ini</p>
+              <p className="text-xs text-muted-foreground">{t.dashboard.noTransactions}</p>
             </div>
           ) : (
             <div className="flex-1 overflow-hidden grid gap-1.5" style={{ gridTemplateColumns: "1fr 1fr", alignContent: "start" }}>
@@ -451,8 +447,7 @@ export default function DashboardPage() {
                 const isTrf = tx.type === "transfer"
                 return (
                   <div key={tx.id} className="flex items-center gap-2 py-1 min-w-0">
-                    <div className={cn(
-                      "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
+                    <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
                       isInc ? "bg-success/10" : isTrf ? "bg-chart-2/10" : "bg-destructive/10"
                     )}>
                       {isInc
@@ -490,7 +485,7 @@ export default function DashboardPage() {
               <div className="h-7 w-7 rounded-lg bg-chart-2/10 flex items-center justify-center shrink-0">
                 <GraduationCap size={14} className="text-chart-2" />
               </div>
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Akademik</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{t.dashboard.academic}</span>
             </div>
             <Link href="/kuliah/tracker" className="text-muted-foreground hover:text-foreground transition-colors">
               <ChevronRight size={13} />
@@ -504,17 +499,17 @@ export default function DashboardPage() {
                   <p className="text-lg font-black text-foreground leading-none">
                     {latestSemester?.gpa != null ? latestSemester.gpa.toFixed(2) : "—"}
                   </p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">IPK Terakhir</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">{t.dashboard.latestGPA}</p>
                 </div>
                 <div className="bg-muted/50 rounded-xl p-2.5 text-center">
                   <p className="text-lg font-black text-foreground leading-none">{semesters.length}</p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">Semester</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">{t.dashboard.semester}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <BookOpen size={11} className="text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground">{totalCourses} mata kuliah total</span>
+                  <span className="text-[10px] text-muted-foreground">{totalCourses} {t.dashboard.totalCourses}</span>
                 </div>
                 {latestSemester && (
                   <span className="text-[10px] font-medium text-primary truncate max-w-[100px]">
@@ -526,9 +521,9 @@ export default function DashboardPage() {
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center gap-1.5 text-center">
               <GraduationCap size={18} className="text-muted-foreground/50" />
-              <p className="text-xs text-muted-foreground">Belum ada data kuliah</p>
+              <p className="text-xs text-muted-foreground">{t.dashboard.noAcademicData}</p>
               <Link href="/kuliah/tracker">
-                <span className="text-[11px] text-primary font-medium hover:underline">+ Mulai Tracker</span>
+                <span className="text-[11px] text-primary font-medium hover:underline">{t.dashboard.startTracker}</span>
               </Link>
             </div>
           )}

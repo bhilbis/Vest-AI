@@ -7,6 +7,7 @@ import { VestAIStructuredData } from "@/components/seo/JsonLd";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
+import { LanguageProvider } from "@/lib/i18n/context";
 import "katex/dist/katex.min.css";
 
 export const viewport: Viewport = {
@@ -120,14 +121,17 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SplashScreen />
-          <VestAIStructuredData />
-          <SessionProviderWrapper>
-            {children}
-            <Toaster position="top-center" richColors />
-            <ConfirmDialog />
-          </SessionProviderWrapper>
-          <script
+          <LanguageProvider>
+            <SplashScreen />
+            <VestAIStructuredData />
+            <SessionProviderWrapper>
+              {children}
+              <Toaster position="top-center" richColors />
+              <ConfirmDialog />
+            </SessionProviderWrapper>
+          </LanguageProvider>
+        </ThemeProvider>
+        <script
             dangerouslySetInnerHTML={{
               __html: `
                 if ('serviceWorker' in navigator) {
@@ -142,7 +146,6 @@ export default function RootLayout({
               `,
             }}
           />
-        </ThemeProvider>
       </body>
     </html>
   );
