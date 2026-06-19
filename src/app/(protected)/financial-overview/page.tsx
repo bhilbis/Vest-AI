@@ -40,11 +40,10 @@ import {
   Tags,
 } from "lucide-react"
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog"
+import { TransactionFormDialog } from "@/components/expenses/TransactionFormDialog"
 import { useExpenseForm } from "@/hooks/useExpensesForm"
-import { TransferFormDialog } from "@/components/expenses/TransferFormDialog"
 import { AccountBalanceFormDialog } from "@/components/balance-type/BalanceTypeFormDialog"
 import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog"
-import { IncomeFormDialog } from "@/components/income/IncomeFormDialog"
 import { CashflowChart } from "@/components/tracker/cashflow-chart"
 import { ExpensePieChart } from "@/components/tracker/expense-pie-chart"
 import { EXPENSE_CATEGORIES, getExpenseCategories, formatCurrency, calculateExpenseSummary, mergeExpenseCategories, type ExpenseCategoryOption } from "@/lib/expenseUtils"
@@ -125,7 +124,7 @@ export default function FinancialOverviewPage() {
   const [newCategoryLabel, setNewCategoryLabel] = useState("")
   const [analytics, setAnalytics] = useState<ExpenseAnalytics | null>(null)
   const [loading, setLoading] = useState({ expenses: true, accounts: true, budgets: true })
-  const [dialogs, setDialogs] = useState({ expense: false, transfer: false, account: false, budget: false, income: false, category: false })
+  const [dialogs, setDialogs] = useState({ expense: false, transaction: false, transactionTab: "expense" as "expense" | "income" | "transfer", account: false, budget: false, category: false })
   const currentMonthKey = useMemo(() => getMonthKey(), [])
   const [editing, setEditing] = useState<{ account: AccountBalance | null; budget: BudgetWithUsage | null }>({ account: null, budget: null })
   const [filters, setFilters] = useState({ category: "all", startDate: "", endDate: "", month: currentMonthKey })
@@ -295,7 +294,7 @@ export default function FinancialOverviewPage() {
       const res = await fetch(url, { method: editingExpense ? "PUT" : "POST", body: fd })
       if (!res.ok) throw new Error("Failed")
       await Promise.all([fetchExpenses(), fetchBudgets(), fetchAccounts(), fetchAnalytics()])
-      resetForm(); setDialogs((p) => ({ ...p, expense: false }))
+      resetForm(); setDialogs((p) => ({ ...p, expense: false, transaction: false }))
     } catch { /* ignore */ }
   }, [formData, editingExpense, removePhoto, fetchExpenses, fetchBudgets, fetchAccounts, fetchAnalytics, resetForm])
 
@@ -404,14 +403,8 @@ export default function FinancialOverviewPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => setDialogs((p) => ({ ...p, expense: true }))}>
-          <TrendingDown size={14} /> {t.financial.expenses}
-        </Button>
-        <Button size="sm" onClick={() => setDialogs((p) => ({ ...p, income: true }))}>
-          <TrendingUp size={14} /> {t.financial.income}
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => setDialogs((p) => ({ ...p, transfer: true }))}>
-          <ArrowLeftRight size={14} /> {t.financial.transfer}
+        <Button size="sm" onClick={() => setDialogs((p) => ({ ...p, transaction: true, transactionTab: "expense" }))}>
+          <PlusIcon size={14} /> {t.financial.addTransaction}
         </Button>
         <Button size="sm" variant="outline" onClick={() => { setEditing((p) => ({ ...p, budget: null })); setDialogs((p) => ({ ...p, budget: true })) }}>
           <Target size={14} /> {t.financial.budget}
@@ -671,9 +664,26 @@ export default function FinancialOverviewPage() {
       </div>
 
       {/* Dialogs */}
+      <TransactionFormDialog
+        isOpen={dialogs.transaction}
+        onOpenChange={(open) => { setDialogs((p) => ({ ...p, transaction: open })); if (open) updateFormData({ date: `${filters.month}-01T00:00` }); if (!open) resetForm() }}
+        defaultTab={dialogs.transactionTab}
+        expenseFormData={formData}
+        onExpenseFormDataChange={updateFormData}
+        onExpenseSubmit={handleSubmitExpense}
+        onPhotoChange={handlePhotoChange}
+        onRemovePhoto={handleRemovePhoto}
+        categories={categories}
+        accounts={data.accounts}
+        budgets={budgetsForExpense}
+        onAddCategory={() => setDialogs((p) => ({ ...p, category: true }))}
+        defaultDate={`${filters.month}-01`}
+        onIncomeSuccess={() => { fetchAccounts(); fetchExpenses(); fetchIncomes() }}
+        onTransferSuccess={() => { fetchAccounts(); fetchTransfers(); fetchExpenses() }}
+      />
       <ExpenseFormDialog
         isOpen={dialogs.expense}
-        onOpenChange={(open) => { setDialogs((p) => ({ ...p, expense: open })); if (open && !editingExpense) updateFormData({ date: `${filters.month}-01` }); if (!open) resetForm() }}
+        onOpenChange={(open) => { setDialogs((p) => ({ ...p, expense: open })); if (!open) resetForm() }}
         formData={formData}
         onFormDataChange={updateFormData}
         onSubmit={handleSubmitExpense}
@@ -686,10 +696,8 @@ export default function FinancialOverviewPage() {
         existingPhotoUrl={editingExpense?.photoUrl}
         onAddCategory={() => setDialogs((p) => ({ ...p, category: true }))}
       />
-      <TransferFormDialog isOpen={dialogs.transfer} onOpenChange={(open) => setDialogs((p) => ({ ...p, transfer: open }))} accounts={data.accounts} onSuccess={() => { fetchAccounts(); fetchTransfers(); fetchExpenses() }} />
       <AccountBalanceFormDialog isOpen={dialogs.account} onOpenChange={(open) => { setDialogs((p) => ({ ...p, account: open })); if (!open) setEditing((p) => ({ ...p, account: null })) }} fetchData={fetchAccounts} editing={editing.account} />
       <BudgetFormDialog isOpen={dialogs.budget} onOpenChange={(open) => { setDialogs((p) => ({ ...p, budget: open })); if (!open) setEditing((p) => ({ ...p, budget: null })) }} defaultMonth={filters.month} onSuccess={fetchBudgets} editing={editing.budget} />
-      <IncomeFormDialog isOpen={dialogs.income} onOpenChange={(open) => setDialogs((p) => ({ ...p, income: open }))} accounts={data.accounts} defaultDate={`${filters.month}-01`} onSuccess={() => { fetchAccounts(); fetchExpenses(); fetchIncomes() }} />
 
       <Dialog open={dialogs.category} onOpenChange={(open) => setDialogs((p) => ({ ...p, category: open }))}>
         <DialogContent className="sm:max-w-md">

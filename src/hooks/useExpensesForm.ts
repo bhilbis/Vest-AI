@@ -9,19 +9,24 @@ interface FormData {
   date: string;
   photo: File | null;
   photoPreview: string | null;
-  accountId: string; // 🔥 NEW
+  accountId: string;
   budgetId: string;
 }
+
+const toLocalDatetime = (d: Date = new Date()) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const initialFormData: FormData = {
   title: '',
   amount: '',
   category: '',
   description: '',
-  date: new Date().toISOString().split('T')[0],
+  date: toLocalDatetime(),
   photo: null,
   photoPreview: null,
-  accountId: '', // 🔥 NEW
+  accountId: '',
   budgetId: '',
 };
 
@@ -63,7 +68,7 @@ export function useExpenseForm() {
       amount: expense.amount.toString(),
       category: expense.category || '',
       description: expense.description || '',
-      date: new Date(expense.date).toISOString().split('T')[0],
+      date: toLocalDatetime(new Date(expense.date)),
       photo: null,
       photoPreview: expense.photoUrl,
       accountId: expense.accountId ?? '', // 🔥 NEW

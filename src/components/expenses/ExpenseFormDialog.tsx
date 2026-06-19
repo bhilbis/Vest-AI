@@ -23,6 +23,7 @@ import { PlusIcon, XIcon } from "lucide-react";
 import Image from "next/image";
 import { Budget } from "@/types/types";
 import { formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/context";
 
 interface FormData {
   title: string;
@@ -32,7 +33,7 @@ interface FormData {
   date: string;
   photo: File | null;
   photoPreview: string | null;
-  accountId: string; // 🔥 NEW
+  accountId: string;
   budgetId: string;
 }
 
@@ -53,7 +54,7 @@ interface ExpenseFormDialogProps {
   onRemovePhoto: () => void;
   isEditing: boolean;
   categories: Array<{ value: string; label: string }>;
-  accounts: AccountData[]; // 🔥 NEW
+  accounts: AccountData[];
   budgets?: Budget[];
   existingPhotoUrl?: string | null;
   onAddCategory?: () => void;
@@ -74,6 +75,8 @@ export function ExpenseFormDialog({
   existingPhotoUrl,
   onAddCategory,
 }: ExpenseFormDialogProps) {
+  const { t } = useLanguage();
+
   const formatCompactCurrency = (value: number) =>
     new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(value);
 
@@ -82,18 +85,17 @@ export function ExpenseFormDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">
-            {isEditing ? "Edit Pengeluaran" : "Tambah Pengeluaran Baru"}
+            {isEditing ? t.financial.editExpense : t.financial.addExpense}
           </DialogTitle>
           <DialogDescription>
-            Tambahkan detail pengeluaran Anda beserta foto jika diperlukan
+            {t.financial.addExpenseDesc}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-6">
-          {/* Judul + Amount */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Judul *</Label>
+              <Label>{t.financial.labelTitle} *</Label>
               <Input
                 value={formData.title}
                 onChange={(e) => onFormDataChange({ title: e.target.value })}
@@ -102,7 +104,7 @@ export function ExpenseFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Jumlah (Rp) *</Label>
+              <Label>{t.financial.labelAmount} *</Label>
               <Input
                 type="text"
                 inputMode="numeric"
@@ -114,15 +116,14 @@ export function ExpenseFormDialog({
             </div>
           </div>
 
-          {/* Category + Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <Label>Kategori</Label>
+                <Label>{t.financial.labelCategory}</Label>
                 {onAddCategory && (
                   <Button type="button" variant="ghost" size="sm" className="h-7 min-h-0 gap-1 px-2 text-xs" onClick={onAddCategory}>
                     <PlusIcon className="h-3 w-3" />
-                    Tambah
+                    {t.common.add}
                   </Button>
                 )}
               </div>
@@ -131,7 +132,7 @@ export function ExpenseFormDialog({
                 onValueChange={(value) => onFormDataChange({ category: value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori" />
+                  <SelectValue placeholder={t.financial.placeholderSelectCategory} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
@@ -144,9 +145,9 @@ export function ExpenseFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Tanggal *</Label>
+              <Label>{t.financial.labelDate} *</Label>
               <Input
-                type="date"
+                type="datetime-local"
                 value={formData.date}
                 onChange={(e) => onFormDataChange({ date: e.target.value })}
                 required
@@ -154,15 +155,14 @@ export function ExpenseFormDialog({
             </div>
           </div>
 
-          {/* Sumber Dana / Account */}
           <div className="space-y-2">
-            <Label>Sumber Dana *</Label>
+            <Label>{t.financial.labelSourceAccount} *</Label>
             <Select
               value={formData.accountId}
               onValueChange={(value) => onFormDataChange({ accountId: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Pilih akun sumber dana" />
+                <SelectValue placeholder={t.financial.placeholderSelectSourceAccount} />
               </SelectTrigger>
               <SelectContent>
                 {accounts.map((acc) => (
@@ -174,15 +174,14 @@ export function ExpenseFormDialog({
             </Select>
           </div>
 
-          {/* Budget */}
           <div className="space-y-2">
-            <Label>Anggarkan ke Budget</Label>
+            <Label>{t.financial.labelAssignBudget}</Label>
             <Select
               value={formData.budgetId}
               onValueChange={(value) => onFormDataChange({ budgetId: value })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Tidak menggunakan budget" />
+                <SelectValue placeholder={t.financial.placeholderNoBudget} />
               </SelectTrigger>
               <SelectContent>
                 {budgets.map((budget) => (
@@ -190,7 +189,7 @@ export function ExpenseFormDialog({
                     {budget.name} — Rp {formatCompactCurrency(budget.limit)}
                     {typeof budget.spent === "number" && (
                       <span className="text-muted-foreground text-xs ml-1">
-                        (Sisa Rp {formatCompactCurrency(Math.max(budget.limit - (budget.spent ?? 0), 0))})
+                        ({t.financial.budgetRemaining} Rp {formatCompactCurrency(Math.max(budget.limit - (budget.spent ?? 0), 0))})
                       </span>
                     )}
                   </SelectItem>
@@ -199,9 +198,8 @@ export function ExpenseFormDialog({
             </Select>
           </div>
 
-          {/* Description */}
           <div className="space-y-2">
-            <Label>Deskripsi</Label>
+            <Label>{t.financial.labelDescription}</Label>
             <Textarea
               rows={3}
               value={formData.description}
@@ -209,9 +207,8 @@ export function ExpenseFormDialog({
             />
           </div>
 
-          {/* Photo */}
           <div className="space-y-2">
-            <Label>Foto</Label>
+            <Label>{t.financial.labelPhoto}</Label>
             <Input type="file" accept="image/*" onChange={onPhotoChange} />
 
             {formData.photoPreview && (
@@ -250,10 +247,10 @@ export function ExpenseFormDialog({
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Batal
+              {t.common.cancel}
             </Button>
             <Button>
-              {isEditing ? "Update" : "Simpan"}
+              {isEditing ? t.common.save : t.common.save}
             </Button>
           </div>
         </form>
