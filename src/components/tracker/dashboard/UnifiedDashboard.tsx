@@ -1,21 +1,18 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 import { motion } from "motion/react"
 import {
-  Wallet,
   TrendingUp,
   TrendingDown,
   PieChart,
   ArrowUpRight,
   ArrowDownRight,
   BarChart3,
-  CreditCard,
   Plus,
   RefreshCw,
   Star,
   Layers,
-  ChevronRight,
   Loader2,
   ExternalLink,
 } from "lucide-react"
@@ -27,14 +24,6 @@ import { usePortfolioAssets } from "@/components/tracker/dashboard/usePortfolioA
 import type { AssetProps } from "@/components/tracker/dashboard/types"
 import { formatCurrency } from "@/lib/expenseUtils"
 import Link from "next/link"
-
-// ==================== TYPES ====================
-interface AccountBalance {
-  id: string
-  name: string
-  type: string
-  balance: number
-}
 
 type AssetWithStats = AssetProps & {
   val: number
@@ -58,31 +47,11 @@ const item = {
 export function UnifiedDashboard() {
   const { assets, loading: assetsLoading, reload: reloadAssets } = usePortfolioAssets()
 
-  const [accounts, setAccounts] = useState<AccountBalance[]>([])
-  const [dataLoading, setDataLoading] = useState(true)
-
-  const fetchData = useCallback(async () => {
-    setDataLoading(true)
-    try {
-      const res = await fetch("/api/account-balance")
-      setAccounts(res.ok ? await res.json() : [])
-    } catch {
-      // silent
-    } finally {
-      setDataLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { fetchData() }, [fetchData])
-
   const handleReloadAll = useCallback(() => {
     reloadAssets()
-    fetchData()
-  }, [reloadAssets, fetchData])
+  }, [reloadAssets])
 
-  const isLoading = assetsLoading || dataLoading
-
-  const totalCash = useMemo(() => accounts.reduce((s, a) => s + a.balance, 0), [accounts])
+  const isLoading = assetsLoading
 
   const portfolio = useMemo(() => {
     if (!assets.length) {
@@ -135,8 +104,6 @@ export function UnifiedDashboard() {
     }
   }, [assets])
 
-  const totalNetWorth = totalCash + portfolio.totalValue
-
   // ==================== RENDER ====================
   return (
     <div className="space-y-6">
@@ -179,46 +146,42 @@ export function UnifiedDashboard() {
             <div className="p-5 sm:p-6 flex flex-col justify-between h-full relative z-10">
               <div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <Wallet className="h-4 w-4" />
-                  <span>Total Net Worth</span>
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Total Nilai Portofolio</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight tabular-nums">
                   {isLoading ? (
                     <span className="animate-shimmer h-10 w-48 rounded block" />
                   ) : (
-                    formatCurrency(totalNetWorth)
+                    formatCurrency(portfolio.totalValue)
                   )}
                 </h2>
                 {!isLoading && (
                   <div className="flex flex-wrap items-center gap-3 mt-3">
                     <Badge variant="outline" className="gap-1 text-xs">
-                      <CreditCard className="h-3 w-3" />
-                      Cash: {formatCurrency(totalCash)}
-                    </Badge>
-                    <Badge variant="outline" className="gap-1 text-xs">
                       <BarChart3 className="h-3 w-3" />
-                      Portfolio: {formatCurrency(portfolio.totalValue)}
+                      {assets.length} aset investasi
                     </Badge>
                   </div>
                 )}
               </div>
-              {!isLoading && totalNetWorth > 0 && (
+              {!isLoading && portfolio.totalValue > 0 && portfolio.totalCost > 0 && (
                 <div className="mt-6 space-y-2">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Cash vs Portfolio</span>
+                    <span>Modal vs Profit</span>
                     <span>
-                      {((totalCash / totalNetWorth) * 100).toFixed(0)}% /{" "}
-                      {((portfolio.totalValue / totalNetWorth) * 100).toFixed(0)}%
+                      {((portfolio.totalCost / portfolio.totalValue) * 100).toFixed(0)}% /{" "}
+                      {((portfolio.totalProfit / portfolio.totalValue) * 100).toFixed(0)}%
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted flex overflow-hidden">
                     <div
                       className="bg-chart-1 rounded-l-full transition-all duration-700"
-                      style={{ width: `${(totalCash / totalNetWorth) * 100}%` }}
+                      style={{ width: `${Math.min((portfolio.totalCost / portfolio.totalValue) * 100, 100)}%` }}
                     />
                     <div
                       className="bg-primary rounded-r-full transition-all duration-700"
-                      style={{ width: `${(portfolio.totalValue / totalNetWorth) * 100}%` }}
+                      style={{ width: `${Math.max((portfolio.totalProfit / portfolio.totalValue) * 100, 0)}%` }}
                     />
                   </div>
                 </div>
@@ -414,35 +377,6 @@ export function UnifiedDashboard() {
               )}
             </div>
 
-            {/* Kas / Saldo Akun */}
-            {!isLoading && accounts.length > 0 && (
-              <div className="border-t border-border/30 p-5 space-y-2.5">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Kas / Saldo
-                  </p>
-                  <Link
-                    href="/financial-overview"
-                    className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
-                  >
-                    Detail <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </div>
-                {accounts.map((acc) => (
-                  <div key={acc.id} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                        {acc.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-muted-foreground truncate">{acc.name}</span>
-                    </div>
-                    <span className="font-medium tabular-nums shrink-0 ml-2">
-                      {formatCurrency(acc.balance)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </Card>
         </motion.div>
       </motion.div>

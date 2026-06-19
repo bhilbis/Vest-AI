@@ -128,7 +128,7 @@ export function GradeSettings() {
   const allValid = tutonValid && regulerValid && praktikValid
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 py-6">
+    <div className="space-y-10">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -143,14 +143,12 @@ export function GradeSettings() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-10 px-4 text-xs font-bold gap-2 text-muted-foreground hover:bg-white dark:hover:bg-muted shadow-sm border border-transparent hover:border-border"
             onClick={handleReset}
           >
             <RotateCcw className="h-3.5 w-3.5" /> Reset Default
           </Button>
           <Button
             size="sm"
-            className="h-10 px-6 text-xs font-bold gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 border-none"
             onClick={handleSave}
             disabled={saving || !dirty || !allValid}
           >

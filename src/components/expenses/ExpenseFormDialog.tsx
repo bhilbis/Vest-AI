@@ -17,7 +17,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusIcon, XIcon } from "lucide-react";
@@ -57,6 +56,7 @@ interface ExpenseFormDialogProps {
   accounts: AccountData[]; // 🔥 NEW
   budgets?: Budget[];
   existingPhotoUrl?: string | null;
+  onAddCategory?: () => void;
 }
 
 export function ExpenseFormDialog({
@@ -72,19 +72,13 @@ export function ExpenseFormDialog({
   accounts,
   budgets = [],
   existingPhotoUrl,
+  onAddCategory,
 }: ExpenseFormDialogProps) {
   const formatCompactCurrency = (value: number) =>
     new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(value);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <PlusIcon className="h-4 w-4" />
-          Tambah Pengeluaran
-        </Button>
-      </DialogTrigger>
-
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">
@@ -123,7 +117,15 @@ export function ExpenseFormDialog({
           {/* Category + Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Kategori</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Kategori</Label>
+                {onAddCategory && (
+                  <Button type="button" variant="ghost" size="sm" className="h-7 min-h-0 gap-1 px-2 text-xs" onClick={onAddCategory}>
+                    <PlusIcon className="h-3 w-3" />
+                    Tambah
+                  </Button>
+                )}
+              </div>
               <Select
                 value={formData.category}
                 onValueChange={(value) => onFormDataChange({ category: value })}

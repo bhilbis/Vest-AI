@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   TrendingUp,
   MessageSquarePlus,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useConfirmStore } from "@/lib/confirm-store"
@@ -41,6 +42,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { AddMataKuliahDialog } from "./AddMataKuliahDialog"
 import { EditMataKuliahDialog } from "./EditMataKuliahDialog"
 import {
@@ -60,6 +66,93 @@ const JENIS_CONFIG: Record<string, { label: string; colLabel: string; badgeClass
   reguler: { label: "Reguler",  colLabel: "Sesi",      badgeClass: "border-primary/30 text-primary bg-primary/5" },
   praktik: { label: "Praktik",  colLabel: "Sesi",      badgeClass: "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5" },
   tuweb:   { label: "Tuweb",    colLabel: "Aktivitas", badgeClass: "border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/5" },
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+function SemesterStatusChips({ semester }: { semester: SemesterData }) {
+  const stats = useMemo(() => {
+    const now = new Date()
+    let totalPast = 0, attended = 0
+    const pending: { mkNama: string; sesiNum: number; missing: string }[] = []
+
+    semester.mataKuliah.forEach((mk) => {
+      mk.sessions.forEach((s) => {
+        const status = getSessionStatus(s, semester.tanggalMulai, now)
+        if (status === "future" || status === "active") return
+        totalPast++
+        if (s.kehadiran) attended++
+        if (status === "needs-input") {
+          const parts: string[] = []
+          if (!(s.hasTugas || s.diskusiNA || s.diskusi !== null)) parts.push("diskusi")
+          if (!(!s.hasTugas || s.tugasNA || s.tugas !== null)) parts.push("tugas")
+          pending.push({ mkNama: mk.nama, sesiNum: s.sesiNumber, missing: parts.join(" & ") })
+        }
+      })
+    })
+
+    return {
+      totalPast,
+      attended,
+      kehadiranPct: totalPast > 0 ? Math.round((attended / totalPast) * 100) : null,
+      pending,
+    }
+  }, [semester])
+
+  if (semester.mataKuliah.length === 0) return null
+
+  const { kehadiranPct, pending, totalPast } = stats
+  const hasPending = pending.length > 0
+
+  return (
+    <>
+      {kehadiranPct !== null && (
+        <span className={cn(
+          "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full",
+          kehadiranPct >= 75
+            ? "bg-success/10 text-success"
+            : "bg-destructive/10 text-destructive",
+        )}>
+          {kehadiranPct >= 75 ? <CheckCircle2 size={10} /> : <AlertTriangle size={10} />}
+          {kehadiranPct}% hadir
+        </span>
+      )}
+
+      {hasPending ? (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 transition-colors cursor-pointer"
+            >
+              <AlertTriangle size={10} />
+              {pending.length} sesi perlu diisi
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" sideOffset={8} className="w-72 p-3">
+            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5 mb-2.5">
+              <AlertTriangle size={12} className="text-amber-500" />
+              Sesi belum dilengkapi
+            </p>
+            <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1">
+              {pending.map((item, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span className="font-medium text-foreground">{item.mkNama}</span>
+                  <span className="text-muted-foreground">· Sesi {item.sesiNum}</span>
+                  <span className="text-amber-500">· Nilai {item.missing}</span>
+                </div>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : totalPast > 0 ? (
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-success/10 text-success">
+          <CheckCircle2 size={10} />
+          Semua lengkap
+        </span>
+      ) : null}
+    </>
+  )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -351,28 +444,42 @@ export function TrackerGrid() {
         {newSemester.show && (
           <div className="rounded-xl border border-border bg-card p-4 space-y-3 animate-slide-up">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Semester Baru</p>
-            <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-wrap">
               <Input
                 placeholder="Nama (mis. Semester 1 2025/2026)"
                 value={newSemester.nama}
                 onChange={(e) => setNewSemester((p) => ({ ...p, nama: e.target.value }))}
-                className="h-9 text-sm flex-1 min-w-[200px]"
+                className="flex-1 min-w-[200px]"
               />
               <div className="flex items-center gap-1.5">
                 <CalendarDays size={13} className="text-muted-foreground shrink-0" />
-                <Input type="date" value={newSemester.tanggalMulai}
+                <Input
+                  type="date"
+                  value={newSemester.tanggalMulai}
                   onChange={(e) => setNewSemester((p) => ({ ...p, tanggalMulai: e.target.value }))}
-                  className="h-9 text-sm w-40" />
+                  className="w-40"
+                />
               </div>
-              <Input type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Target SKS"
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Target SKS"
                 value={newSemester.totalSKS}
                 onChange={(e) => setNewSemester((p) => ({ ...p, totalSKS: e.target.value.replace(/[^0-9]/g, "") }))}
-                className="h-9 text-sm w-28" />
-              <div className="flex gap-2">
-                <Button size="sm" className="h-9 text-xs" onClick={handleCreateSemester}
-                  disabled={!newSemester.nama.trim() || !newSemester.tanggalMulai}>Simpan</Button>
-                <Button variant="ghost" size="sm" className="h-9 text-xs"
-                  onClick={() => setNewSemester({ show: false, nama: "", tanggalMulai: "", totalSKS: "" })}>
+                className="w-28"
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleCreateSemester}
+                  disabled={!newSemester.nama.trim() || !newSemester.tanggalMulai}
+                >
+                  Simpan
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setNewSemester({ show: false, nama: "", tanggalMulai: "", totalSKS: "" })}
+                >
                   Batal
                 </Button>
               </div>
@@ -388,6 +495,7 @@ export function TrackerGrid() {
               {new Date(activeSemester.tanggalMulai).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })}
             </p>
             <SKSSummary semester={activeSemester} />
+            <SemesterStatusChips semester={activeSemester} />
           </div>
         )}
 

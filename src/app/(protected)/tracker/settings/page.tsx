@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useCallback, useEffect, useState } from "react"
 import { signIn } from "next-auth/react"
+import Link from "next/link"
 
 interface LinkedProvider {
   provider: string
@@ -53,15 +54,20 @@ function SettingRow({
   description,
   action,
   danger = false,
+  href,
 }: {
   icon: React.ReactNode
   label: string
   description?: string
   action: React.ReactNode
   danger?: boolean
+  href?: string
 }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3.5 px-5">
+  const inner = (
+    <div className={cn(
+      "flex items-center justify-between gap-4 py-3.5 px-5",
+      href && "cursor-pointer hover:bg-muted/50 transition-colors"
+    )}>
       <div className="flex items-center gap-3 min-w-0">
         <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
           danger ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
@@ -76,6 +82,10 @@ function SettingRow({
       <div className="shrink-0">{action}</div>
     </div>
   )
+  if (href) {
+    return <Link href={href}>{inner}</Link>
+  }
+  return inner
 }
 
 function SectionCard({ children, divider = true }: { children: React.ReactNode; divider?: boolean }) {
@@ -259,13 +269,13 @@ export default function SettingsPage() {
   const isGoogleLinked = linked?.providers.some((p) => p.provider === "google") ?? false
 
   return (
-    <PageWrapper maxWidth="md" className="space-y-6">
-      <header className="mb-8">
+    <PageWrapper maxWidth="lg" className="space-y-6">
+      <header>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Pengaturan</h1>
         <p className="text-sm text-muted-foreground">Kelola akun dan preferensi aplikasi Anda</p>
       </header>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
 
         {/* ── Profil ── */}
         <section>
@@ -495,18 +505,20 @@ export default function SettingsPage() {
               icon={<Info size={15} />}
               label="Versi Aplikasi"
               description="Vest AI · Personal Finance Manager"
-              action={<Badge variant="outline" className="text-[10px] font-mono">v0.1.0</Badge>}
+              action={<Badge variant="outline" className="text-[10px] font-mono">v1.1.6-security-seo</Badge>}
             />
             <SettingRow
               icon={<ExternalLink size={15} />}
               label="Kebijakan Privasi"
               description="Baca kebijakan penggunaan data kami"
+              href="/kebijakan-privasi"
               action={<ChevronRight size={15} className="text-muted-foreground" />}
             />
             <SettingRow
               icon={<ExternalLink size={15} />}
               label="Syarat & Ketentuan"
               description="Aturan penggunaan layanan Vest AI"
+              href="/syarat-ketentuan"
               action={<ChevronRight size={15} className="text-muted-foreground" />}
             />
           </SectionCard>
