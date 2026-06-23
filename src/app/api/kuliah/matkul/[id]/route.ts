@@ -33,9 +33,10 @@ export async function PUT(
   const tugasListChanged =
     body.tugaSesiNumbers !== undefined || body.sesiTugasList !== undefined;
 
-  // diskusiSesiNumbers: explicit list for tuweb (null = no change / use default)
   const newDiskusiSesiNumbers: number[] | null = body.diskusiSesiNumbers ?? null;
   const diskusiListChanged = body.diskusiSesiNumbers !== undefined;
+  const newZoomSesiNumbers: number[] | null = body.zoomSesiNumbers ?? null;
+  const zoomListChanged = body.zoomSesiNumbers !== undefined;
 
   const sessions = existing.sessions;
   const currentMax = sessions.length;
@@ -72,7 +73,11 @@ export async function PUT(
                 resolvedJenis === "tuweb" && newDiskusiSesiNumbers !== null
                   ? !hasTugas && !newDiskusiSesiNumbers.includes(sesiNumber)
                   : false;
-              return { sesiNumber, hasTugas, diskusiNA };
+              const hasZoom =
+                resolvedJenis === "tuweb" && newZoomSesiNumbers !== null
+                  ? newZoomSesiNumbers.includes(sesiNumber)
+                  : false;
+              return { sesiNumber, hasTugas, diskusiNA, hasZoom };
             }),
           },
         },
@@ -125,8 +130,20 @@ export async function PUT(
     );
   }
 
+  // Sync hasZoom flags for tuweb when zoom assignment changed
+  if (zoomListChanged && resolvedJenis === "tuweb" && newZoomSesiNumbers !== null) {
+    await Promise.all(
+      (updated.sessions as { id: string; sesiNumber: number }[]).map((s) =>
+        prisma.sesiKuliah.update({
+          where: { id: s.id },
+          data: { hasZoom: newZoomSesiNumbers.includes(s.sesiNumber) },
+        })
+      )
+    );
+  }
+
   // Re-fetch if any flags were synced
-  if (tugasListChanged || diskusiListChanged) {
+  if (tugasListChanged || diskusiListChanged || zoomListChanged) {
     updated = await prisma.mataKuliah.findUnique({
       where: { id },
       include: { sessions: { orderBy: { sesiNumber: "asc" } } },

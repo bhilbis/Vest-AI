@@ -19,7 +19,14 @@
       "Bash(bunx prisma *)",
       "WebSearch",
       "Bash(Remove-Item \"d:\\\\Something\\\\vest-ai\\\\src\\\\app\\\\\\(protected\\)\\\\loading.tsx\")",
-      "PowerShell(Rename-Item \"d:\\\\Something\\\\vest-ai\\\\src\\\\middleware.ts\" \"proxy.ts\")"
+      "PowerShell(Rename-Item \"d:\\\\Something\\\\vest-ai\\\\src\\\\middleware.ts\" \"proxy.ts\")",
+      "Bash(Get-ChildItem -Path . -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(git -C \"d:/Something/vest-ai\" status)",
+      "Bash(git -C \"d:/Something/vest-ai\" log --oneline -3)",
+      "Bash(git -C \"d:/Something/vest-ai\" diff --stat HEAD -- prisma/schema.prisma src/components/ui/button.tsx src/components/ui/input.tsx src/components/ui/select.tsx src/app/api/expenses/export/route.ts)",
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(xargs grep -l \"Riwayat Transaksi\\\\|Semua aktivitas\")"
     ],
     "additionalDirectories": [
       "d:\\Something\\vest-ai\\src\\app\\api\\uas-prep"

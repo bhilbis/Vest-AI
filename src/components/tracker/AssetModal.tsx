@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { AssetProps } from '@/components/tracker/dashboard/types';
+import { useLanguage } from '@/lib/i18n/context';
 
 interface AssetDetailModalProps {
   asset: AssetProps;
@@ -24,6 +25,7 @@ interface AssetDetailModalProps {
 }
 
 export function AssetDetailModal({ asset, isOpen, onClose, onUpdate, onDelete }: AssetDetailModalProps) {
+  const { t } = useLanguage()
   const [editData, setEditData] = useState<AssetProps | null>(null);
 
   React.useEffect(() => {
@@ -143,7 +145,7 @@ const handleNumericInput = (
                 />
               </div>
               <div>
-                <Label>Harga Sekarang (Rp)</Label>
+                <Label>{t.tracker.currentPriceHeader} (Rp)</Label>
                 <Input
                   inputMode='numeric'
                   pattern="[0-9.,]*"
@@ -165,7 +167,7 @@ const handleNumericInput = (
                     <span>Rp {totalCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Nilai Sekarang:</span>
+                    <span className="text-muted-foreground">{t.tracker.currentValueLabel}:</span>
                     <span>Rp {totalValue.toLocaleString()}</span>
                   </div>
                   <Separator />

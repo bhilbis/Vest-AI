@@ -3,6 +3,7 @@
 import { PieChart, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react"
 import { Button } from "../ui/button"
 import { Card, CardContent } from "../ui/card"
+import { useLanguage } from "@/lib/i18n/context"
 
 type PortfolioAsset = {
     id: string
@@ -19,6 +20,8 @@ export function TrackerTable({
     data: PortfolioAsset[]
     onRemove: (id: string) => void
 }) {
+    const { t } = useLanguage()
+
     const formatCurrency = (value: number) =>
         new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(value)
 
@@ -67,7 +70,7 @@ export function TrackerTable({
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                <p className="text-gray-600">Nilai Saat Ini</p>
+                                <p className="text-gray-600">{t.tracker.currentValueLabel}</p>
                                 <p className="font-semibold">{formatCurrency(currentValue)}</p>
                                 </div>
                                 <div>
@@ -86,7 +89,7 @@ export function TrackerTable({
                             className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-300"
                             >
                             <Trash2 className="w-4 h-4 mr-1" />
-                            Hapus
+                            {t.common.delete}
                             </Button>
                         </div>
                         </CardContent>
@@ -100,8 +103,8 @@ export function TrackerTable({
                     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Wallet className="w-10 h-10 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 text-lg">Belum ada asset dalam portfolio</p>
-                    <p className="text-gray-400 text-sm">Tambahkan asset pertama Anda untuk mulai tracking</p>
+                    <p className="text-gray-500 text-lg">{t.tracker.noAssetsInPortfolio}</p>
+                    <p className="text-gray-400 text-sm">{t.tracker.addFirstTracking}</p>
                 </div>
                 )}
             </CardContent>

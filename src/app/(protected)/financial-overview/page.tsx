@@ -89,6 +89,11 @@ type ExpenseAnalytics = {
 const ACCOUNT_TYPE_LABEL: Record<string, string> = { cash: "Cash", bank: "Bank", ewallet: "E-Wallet" }
 const ACCOUNT_TYPE_ICON: Record<string, string> = { cash: "💵", bank: "🏦", ewallet: "📱" }
 
+const toLocalDatetime = (d: Date = new Date()) => {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 const getMonthKey = (v?: string | Date) => {
   if (!v) return new Date().toISOString().slice(0, 7)
   const d = typeof v === "string" ? new Date(v) : v
@@ -666,7 +671,7 @@ export default function FinancialOverviewPage() {
       {/* Dialogs */}
       <TransactionFormDialog
         isOpen={dialogs.transaction}
-        onOpenChange={(open) => { setDialogs((p) => ({ ...p, transaction: open })); if (open) updateFormData({ date: `${filters.month}-01T00:00` }); if (!open) resetForm() }}
+        onOpenChange={(open) => { setDialogs((p) => ({ ...p, transaction: open })); if (open) updateFormData({ date: toLocalDatetime() }); if (!open) resetForm() }}
         defaultTab={dialogs.transactionTab}
         expenseFormData={formData}
         onExpenseFormDataChange={updateFormData}
@@ -677,7 +682,6 @@ export default function FinancialOverviewPage() {
         accounts={data.accounts}
         budgets={budgetsForExpense}
         onAddCategory={() => setDialogs((p) => ({ ...p, category: true }))}
-        defaultDate={`${filters.month}-01`}
         onIncomeSuccess={() => { fetchAccounts(); fetchExpenses(); fetchIncomes() }}
         onTransferSuccess={() => { fetchAccounts(); fetchTransfers(); fetchExpenses() }}
       />

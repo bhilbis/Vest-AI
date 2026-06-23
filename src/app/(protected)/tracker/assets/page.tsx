@@ -29,6 +29,7 @@ import type { AssetProps } from "@/components/tracker/dashboard/types"
 import { formatCurrency } from "@/lib/expenseUtils"
 import { useDebounce } from "use-debounce"
 import Image from "next/image"
+import { useLanguage } from "@/lib/i18n/context"
 
 // ── Types ──────────────────────────────────────────────
 
@@ -187,6 +188,7 @@ function AssetForm({
   selectedCoin: Coin | null
   setSelectedCoin: (c: Coin | null) => void
 }) {
+  const { t } = useLanguage()
   const totalCost = parseFloat(form.amount || "0") * parseFloat(form.buyPrice || "0")
   const totalVal = parseFloat(form.amount || "0") * parseFloat(form.currentPrice || "0")
   const hasCurr = parseFloat(form.currentPrice) > 0 && parseFloat(form.amount) > 0
@@ -198,7 +200,7 @@ function AssetForm({
       {/* Asset type (only on add) */}
       {!isEdit && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Jenis Aset</Label>
+          <Label className="text-xs font-medium">{t.tracker.assetTypeLabel}</Label>
           <Select
             value={form.type}
             onValueChange={v =>
@@ -212,9 +214,9 @@ function AssetForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="crypto">Kripto (live price)</SelectItem>
-              <SelectItem value="stock">Saham</SelectItem>
-              <SelectItem value="manual">Lainnya</SelectItem>
+              <SelectItem value="crypto">{t.tracker.cryptoType}</SelectItem>
+              <SelectItem value="stock">{t.tracker.stockType}</SelectItem>
+              <SelectItem value="manual">{t.tracker.otherType}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -223,7 +225,7 @@ function AssetForm({
       {/* Coin picker (crypto + new only) */}
       {form.type === "crypto" && !isEdit && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Koin</Label>
+          <Label className="text-xs font-medium">{t.tracker.coinLabel}</Label>
           <Popover open={coinOpen} onOpenChange={setCoinOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
@@ -234,7 +236,7 @@ function AssetForm({
                     <span className="text-muted-foreground text-xs ml-auto">{selectedCoin.symbol.toUpperCase()}</span>
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">Cari Bitcoin, Ethereum…</span>
+                  <span className="text-muted-foreground">{t.tracker.searchCoinPlaceholder}</span>
                 )}
               </Button>
             </PopoverTrigger>
@@ -243,7 +245,7 @@ function AssetForm({
                 <CommandInput
                   value={coinSearch.query}
                   onValueChange={coinSearch.setQuery}
-                  placeholder="Nama koin atau ticker…"
+                  placeholder={t.tracker.coinTickerPlaceholder}
                 />
                 <CommandList className="max-h-56">
                   {coinSearch.loading && (
@@ -251,7 +253,7 @@ function AssetForm({
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  <CommandEmpty>Tidak ditemukan</CommandEmpty>
+                  <CommandEmpty>{t.tracker.coinNotFound}</CommandEmpty>
                   {coinSearch.coins.map(coin => (
                     <CommandItem
                       key={coin.id}
@@ -283,11 +285,11 @@ function AssetForm({
       {/* Manual name */}
       {(form.type !== "crypto" || isEdit) && (
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Nama Aset</Label>
+          <Label className="text-xs font-medium">{t.tracker.assetNameLabel}</Label>
           <Input
             value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            placeholder="Contoh: Apple Inc. (AAPL)"
+            placeholder={t.tracker.assetNamePlaceholder}
             className="h-9"
           />
         </div>
@@ -295,11 +297,11 @@ function AssetForm({
 
       {/* Category */}
       <div className="space-y-1.5">
-        <Label className="text-xs font-medium">Kategori</Label>
+        <Label className="text-xs font-medium">{t.financial.labelCategory}</Label>
         <Input
           value={form.category}
           onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-          placeholder="cryptocurrency, stocks, bonds, reksa dana…"
+          placeholder={t.tracker.categoryPlaceholder}
           className="h-9"
           disabled={form.type === "crypto" && !isEdit}
         />
@@ -308,7 +310,7 @@ function AssetForm({
       {/* Lots + Buy Price */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Jumlah / Lots</Label>
+          <Label className="text-xs font-medium">{t.tracker.amountLotsLabel}</Label>
           <Input
             type="number"
             step="any"
@@ -320,7 +322,7 @@ function AssetForm({
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">Harga Beli (Rp)</Label>
+          <Label className="text-xs font-medium">{t.tracker.buyPriceHeader}</Label>
           <Input
             type="number"
             step="any"
@@ -337,8 +339,8 @@ function AssetForm({
       {(form.type !== "crypto" || isEdit) && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">
-            Harga Saat Ini (Rp)
-            <span className="text-muted-foreground font-normal ml-1">— opsional</span>
+            {t.tracker.currentPriceHeader}
+            <span className="text-muted-foreground font-normal ml-1">{t.tracker.currentPriceOptional}</span>
           </Label>
           <Input
             type="number"
@@ -346,7 +348,7 @@ function AssetForm({
             min="0"
             value={form.currentPrice}
             onChange={e => setForm(f => ({ ...f, currentPrice: e.target.value }))}
-            placeholder="Kosongkan jika belum tahu"
+            placeholder={t.tracker.leaveBlankUnknown}
             className="h-9"
           />
         </div>
@@ -356,17 +358,17 @@ function AssetForm({
       {totalCost > 0 && (
         <div className="rounded-lg bg-muted/50 border border-border/40 p-3 space-y-2 text-sm">
           <div className="flex justify-between text-muted-foreground">
-            <span>Total Modal</span>
+            <span>{t.tracker.totalCostLabel}</span>
             <span className="tabular-nums font-medium text-foreground">{formatCurrency(totalCost)}</span>
           </div>
           {hasCurr && (
             <>
               <div className="flex justify-between text-muted-foreground">
-                <span>Nilai Saat Ini</span>
+                <span>{t.tracker.currentValueLabel}</span>
                 <span className="tabular-nums font-medium text-foreground">{formatCurrency(totalVal)}</span>
               </div>
               <div className={`flex justify-between font-semibold border-t border-border/40 pt-2 ${pl >= 0 ? "text-chart-1" : "text-destructive"}`}>
-                <span>Estimasi P/L</span>
+                <span>{t.tracker.estimatedPL}</span>
                 <span className="tabular-nums">
                   {pl >= 0 ? "+" : ""}{formatCurrency(pl)} ({plPct >= 0 ? "+" : ""}{plPct.toFixed(2)}%)
                 </span>
@@ -383,6 +385,7 @@ function AssetForm({
 
 export default function AssetsPage() {
   const { assets, loading, error, reload } = usePortfolioAssets()
+  const { t } = useLanguage()
 
   const [search, setSearch] = useState("")
   const [activeCategory, setActiveCategory] = useState("all")
@@ -531,21 +534,21 @@ export default function AssetsPage() {
   // ── Render ──
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-0.5">
-          <h1 className="text-2xl font-semibold tracking-tight">Aset Investasi</h1>
-          <p className="text-sm text-muted-foreground">Kelola portofolio crypto, saham, dan aset investasi lainnya</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.tracker.assetsTitle}</h1>
+          <p className="text-sm text-muted-foreground">{t.tracker.managePortfolio}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={reload} disabled={loading}>
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            {t.tracker.refresh}
           </Button>
           <Button size="sm" className="gap-1.5" onClick={openAdd}>
-            <Plus className="h-3.5 w-3.5" /> Tambah Aset
+            <Plus className="h-3.5 w-3.5" /> {t.tracker.addAsset}
           </Button>
         </div>
       </div>
@@ -554,27 +557,27 @@ export default function AssetsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Stat
           icon={Wallet}
-          label="Total Portofolio"
+          label={t.tracker.totalPortfolioStat}
           value={loading ? "—" : formatCurrency(stats.totalVal)}
-          sub={`${rows.length} aset`}
+          sub={`${rows.length} ${t.tracker.investmentAssets}`}
         />
         <Stat
           icon={stats.totalProfit >= 0 ? TrendingUp : TrendingDown}
-          label="Total P/L"
+          label={t.tracker.totalPL}
           value={loading ? "—" : `${stats.totalProfit >= 0 ? "+" : ""}${formatCurrency(stats.totalProfit)}`}
-          sub={loading ? undefined : `${stats.totalPct >= 0 ? "+" : ""}${stats.totalPct.toFixed(2)}% dari modal`}
+          sub={loading ? undefined : `${stats.totalPct >= 0 ? "+" : ""}${stats.totalPct.toFixed(2)}% ${t.tracker.fromCapital}`}
           up={rows.length > 0 ? stats.totalProfit >= 0 : undefined}
         />
         <Stat
           icon={ArrowUpRight}
-          label="Best Performer"
+          label={t.tracker.bestPerformer}
           value={loading ? "—" : stats.best ? `${stats.best.pct >= 0 ? "+" : ""}${stats.best.pct.toFixed(2)}%` : "—"}
           sub={stats.best?.name}
           up={stats.best ? true : undefined}
         />
         <Stat
           icon={ArrowDownRight}
-          label="Worst Performer"
+          label={t.tracker.worstPerformer}
           value={loading ? "—" : stats.worst && stats.worst !== stats.best ? `${stats.worst.pct.toFixed(2)}%` : "—"}
           sub={stats.worst && stats.worst !== stats.best ? stats.worst.name : undefined}
           up={stats.worst && stats.worst !== stats.best ? false : undefined}
@@ -594,7 +597,7 @@ export default function AssetsPage() {
                 : "bg-card text-muted-foreground border-border hover:bg-muted"
             }`}
           >
-            Semua
+            {t.tracker.allFilter}
             <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeCategory === "all" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
               {rows.length}
             </span>
@@ -628,7 +631,7 @@ export default function AssetsPage() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Cari aset…"
+            placeholder={t.tracker.searchAssetsPlaceholder}
             className="pl-8 h-8 text-sm bg-card"
           />
         </div>
@@ -646,7 +649,7 @@ export default function AssetsPage() {
       <Card className="border-border/50 overflow-hidden">
         {/* Table header — desktop only */}
         <div className="hidden md:grid md:grid-cols-[minmax(0,2.5fr)_80px_1fr_1fr_1fr_1fr_40px] px-5 py-2.5 border-b border-border/40 bg-muted/30">
-          {["Aset", "Lots", "Harga Beli", "Harga Saat Ini", "Nilai", "P/L", ""].map((h, i) => (
+          {[t.tracker.assetHeader, t.tracker.lotsHeader, t.tracker.buyPriceHeader, t.tracker.currentPriceHeader, t.tracker.valueHeader, "P/L", ""].map((h, i) => (
             <span key={i} className={`text-[10px] font-semibold text-muted-foreground uppercase tracking-wider ${i > 0 ? "text-right" : ""}`}>
               {h}
             </span>
@@ -666,16 +669,16 @@ export default function AssetsPage() {
             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
               <BarChart3 className="h-12 w-12 mb-3 opacity-10" />
               <p className="text-sm font-medium">
-                {assets.length === 0 ? "Belum ada aset investasi" : "Tidak ada aset yang cocok"}
+                {assets.length === 0 ? t.tracker.noAssetsYet : t.tracker.noAssetsMatch}
               </p>
               <p className="text-xs mt-1 max-w-xs">
                 {assets.length === 0
-                  ? "Mulai tambahkan aset kripto, saham, atau investasi lainnya"
-                  : "Coba ubah filter atau kata kunci pencarian"}
+                  ? t.tracker.noAssetsYetDesc
+                  : t.tracker.noAssetsMatchDesc}
               </p>
               {assets.length === 0 && (
                 <Button variant="outline" size="sm" className="mt-5 gap-1.5 text-xs" onClick={openAdd}>
-                  <Plus className="h-3.5 w-3.5" /> Tambah Aset Pertama
+                  <Plus className="h-3.5 w-3.5" /> {t.tracker.addFirstAsset}
                 </Button>
               )}
             </div>
@@ -797,7 +800,7 @@ export default function AssetsPage() {
               <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <Plus className="h-4 w-4 text-primary" />
               </div>
-              Tambah Aset Baru
+              {t.tracker.addNewAsset}
             </DialogTitle>
           </DialogHeader>
 
@@ -814,11 +817,11 @@ export default function AssetsPage() {
 
           <DialogFooter className="gap-2 pt-2">
             <Button variant="outline" size="sm" onClick={() => setAddOpen(false)} disabled={adding}>
-              Batal
+              {t.common.cancel}
             </Button>
             <Button size="sm" onClick={handleAdd} disabled={adding || !isAddValid} className="gap-1.5">
               {adding && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Tambah
+              {t.tracker.addAsset}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -832,7 +835,7 @@ export default function AssetsPage() {
               <div className={`w-7 h-7 rounded-lg bg-linear-to-br ${catCfg(editTarget?.category ?? "").gradient} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
                 {editTarget?.name.substring(0, 2).toUpperCase()}
               </div>
-              Edit Aset
+              {t.tracker.editAsset}
             </DialogTitle>
           </DialogHeader>
 
@@ -856,15 +859,15 @@ export default function AssetsPage() {
               disabled={deleting || saving}
             >
               {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-              Hapus
+              {t.common.delete}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setEditTarget(null)} disabled={saving}>
-                Batal
+                {t.common.cancel}
               </Button>
               <Button size="sm" onClick={handleUpdate} disabled={saving || !isEditValid} className="gap-1.5">
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Simpan
+                {t.common.save}
               </Button>
             </div>
           </div>

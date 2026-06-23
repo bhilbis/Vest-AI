@@ -41,6 +41,7 @@ export async function PUT(
         tugas: body.tugas === null ? null : Number(body.tugas),
       }),
       ...(body.tugasNA !== undefined && { tugasNA: body.tugasNA }),
+      ...(body.zoomUrl !== undefined && { zoomUrl: body.zoomUrl === "" ? null : body.zoomUrl }),
     },
   });
 

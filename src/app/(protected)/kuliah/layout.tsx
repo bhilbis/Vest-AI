@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { GraduationCap, BookOpen, BarChart3, Settings2, MessageSquare, ClipboardList } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MessagesPanel } from "@/components/layout/messages-panel"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface KuliahLayoutContextType {
   isChatOpen: boolean
@@ -22,21 +23,22 @@ export const useKuliahLayout = () => {
   return context
 }
 
-const kuliahNav = [
-  { title: "Tracker", url: "/kuliah/tracker", icon: BookOpen },
-  { title: "Nilai", url: "/kuliah/nilai", icon: BarChart3 },
-  { title: "UAS Prep", url: "/kuliah/uas-prep", icon: ClipboardList },
-  { title: "Pengaturan", url: "/kuliah/settings", icon: Settings2 },
-]
-
 export default function KuliahLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const { t } = useLanguage()
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [, setInitialMessage] = useState("")
+
+  const kuliahNav = [
+    { title: t.kuliah.tracker, url: "/kuliah/tracker", icon: BookOpen },
+    { title: t.kuliah.grades, url: "/kuliah/nilai", icon: BarChart3 },
+    { title: t.kuliah.examPrep, url: "/kuliah/uas-prep", icon: ClipboardList },
+    { title: t.kuliah.settings, url: "/kuliah/settings", icon: Settings2 },
+  ]
 
   return (
     <KuliahLayoutContext.Provider value={{ isChatOpen, setIsChatOpen, setInitialMessage }}>
@@ -52,10 +54,10 @@ export default function KuliahLayout({
                 </div>
                 <div>
                   <h1 className="text-lg font-semibold tracking-tight text-foreground">
-                    Kuliah Tracker
+                    {t.kuliah.kuliahTrackerTitle}
                   </h1>
                   <p className="text-[11px] text-muted-foreground">
-                    Tracking pengerjaan akademik UT
+                    {t.kuliah.kuliahSubtitle}
                   </p>
                 </div>
               </div>

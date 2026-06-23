@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, X, FileText, MessageSquare } from "lucide-react"
+import { Loader2, X, FileText, Video } from "lucide-react"
 import { MataKuliahData } from "@/lib/kuliah-types"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface EditMataKuliahDialogProps {
   open: boolean
@@ -36,13 +37,7 @@ interface FormState {
   jenis: "reguler" | "praktik" | "tuweb"
   jumlahSesi: number
   tugaSesiNumbers: number[]
-  diskusiSesiNumbers: number[] | null
-}
-
-function allNonTugasNums(total: number, tugaNums: number[]): number[] {
-  return Array.from({ length: total }, (_, i) => i + 1).filter(
-    (n) => !tugaNums.includes(n)
-  )
+  zoomSesiNumbers: number[]
 }
 
 export function EditMataKuliahDialog({
@@ -51,6 +46,7 @@ export function EditMataKuliahDialog({
   mataKuliah,
   onSuccess,
 }: EditMataKuliahDialogProps) {
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState<FormState>({
     kode: "",
@@ -59,7 +55,7 @@ export function EditMataKuliahDialog({
     jenis: "reguler",
     jumlahSesi: 8,
     tugaSesiNumbers: [3, 5, 7],
-    diskusiSesiNumbers: null,
+    zoomSesiNumbers: [],
   })
 
   useEffect(() => {
@@ -69,13 +65,12 @@ export function EditMataKuliahDialog({
         .map((s) => s.sesiNumber)
         .sort((a, b) => a - b)
 
-      // Derive diskusi from existing sessions: non-tugas sessions with diskusiNA=false
-      const diskusiNums = mataKuliah.jenis === "tuweb"
+      const zoomNums = mataKuliah.jenis === "tuweb"
         ? mataKuliah.sessions
-            .filter((s) => !s.hasTugas && !s.diskusiNA)
+            .filter((s) => s.hasZoom)
             .map((s) => s.sesiNumber)
             .sort((a, b) => a - b)
-        : null
+        : []
 
       setForm({
         kode: mataKuliah.kode,
@@ -84,7 +79,7 @@ export function EditMataKuliahDialog({
         jenis: mataKuliah.jenis,
         jumlahSesi: mataKuliah.jumlahSesi,
         tugaSesiNumbers: tugaNums,
-        diskusiSesiNumbers: diskusiNums,
+        zoomSesiNumbers: zoomNums,
       })
     }
   }, [mataKuliah, open])
@@ -94,7 +89,7 @@ export function EditMataKuliahDialog({
       ...prev,
       jumlahSesi: newTotal,
       tugaSesiNumbers: prev.tugaSesiNumbers.filter((n) => n <= newTotal),
-      diskusiSesiNumbers: null,
+      zoomSesiNumbers: prev.zoomSesiNumbers.filter((n) => n <= newTotal),
     }))
   }
 
@@ -103,29 +98,18 @@ export function EditMataKuliahDialog({
       const tugaNums = prev.tugaSesiNumbers.includes(n)
         ? prev.tugaSesiNumbers.filter((x) => x !== n)
         : [...prev.tugaSesiNumbers, n].sort((a, b) => a - b)
-      const diskusiNums =
-        prev.diskusiSesiNumbers !== null
-          ? prev.diskusiSesiNumbers.filter((x) => !tugaNums.includes(x))
-          : null
-      return { ...prev, tugaSesiNumbers: tugaNums, diskusiSesiNumbers: diskusiNums }
+      return { ...prev, tugaSesiNumbers: tugaNums }
     })
   }
 
-  const toggleDiskusiSesi = (n: number) => {
+  const toggleZoomSesi = (n: number) => {
     setForm((prev) => {
-      const current =
-        prev.diskusiSesiNumbers ??
-        allNonTugasNums(prev.jumlahSesi, prev.tugaSesiNumbers)
-      const next = current.includes(n)
-        ? current.filter((x) => x !== n)
-        : [...current, n].sort((a, b) => a - b)
-      return { ...prev, diskusiSesiNumbers: next }
+      const next = prev.zoomSesiNumbers.includes(n)
+        ? prev.zoomSesiNumbers.filter((x) => x !== n)
+        : [...prev.zoomSesiNumbers, n].sort((a, b) => a - b)
+      return { ...prev, zoomSesiNumbers: next }
     })
   }
-
-  const resolvedDiskusiNums =
-    form.diskusiSesiNumbers ??
-    allNonTugasNums(form.jumlahSesi, form.tugaSesiNumbers)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,7 +127,7 @@ export function EditMataKuliahDialog({
           jumlahSesi: form.jumlahSesi,
           tugaSesiNumbers: form.tugaSesiNumbers,
           ...(form.jenis === "tuweb" && {
-            diskusiSesiNumbers: form.diskusiSesiNumbers,
+            zoomSesiNumbers: form.zoomSesiNumbers,
           }),
         }),
       })
@@ -160,14 +144,13 @@ export function EditMataKuliahDialog({
 
   const isTuweb = form.jenis === "tuweb"
   const allNums = Array.from({ length: form.jumlahSesi }, (_, i) => i + 1)
-  const nonTugaNums = allNums.filter((n) => !form.tugaSesiNumbers.includes(n))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">Edit Mata Kuliah</DialogTitle>
-          <DialogDescription className="text-xs">Ubah konfigurasi mata kuliah.</DialogDescription>
+          <DialogTitle className="text-base">{t.kuliah.editCourseTitle}</DialogTitle>
+          <DialogDescription className="text-xs">{t.kuliah.editCourseDesc}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-1">
@@ -175,7 +158,7 @@ export function EditMataKuliahDialog({
           <div className="grid grid-cols-[1fr_80px] gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="edit-kode" className="text-xs font-medium text-muted-foreground">
-                Kode Matkul
+                {t.kuliah.courseCode}
               </Label>
               <Input
                 id="edit-kode"
@@ -205,7 +188,7 @@ export function EditMataKuliahDialog({
           {/* Nama */}
           <div className="space-y-1.5">
             <Label htmlFor="edit-nama" className="text-xs font-medium text-muted-foreground">
-              Nama Mata Kuliah
+              {t.kuliah.courseName}
             </Label>
             <Input
               id="edit-nama"
@@ -221,7 +204,7 @@ export function EditMataKuliahDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="edit-jenis" className="text-xs font-medium text-muted-foreground">
-                Jenis
+                {t.kuliah.courseType}
               </Label>
               <Select
                 value={form.jenis}
@@ -231,15 +214,15 @@ export function EditMataKuliahDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="reguler">Reguler</SelectItem>
-                  <SelectItem value="praktik">Praktik</SelectItem>
+                  <SelectItem value="reguler">{t.kuliah.regularLabel}</SelectItem>
+                  <SelectItem value="praktik">{t.kuliah.practicalLabel}</SelectItem>
                   <SelectItem value="tuweb">Tuweb</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="edit-jumlah-sesi" className="text-xs font-medium text-muted-foreground">
-                {isTuweb ? "Jumlah Aktivitas" : "Jumlah Sesi"}
+                {isTuweb ? t.kuliah.numActivities : t.kuliah.numSessions}
               </Label>
               <Input
                 id="edit-jumlah-sesi"
@@ -262,35 +245,26 @@ export function EditMataKuliahDialog({
 
           {/* Sesi Tugas */}
           <SessionToggleGrid
-            label="Aktivitas Tugas"
+            label={t.kuliah.taskActivities}
             icon={<FileText className="h-3 w-3" />}
             sessions={allNums}
             selected={form.tugaSesiNumbers}
             onToggle={toggleTugaSesi}
             activeClass="bg-amber-500 text-white border-amber-500"
-            hint={`${form.tugaSesiNumbers.length} sesi dipilih`}
+            hint={`${form.tugaSesiNumbers.length} ${t.kuliah.sessionsSelected}`}
           />
 
-          {/* Aktivitas Diskusi — tuweb only */}
-          {isTuweb && nonTugaNums.length > 0 && (
-            <SessionToggleGrid
-              label="Aktivitas Diskusi"
-              icon={<MessageSquare className="h-3 w-3" />}
-              sessions={nonTugaNums}
-              selected={resolvedDiskusiNums}
-              onToggle={toggleDiskusiSesi}
-              activeClass="bg-primary text-white border-primary"
-              hint={`${resolvedDiskusiNums.length} dari ${nonTugaNums.length}`}
-              description="Aktivitas yang tidak dipilih hanya memiliki kehadiran."
-            />
-          )}
-
+          {/* Aktivitas Zoom — tuweb only */}
           {isTuweb && (
-            <div className="rounded-lg bg-muted/40 border border-border/50 px-3 py-2.5 text-[11px] text-muted-foreground space-y-0.5">
-              <p><span className="font-semibold text-foreground">{form.tugaSesiNumbers.length}</span> aktivitas tugas</p>
-              <p><span className="font-semibold text-foreground">{resolvedDiskusiNums.length}</span> aktivitas diskusi</p>
-              <p><span className="font-semibold text-foreground">{form.jumlahSesi - form.tugaSesiNumbers.length - resolvedDiskusiNums.length}</span> aktivitas kehadiran saja</p>
-            </div>
+            <SessionToggleGrid
+              label={t.kuliah.zoomActivities}
+              icon={<Video className="h-3 w-3 text-purple-500" />}
+              sessions={allNums}
+              selected={form.zoomSesiNumbers}
+              onToggle={toggleZoomSesi}
+              activeClass="bg-purple-500 text-white border-purple-500"
+              hint={`${form.zoomSesiNumbers.length} ${t.kuliah.zoomActivitiesSelected}`}
+            />
           )}
 
           {/* Actions */}
@@ -303,7 +277,7 @@ export function EditMataKuliahDialog({
               onClick={() => onOpenChange(false)}
             >
               <X className="h-3.5 w-3.5 mr-1.5" />
-              Batal
+              {t.common.cancel}
             </Button>
             <Button
               type="submit"
@@ -312,7 +286,7 @@ export function EditMataKuliahDialog({
               disabled={loading || !form.kode.trim() || !form.nama.trim()}
             >
               {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Simpan Perubahan
+              {t.kuliah.saveChanges}
             </Button>
           </div>
         </form>

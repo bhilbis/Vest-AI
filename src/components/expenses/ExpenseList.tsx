@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { ExpenseCard } from './ExpenseCard';
 import { TransferCard } from './TransferCard';
+import { useLanguage } from '@/lib/i18n/context';
 
 export type HistoryItem = {
   id: string;
@@ -35,6 +36,7 @@ function ExpenseListComponent({
   formatCurrency,
   getCategoryLabel,
 }: ExpenseListProps) {
+  const { t } = useLanguage()
   const expenseItems = useMemo(
     () => expenses.filter((item) => item.type === "expense"),
     [expenses]
@@ -61,9 +63,9 @@ function ExpenseListComponent({
       <Card className="border-dashed border-2">
         <CardContent className="py-16 text-center">
           <div className="max-w-md mx-auto">
-            <h3 className="text-lg font-semibold mb-2">Belum ada transaksi</h3>
+            <h3 className="text-lg font-semibold mb-2">{t.financial.noTransactionsYet}</h3>
             <p className="text-muted-foreground">
-              Tambahkan data pertama Anda.
+              {t.financial.addFirstData}
             </p>
           </div>
         </CardContent>

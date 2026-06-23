@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirmStore } from "@/lib/confirm-store";
+import { useLanguage } from "@/lib/i18n/context";
 import { AssetDetailModal } from "@/components/tracker/AssetModal";
 import { Card } from "@/components/ui/card";
 import { DashboardHeader } from "./DashboardHeader";
@@ -16,25 +17,26 @@ import type { AssetProps } from "./types";
 export function PortfolioDashboard() {
   const { assets, setAssets, loading, error, reload } = usePortfolioAssets();
   const { openConfirm } = useConfirmStore();
+  const { t } = useLanguage();
   const [selectedAsset, setSelectedAsset] = useState<AssetProps | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'dashboard' | 'canvas'>('dashboard');
 
   const handleRemoveAsset = useCallback(async (id: string) => {
-    const ok = await openConfirm({ title: "Hapus aset ini?", confirmLabel: "Hapus", variant: "destructive" });
+    const ok = await openConfirm({ title: t.tracker.deleteAssetConfirm, confirmLabel: t.common.delete, variant: "destructive" });
     if (!ok) return;
 
     try {
       const response = await fetch(`/api/assets/${id}`, { method: "DELETE" });
       if (!response.ok) {
         const err = await response.json();
-        toast.error(err.error || "Gagal menghapus aset.");
+        toast.error(err.error || t.tracker.deleteAssetFailed);
         return;
       }
       setAssets((prev) => prev.filter((asset) => asset.id !== id));
-      toast.success("Aset berhasil dihapus.");
+      toast.success(t.tracker.deleteAssetSuccess);
     } catch {
-      toast.error("Terjadi kesalahan saat menghapus aset.");
+      toast.error(t.tracker.deleteAssetError);
     }
   }, [setAssets, openConfirm]);
 
@@ -118,10 +120,10 @@ export function PortfolioDashboard() {
             <AlertCircle className="mt-0.5 h-4 w-4 text-destructive" />
             <div className="space-y-1">
               <p className="text-sm font-medium text-destructive">
-                Gagal memuat portfolio
+                {t.tracker.loadPortfolioFailed}
               </p>
               <p className="text-xs text-muted-foreground">
-                {error} Jika masalah berlanjut, coba refresh halaman atau cek koneksi internet Anda.
+                {error} {t.tracker.loadPortfolioFailedHint}
               </p>
             </div>
           </div>
@@ -133,7 +135,7 @@ export function PortfolioDashboard() {
             assets={assets} 
             loading={loading}
             onAssetClick={handleAssetClick}
-            onAddAsset={() => toast.info("Gunakan menu '+' di navbar untuk menambah aset baru.")}
+            onAddAsset={() => toast.info(t.tracker.addViaNavbarHint)}
         />
       ) : (
         <div className="space-y-8">

@@ -268,6 +268,8 @@ model SesiKuliah {
   tugasNA       Boolean    @default(false) // tugas tidak relevan untuk sesi ini
   hasTugas      Boolean    @default(false) // apakah sesi ini adalah sesi tugas
   tugasDeadline DateTime?  // opsional: deadline tugas sesi ini
+  hasZoom       Boolean    @default(false) // apakah sesi ini memiliki sesi Zoom (Tuweb)
+  zoomUrl       String?    // opsional: link Zoom untuk sesi Tuweb
 
   mataKuliahId  String
   mataKuliah    MataKuliah @relation(fields: [mataKuliahId], references: [id], onDelete: Cascade)

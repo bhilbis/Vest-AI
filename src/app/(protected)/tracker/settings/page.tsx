@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface LinkedProvider {
   provider: string
@@ -116,6 +117,7 @@ function SetPasswordForm({
   hasPassword: boolean
   onSuccess: () => void
 }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -136,7 +138,7 @@ function SetPasswordForm({
         body: JSON.stringify({ password: newPassword, currentPassword: hasPassword ? currentPassword : undefined }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Gagal menyimpan password")
+      if (!res.ok) throw new Error(data.error || t.settings.passwordSaveFailed)
       setSuccess(true)
       setTimeout(() => {
         setOpen(false)
@@ -146,7 +148,7 @@ function SetPasswordForm({
         onSuccess()
       }, 1200)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan")
+      setError(err instanceof Error ? err.message : t.settings.generalError)
     } finally {
       setLoading(false)
     }
@@ -161,7 +163,7 @@ function SetPasswordForm({
         className="text-xs h-7"
         onClick={() => setOpen(true)}
       >
-        {hasPassword ? "Ubah" : "Tambah"}
+        {hasPassword ? t.settings.changePassword : t.settings.addPassword}
       </Button>
     )
   }
@@ -170,14 +172,14 @@ function SetPasswordForm({
     <form onSubmit={handleSubmit} className="w-full px-5 pb-4 pt-2 space-y-3 border-t border-border/60">
       {hasPassword && (
         <div className="space-y-1.5">
-          <Label htmlFor="current-password" className="text-xs">Password Saat Ini</Label>
+          <Label htmlFor="current-password" className="text-xs">{t.settings.currentPassword}</Label>
           <div className="relative">
             <Input
               id="current-password"
               type={showCurrent ? "text" : "password"}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Password lama"
+              placeholder={t.settings.oldPassword}
               required
               className="pr-9 h-8 text-sm"
             />
@@ -193,14 +195,14 @@ function SetPasswordForm({
         </div>
       )}
       <div className="space-y-1.5">
-        <Label htmlFor="new-password" className="text-xs">{hasPassword ? "Password Baru" : "Buat Password"}</Label>
+        <Label htmlFor="new-password" className="text-xs">{hasPassword ? t.settings.newPassword : t.settings.createPassword}</Label>
         <div className="relative">
           <Input
             id="new-password"
             type={showNew ? "text" : "password"}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Minimal 8 karakter"
+            placeholder={t.settings.minChars}
             required
             minLength={8}
             className="pr-9 h-8 text-sm"
@@ -219,7 +221,7 @@ function SetPasswordForm({
       <div className="flex gap-2">
         <Button type="submit" size="sm" className="h-7 text-xs" disabled={loading || success}>
           {success ? <Check size={12} className="mr-1" /> : loading ? <Loader2 size={12} className="mr-1 animate-spin" /> : null}
-          {success ? "Tersimpan" : "Simpan"}
+          {success ? t.settings.passwordSaved : t.common.save}
         </Button>
         <Button
           type="button"
@@ -228,7 +230,7 @@ function SetPasswordForm({
           className="h-7 text-xs"
           onClick={() => { setOpen(false); setError(""); }}
         >
-          Batal
+          {t.common.cancel}
         </Button>
       </div>
     </form>
@@ -236,6 +238,7 @@ function SetPasswordForm({
 }
 
 function PushNotificationToggle() {
+  const { t } = useLanguage()
   const [status, setStatus] = useState<"loading" | "unsupported" | "denied" | "granted" | "default">("loading")
   const [subscribing, setSubscribing] = useState(false)
 
@@ -286,20 +289,20 @@ function PushNotificationToggle() {
   }
 
   if (status === "loading") return <Loader2 size={14} className="animate-spin text-muted-foreground" />
-  if (status === "unsupported") return <Badge variant="secondary" className="text-[10px]">Tidak Didukung</Badge>
+  if (status === "unsupported") return <Badge variant="secondary" className="text-[10px]">{t.settings.notSupported}</Badge>
   if (status === "denied") return (
     <div className="flex items-center gap-1.5 text-xs text-destructive">
-      <XCircle size={13} /> Diblokir browser
+      <XCircle size={13} /> {t.settings.browserBlocked}
     </div>
   )
   if (status === "granted") return (
     <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={handleDisable} disabled={subscribing}>
-      {subscribing ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />} Nonaktifkan
+      {subscribing ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />} {t.settings.disable}
     </Button>
   )
   return (
     <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5" onClick={handleEnable} disabled={subscribing}>
-      {subscribing ? <Loader2 size={11} className="animate-spin" /> : <Bell size={11} />} Aktifkan
+      {subscribing ? <Loader2 size={11} className="animate-spin" /> : <Bell size={11} />} {t.settings.enable}
     </Button>
   )
 }
@@ -307,6 +310,7 @@ function PushNotificationToggle() {
 export default function SettingsPage() {
   const { data: session } = useSession()
   const { theme, setTheme } = useTheme()
+  const { t } = useLanguage()
   const [linked, setLinked] = useState<LinkedAccountsState | null>(null)
   const [unlinkLoading, setUnlinkLoading] = useState<string | null>(null)
   const [unlinkError, setUnlinkError] = useState("")
@@ -332,10 +336,10 @@ export default function SettingsPage() {
         body: JSON.stringify({ provider }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Gagal melepas koneksi")
+      if (!res.ok) throw new Error(data.error || t.settings.unlinkFailed)
       fetchLinked()
     } catch (err) {
-      setUnlinkError(err instanceof Error ? err.message : "Terjadi kesalahan")
+      setUnlinkError(err instanceof Error ? err.message : t.settings.generalError)
     } finally {
       setUnlinkLoading(null)
     }
@@ -389,15 +393,15 @@ export default function SettingsPage() {
   return (
     <PageWrapper maxWidth="lg" className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Pengaturan</h1>
-        <p className="text-sm text-muted-foreground">Kelola akun dan preferensi aplikasi Anda</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t.settings.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.settings.subtitle}</p>
       </header>
 
       <div className="space-y-6">
 
-        {/* ── Profil ── */}
+        {/* ── Profile ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Profil</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.profile}</h2>
           <SectionCard divider={false}>
             <div className="p-5 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -411,22 +415,22 @@ export default function SettingsPage() {
                 </Avatar>
                 <div>
                   <p className="text-base font-bold text-foreground">{session?.user?.name || "Member"}</p>
-                  <p className="text-sm text-muted-foreground">{session?.user?.email || "Tidak ada email"}</p>
+                  <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
                   <Badge variant="secondary" className="mt-1 text-[10px] h-4 px-1.5">
                     {(session?.user as { role?: string })?.role === "ADMIN" ? "Admin" : "Member"}
                   </Badge>
                 </div>
               </div>
               <Button type="button" variant="outline" size="sm" className="hidden sm:flex gap-1.5" disabled>
-                <UserIcon size={13} /> Edit Profil
+                <UserIcon size={13} /> {t.settings.editProfile}
               </Button>
             </div>
           </SectionCard>
         </section>
 
-        {/* ── Akun Terhubung ── */}
+        {/* ── Connected Accounts ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Akun Terhubung</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.connectedAccounts}</h2>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
 
             {/* Google */}
@@ -438,7 +442,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-medium text-foreground">Google</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {isGoogleLinked ? "Terhubung — bisa login via Google" : "Belum terhubung"}
+                    {isGoogleLinked ? t.settings.googleConnected : t.settings.googleNotConnected}
                   </p>
                 </div>
               </div>
@@ -457,7 +461,7 @@ export default function SettingsPage() {
                     ) : (
                       <Link2Off size={11} />
                     )}
-                    Putuskan
+                    {t.settings.disconnect}
                   </Button>
                 ) : (
                   <Button
@@ -467,13 +471,13 @@ export default function SettingsPage() {
                     className="text-xs h-7 gap-1.5"
                     onClick={() => signIn("google", { callbackUrl: "/tracker/settings" })}
                   >
-                    <Link2 size={11} /> Hubungkan
+                    <Link2 size={11} /> {t.settings.connect}
                   </Button>
                 )}
               </div>
             </div>
 
-            {/* Credentials (Password) */}
+            {/* Password */}
             <div className="border-t border-border/60">
               <div className="flex items-center justify-between gap-4 py-3.5 px-5">
                 <div className="flex items-center gap-3 min-w-0">
@@ -481,9 +485,9 @@ export default function SettingsPage() {
                     <KeyRound size={15} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Login dengan Password</p>
+                    <p className="text-sm font-medium text-foreground">{t.settings.loginWithPassword}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {linked?.hasPassword ? "Password sudah diatur" : "Belum ada password — hanya bisa login via Google"}
+                      {linked?.hasPassword ? t.settings.passwordSet : t.settings.passwordNotSet}
                     </p>
                   </div>
                 </div>
@@ -499,19 +503,19 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* ── Tampilan ── */}
+        {/* ── Appearance ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Tampilan</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.appearance}</h2>
           <SectionCard divider={false}>
             <div className="px-5 pt-4 pb-2">
-              <p className="text-sm font-medium text-foreground">Tema Aplikasi</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Pilih tema tampilan favorit Anda</p>
+              <p className="text-sm font-medium text-foreground">{t.settings.appTheme}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t.settings.appThemeDesc}</p>
             </div>
             <div className="px-5 pb-5 grid grid-cols-3 gap-3 mt-3">
               {([
-                { key: "light", label: "Terang", icon: Sun },
-                { key: "dark", label: "Gelap", icon: Moon },
-                { key: "system", label: "Sistem", icon: Monitor },
+                { key: "light", label: t.nav.theme.light, icon: Sun },
+                { key: "dark", label: t.nav.theme.dark, icon: Moon },
+                { key: "system", label: t.nav.theme.system, icon: Monitor },
               ] as const).map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
@@ -537,76 +541,76 @@ export default function SettingsPage() {
           </SectionCard>
         </section>
 
-        {/* ── Notifikasi ── */}
+        {/* ── Notifications ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Notifikasi</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.notifications}</h2>
           <SectionCard>
             <SettingRow
               icon={<Bell size={15} />}
-              label="Notifikasi Push"
-              description="Aktifkan notifikasi browser untuk pengingat transaksi & budget"
+              label={t.settings.pushNotification}
+              description={t.settings.pushNotificationDesc}
               action={<PushNotificationToggle />}
             />
             <SettingRow
               icon={<Globe size={15} />}
-              label="Notifikasi Email"
-              description="Laporan keuangan mingguan via email"
-              action={<Badge variant="secondary" className="text-[10px]">Segera Hadir</Badge>}
+              label={t.settings.emailNotification}
+              description={t.settings.emailNotificationDesc}
+              action={<Badge variant="secondary" className="text-[10px]">{t.settings.comingSoon}</Badge>}
             />
             <SettingRow
               icon={<BellOff size={15} />}
-              label="Mode Senyap"
-              description="Nonaktifkan semua notifikasi sementara"
-              action={<Badge variant="secondary" className="text-[10px]">Segera Hadir</Badge>}
+              label={t.settings.silentMode}
+              description={t.settings.silentModeDesc}
+              action={<Badge variant="secondary" className="text-[10px]">{t.settings.comingSoon}</Badge>}
             />
           </SectionCard>
         </section>
 
-        {/* ── Keamanan ── */}
+        {/* ── Security ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Keamanan & Privasi</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.securityPrivacy}</h2>
           <SectionCard>
             <SettingRow
               icon={<Shield size={15} />}
-              label="Autentikasi Dua Faktor"
-              description="Tambahkan lapisan keamanan ekstra"
-              action={<Badge variant="secondary" className="text-[10px]">Segera Hadir</Badge>}
+              label={t.settings.twoFactor}
+              description={t.settings.twoFactorDesc}
+              action={<Badge variant="secondary" className="text-[10px]">{t.settings.comingSoon}</Badge>}
             />
             <SettingRow
               icon={<Smartphone size={15} />}
-              label="Sesi Aktif"
-              description="Lihat perangkat yang login ke akun ini"
-              action={<Badge variant="secondary" className="text-[10px]">Segera Hadir</Badge>}
+              label={t.settings.activeSessions}
+              description={t.settings.activeSessionsDesc}
+              action={<Badge variant="secondary" className="text-[10px]">{t.settings.comingSoon}</Badge>}
             />
           </SectionCard>
         </section>
 
-        {/* ── Data & Ekspor ── */}
+        {/* ── Data & Backup ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Data & Backup</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.dataBackup}</h2>
           <SectionCard>
             <SettingRow
               icon={<Download size={15} />}
-              label="Ekspor Semua Data Aplikasi"
-              description="Unduh seluruh data (keuangan, aset, kuliah) sebagai JSON"
+              label={t.settings.exportAllData}
+              description={t.settings.exportAllDataDesc}
               action={
                 <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5" onClick={handleExportAll} disabled={exportLoading}>
-                  {exportLoading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} Ekspor
+                  {exportLoading ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} {t.common.export}
                 </Button>
               }
             />
             <div>
               <SettingRow
                 icon={<Upload size={15} />}
-                label="Impor Data Aplikasi"
-                description="Pulihkan data dari file backup JSON"
+                label={t.settings.importData}
+                description={t.settings.importDataDesc}
                 action={
                   <Button type="button" variant="outline" size="sm" className="text-xs h-7 gap-1.5" onClick={() => importFileRef.current?.click()} disabled={importLoading}>
-                    {importLoading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} Impor
+                    {importLoading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {t.settings.import}
                   </Button>
                 }
               />
-              <input ref={importFileRef} type="file" accept=".json" aria-label="Pilih file backup JSON untuk diimpor" className="hidden" onChange={handleImportFile} />
+              <input ref={importFileRef} type="file" accept=".json" aria-label={t.settings.importFileLabel} className="hidden" onChange={handleImportFile} />
               {importResult && (
                 <div className={cn("px-5 pb-3 text-xs flex items-center gap-1.5", importResult.success ? "text-green-600" : "text-destructive")}>
                   {importResult.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
@@ -616,48 +620,48 @@ export default function SettingsPage() {
             </div>
             <SettingRow
               icon={<Trash2 size={15} />}
-              label="Hapus Semua Data"
-              description="Hapus permanen seluruh data transaksi & budget"
+              label={t.settings.deleteAllData}
+              description={t.settings.deleteAllDataDesc}
               danger
               action={
                 <Button type="button" variant="outline" size="sm" disabled className="text-xs h-7 border-destructive/30 text-destructive hover:bg-destructive/10">
-                  Hapus
+                  {t.common.delete}
                 </Button>
               }
             />
           </SectionCard>
         </section>
 
-        {/* ── Tentang ── */}
+        {/* ── About ── */}
         <section>
-          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Tentang Aplikasi</h2>
+          <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">{t.settings.about}</h2>
           <SectionCard>
             <SettingRow
               icon={<Info size={15} />}
-              label="Versi Aplikasi"
+              label={t.settings.appVersion}
               description="Vest AI · Personal Finance Manager"
               action={<Badge variant="outline" className="text-[10px] font-mono">v1.1.6-security-seo</Badge>}
             />
             <SettingRow
               icon={<ExternalLink size={15} />}
-              label="Kebijakan Privasi"
-              description="Baca kebijakan penggunaan data kami"
+              label={t.settings.privacyPolicy}
+              description={t.settings.privacyPolicy}
               href="/kebijakan-privasi"
               action={<ChevronRight size={15} className="text-muted-foreground" />}
             />
             <SettingRow
               icon={<ExternalLink size={15} />}
-              label="Syarat & Ketentuan"
-              description="Aturan penggunaan layanan Vest AI"
+              label={t.settings.termsOfService}
+              description={t.settings.termsOfService}
               href="/syarat-ketentuan"
               action={<ChevronRight size={15} className="text-muted-foreground" />}
             />
           </SectionCard>
         </section>
 
-        {/* ── Zona Bahaya ── */}
+        {/* ── Danger Zone ── */}
         <section>
-          <h2 className="text-xs font-semibold text-destructive mb-3 uppercase tracking-wider">Zona Bahaya</h2>
+          <h2 className="text-xs font-semibold text-destructive mb-3 uppercase tracking-wider">{t.settings.dangerZone}</h2>
           <SectionCard divider={false}>
             <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -665,8 +669,8 @@ export default function SettingsPage() {
                   <LogOut size={15} className="text-destructive" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">Keluar dari akun</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Anda harus login kembali untuk mengakses data Anda</p>
+                  <p className="text-sm font-medium text-foreground">{t.settings.logoutLabel}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t.settings.logoutDesc}</p>
                 </div>
               </div>
               <Button
@@ -675,7 +679,7 @@ export default function SettingsPage() {
                 onClick={() => signOut({ callbackUrl: "/login" })}
                 className="gap-2 w-full sm:w-auto"
               >
-                <LogOut size={15} /> Logout
+                <LogOut size={15} /> {t.settings.logoutButton}
               </Button>
             </div>
           </SectionCard>

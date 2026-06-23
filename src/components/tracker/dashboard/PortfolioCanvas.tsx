@@ -1,9 +1,12 @@
+"use client"
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, BarChart3, Grid3x3, Hand, Info } from "lucide-react";
 import { AssetCard } from "@/components/tracker/AssetCard";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AssetProps } from "./types";
+import { useLanguage } from "@/lib/i18n/context";
 
 const HEIGHT_CLASS_MAP: Record<number, string> = {
   600: "h-[600px]",
@@ -31,6 +34,7 @@ interface PortfolioCanvasProps {
 }
 
 export function PortfolioCanvas({ assets, loading, onUpdate, onAssetClick }: PortfolioCanvasProps) {
+  const { t } = useLanguage()
   const constraintsRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(2);
 
@@ -90,19 +94,19 @@ export function PortfolioCanvas({ assets, loading, onUpdate, onAssetClick }: Por
               Portfolio Canvas
             </div>
             <p className="text-xs text-muted-foreground">
-              Seret kartu untuk mengatur layout. Posisi tersimpan otomatis setelah Anda lepaskan.
+              {t.tracker.canvasDragHint}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1 rounded-full bg-secondary/70 px-3 py-1 text-secondary-foreground ring-1 ring-border/60">
               <Hand className="h-3 w-3" />
-              Drag aktif
+              {t.tracker.canvasDragActive}
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-card px-3 py-1 ring-1 ring-border/60">
-              <Grid3x3 className="h-3 w-3" /> Grid adaptif
+              <Grid3x3 className="h-3 w-3" /> {t.tracker.canvasAdaptiveGrid}
             </span>
             <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-background px-3 py-1 ring-1 ring-border/60">
-              <Info className="h-3 w-3" /> Klik kartu untuk detail
+              <Info className="h-3 w-3" /> {t.tracker.canvasClickDetail}
             </span>
           </div>
         </div>
@@ -112,7 +116,7 @@ export function PortfolioCanvas({ assets, loading, onUpdate, onAssetClick }: Por
             <div className="flex w-full max-w-xl flex-col gap-3 px-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <BarChart3 className="h-4 w-4 animate-pulse" />
-                <span>Menyiapkan kanvas portfolio Anda...</span>
+                <span>{t.tracker.canvasLoading}</span>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[1, 2, 3, 4].map((key) => (
@@ -142,9 +146,9 @@ export function PortfolioCanvas({ assets, loading, onUpdate, onAssetClick }: Por
           <div className="absolute inset-0 flex items-center justify-center px-4">
             <div className="max-w-sm text-center text-muted-foreground">
               <AlertCircle size={48} className="mx-auto mb-3 text-primary" />
-              <p className="text-base font-semibold text-foreground">Belum ada aset dalam kanvas</p>
+              <p className="text-base font-semibold text-foreground">{t.tracker.noAssetsInCanvas}</p>
               <p className="mt-2 text-sm">
-                Tambahkan aset melalui menu Portfolio, lalu kembali untuk mengatur posisi visualnya di sini.
+                {t.tracker.addAssetsViaPortfolioHint}
               </p>
             </div>
           </div>

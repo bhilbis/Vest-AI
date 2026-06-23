@@ -28,6 +28,7 @@ import {
 import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
 import { cn, formatCurrencyInput, parseCurrencyInput } from "@/lib/utils";
 import { useConfirmStore } from "@/lib/confirm-store";
+import { useLanguage } from "@/lib/i18n/context";
 
 const DEFAULT_LABELS = [
   "Makanan",
@@ -72,6 +73,7 @@ export function BudgetFormDialog({
   editing,
 }: BudgetFormDialogProps) {
   const { openConfirm } = useConfirmStore();
+  const { t } = useLanguage();
 
   const [name, setName] = useState("");
   const [limit, setLimit] = useState("0");
@@ -160,14 +162,14 @@ export function BudgetFormDialog({
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || "Gagal menyimpan budget");
+        throw new Error(body.error || t.financial.budgetSaveFailed);
       }
 
       onSuccess();
       onOpenChange(false);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Gagal menyimpan budget";
+        err instanceof Error ? err.message : t.financial.budgetSaveFailed;
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -178,16 +180,15 @@ export function BudgetFormDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Budget" : "Set Budget Baru"}</DialogTitle>
+          <DialogTitle>{editing ? t.common.edit + " Budget" : t.financial.setBudgetNew}</DialogTitle>
           <DialogDescription>
-            Tetapkan limit bulanan untuk kategori pengeluaran tertentu agar
-            tetap terkontrol.
+            {t.financial.budgetDesc}
           </DialogDescription>
         </DialogHeader>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label>Nama Budget *</Label>
+            <Label>{t.financial.budgetNameLabel} *</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -203,7 +204,7 @@ export function BudgetFormDialog({
             )}
           >
             <div className="space-y-2">
-              <Label>Limit (Rp) *</Label>
+              <Label>{t.financial.budgetLimitLabel} *</Label>
               <Input
                 type="text"
                 inputMode="numeric"
@@ -215,7 +216,7 @@ export function BudgetFormDialog({
 
             {!isRecurring && (
               <div className="space-y-2">
-                <Label>Bulan *</Label>
+                <Label>{t.financial.budgetMonthLabel} *</Label>
                 <Input
                   type="month"
                   value={month}
@@ -228,7 +229,7 @@ export function BudgetFormDialog({
 
           {/* Category / Label combobox */}
           <div className="space-y-2">
-            <Label>Kategori / Label</Label>
+            <Label>{t.financial.budgetCategoryLabel}</Label>
             <Popover open={labelOpen} onOpenChange={setLabelOpen}>
               <PopoverTrigger asChild>
                 <button
@@ -247,7 +248,7 @@ export function BudgetFormDialog({
                   )}
                 >
                   <span className="truncate">
-                    {category || "Pilih atau ketik label..."}
+                    {category || t.financial.budgetCategoryPlaceholder}
                   </span>
                   <div className="flex items-center gap-1 shrink-0 ml-2">
                     {category && (
@@ -321,7 +322,7 @@ export function BudgetFormDialog({
                         >
                           <Plus className="h-3.5 w-3.5 text-primary shrink-0" />
                           <span className="text-primary">
-                            Tambahkan &quot;{labelSearch.trim()}&quot;
+                            {t.financial.budgetAddLabelHint} &quot;{labelSearch.trim()}&quot;
                           </span>
                         </CommandItem>
                       </CommandGroup>
@@ -333,18 +334,18 @@ export function BudgetFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Catatan</Label>
+            <Label>{t.financial.budgetNotesLabel}</Label>
             <Textarea
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Detail tambahan untuk budget ini"
+              placeholder={t.financial.budgetNotesPlaceholder}
             />
           </div>
 
           {!editing && (
             <div className="space-y-2">
-              <Label>Frekuensi</Label>
+              <Label>{t.financial.budgetFrequencyLabel}</Label>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -356,7 +357,7 @@ export function BudgetFormDialog({
                       : "border-border text-muted-foreground hover:border-primary/40"
                   )}
                 >
-                  Sekali (bulan ini)
+                  {t.financial.budgetOnce}
                 </button>
                 <button
                   type="button"
@@ -368,12 +369,12 @@ export function BudgetFormDialog({
                       : "border-border text-muted-foreground hover:border-primary/40"
                   )}
                 >
-                  Tiap Bulan (rutin)
+                  {t.financial.budgetMonthly}
                 </button>
               </div>
               {isRecurring && (
                 <p className="text-xs text-muted-foreground">
-                  Budget akan dibuat otomatis untuk 12 bulan ke depan mulai dari bulan ini.
+                  {t.financial.budgetMonthlyHint}
                 </p>
               )}
             </div>
@@ -388,10 +389,10 @@ export function BudgetFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Batal
+              {t.common.cancel}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Menyimpan..." : editing ? "Update" : "Simpan"}
+              {isSubmitting ? t.financial.saving : editing ? t.common.save : t.common.save}
             </Button>
           </div>
         </form>

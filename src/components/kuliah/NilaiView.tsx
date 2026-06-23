@@ -29,8 +29,10 @@ import {
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
+import { useLanguage } from "@/lib/i18n/context"
 
 export function NilaiView() {
+  const { t } = useLanguage()
   const [semesters, setSemesters] = useState<SemesterData[]>([])
   const [activeSemesterId, setActiveSemesterId] = useState("")
   const [settings, setSettings] = useState<KuliahSettingsData | null>(null)
@@ -103,14 +105,14 @@ export function NilaiView() {
       {/* Header & Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Ringkasan Nilai</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Pantau progres akademik dan kalkulasi nilai akhir secara real-time.</p>
+          <h1 className="text-xl font-bold tracking-tight">{t.kuliah.gradesTitle}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{t.kuliah.gradesDesc}</p>
         </div>
         
         {semesters.length > 0 && (
           <Select value={activeSemesterId} onValueChange={setActiveSemesterId}>
             <SelectTrigger className="w-[200px] h-9 text-xs bg-background/50 backdrop-blur-sm border-muted-foreground/20">
-              <SelectValue placeholder="Pilih Semester" />
+              <SelectValue placeholder={t.kuliah.selectSemesterPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {semesters.map((s) => (
@@ -132,13 +134,13 @@ export function NilaiView() {
           </div>
           <p className="text-sm font-medium text-foreground">
             {semesters.length === 0
-              ? "Belum ada semester aktif"
-              : "Belum ada mata kuliah terdaftar"}
+              ? t.kuliah.noActiveSemester
+              : t.kuliah.noCoursesRegistered}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {semesters.length === 0
-              ? "Buat semester baru di tab Tracker untuk memulai."
-              : "Tambahkan mata kuliah di tab Tracker."}
+              ? t.kuliah.createSemesterHint
+              : t.kuliah.addCoursesHint}
           </p>
         </div>
       ) : (
@@ -160,17 +162,18 @@ export function NilaiView() {
   )
 }
 
-function GradeCard({ 
-  mk, 
-  settings, 
+function GradeCard({
+  mk,
+  settings,
   index,
-  onUASUpdate 
-}: { 
-  mk: MataKuliahData, 
+  onUASUpdate
+}: {
+  mk: MataKuliahData,
   settings: KuliahSettingsData,
   index: number,
   onUASUpdate: (id: string, field: "uasJumlahSoal" | "uasJumlahBenar", val: string) => Promise<void>
 }) {
+  const { t } = useLanguage()
   const tuton = calculateNilaiTuton(mk, settings)
   const result = calculateNilaiAkhir(mk, settings)
   
@@ -186,7 +189,7 @@ function GradeCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="group relative rounded-2xl border border-border bg-white shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+      className="group relative rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
     >
       <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-border">
         {/* SECTION 1: Left - Grade Status */}
@@ -215,7 +218,7 @@ function GradeCard({
               <span className={cn("text-4xl font-black", gradeColorClass.split(" ")[0])}>
                 {result.letterGrade}
               </span>
-              <span className="text-xs font-bold text-slate-500 tabular-nums">
+              <span className="text-xs font-bold text-muted-foreground tabular-nums">
                 {result.nilaiAkhir.toFixed(1)}
               </span>
             </div>
@@ -223,131 +226,131 @@ function GradeCard({
 
           <div className="text-center space-y-2">
             <div className="flex flex-col items-center gap-1.5">
-              <span className="text-[11px] font-bold text-slate-900 tracking-wider uppercase">
+              <span className="text-[11px] font-bold text-foreground tracking-wider uppercase">
                 {mk.kode}
               </span>
               <Badge variant="outline" className="text-[9px] py-0 px-2 h-5 bg-primary/5 text-primary border-primary/20 font-bold uppercase rounded-full">
                 {mk.jenis}
               </Badge>
             </div>
-            <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug px-2">
+            <h3 className="text-sm font-bold text-foreground line-clamp-2 leading-snug px-2">
               {mk.nama}
             </h3>
           </div>
         </div>
 
         {/* SECTION 2: Middle - Progress Breakdown */}
-        <div className="p-6 flex flex-col justify-between bg-slate-50/30">
+        <div className="p-6 flex flex-col justify-between bg-muted/20">
           <div className="space-y-6">
-            <MetricSection 
-              label="Kehadiran" 
-              value={tuton.rataKehadiran} 
+            <MetricSection
+              label={t.kuliah.attendanceLabel}
+              value={tuton.rataKehadiran}
               weighted={tuton.nilaiKehadiran}
               max={settings.bobotKehadiran}
             />
-            <MetricSection 
-              label="Diskusi" 
-              value={tuton.rataDiskusi} 
+            <MetricSection
+              label={t.kuliah.discussionLabel}
+              value={tuton.rataDiskusi}
               weighted={tuton.nilaiDiskusi}
               max={settings.bobotDiskusi}
             />
-            <MetricSection 
-              label="Tugas" 
-              value={tuton.rataTugas} 
+            <MetricSection
+              label={t.kuliah.taskLabel}
+              value={tuton.rataTugas}
               weighted={tuton.nilaiTugas}
               max={settings.bobotTugas}
             />
           </div>
 
-          <div className="pt-6 mt-6 border-t border-slate-200">
+          <div className="pt-6 mt-6 border-t border-border">
             <div className="flex items-center justify-between mb-2">
               <div className="space-y-0.5">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tuton</p>
-                <p className="text-lg font-black text-slate-900 tabular-nums">{tuton.totalTuton.toFixed(1)}</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t.kuliah.totalTutonLabel}</p>
+                <p className="text-lg font-black text-foreground tabular-nums">{tuton.totalTuton.toFixed(1)}</p>
               </div>
               <div className="text-right space-y-0.5">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bobot SKS</p>
-                <p className="text-lg font-black text-slate-900 tabular-nums">{mk.sks} SKS</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t.kuliah.creditWeightLabel}</p>
+                <p className="text-lg font-black text-foreground tabular-nums">{mk.sks} SKS</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
               <Target size={12} className="shrink-0" />
-              <span>Target minimal kelulusan: <span className="text-slate-500 font-bold">{settings.batasD}</span></span>
+              <span>{t.kuliah.minPassingTarget} <span className="text-foreground font-bold">{settings.batasD}</span></span>
             </div>
           </div>
         </div>
 
         {/* SECTION 3: Right - Action & Calculation */}
-        <div className="p-6 bg-slate-50/50 flex flex-col">
+        <div className="p-6 bg-muted/10 flex flex-col">
           {mk.jenis === "reguler" ? (
             <div className="space-y-6 flex-1">
               <div className="space-y-4">
-                <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                <p className="text-[11px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                   <GraduationCap size={14} className="text-primary" />
-                  Input Data UAS
+                  {t.kuliah.uasDataInput}
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Soal</label>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">{t.kuliah.questionsLabel}</label>
                     <Input
                       type="number"
                       min={0}
                       value={mk.uasJumlahSoal || ""}
                       onChange={(e) => onUASUpdate(mk.id, "uasJumlahSoal", e.target.value)}
-                      className="h-10 text-xs bg-white border-slate-200 focus:ring-primary/20 rounded-xl font-bold"
+                      className="h-10 text-xs bg-background border-border focus:ring-primary/20 rounded-xl font-bold"
                       placeholder="0"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Benar</label>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">{t.kuliah.correctLabel}</label>
                     <Input
                       type="number"
                       min={0}
                       max={mk.uasJumlahSoal || undefined}
                       value={mk.uasJumlahBenar || ""}
                       onChange={(e) => onUASUpdate(mk.id, "uasJumlahBenar", e.target.value)}
-                      className="h-10 text-xs bg-white border-slate-200 focus:ring-primary/20 rounded-xl font-bold"
+                      className="h-10 text-xs bg-background border-border focus:ring-primary/20 rounded-xl font-bold"
                       placeholder="0"
                     />
                   </div>
                 </div>
               </div>
               
-              <div className="pt-4 border-t border-slate-200 space-y-3">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Breakdown Kontribusi</p>
+              <div className="pt-4 border-t border-border space-y-3">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{t.kuliah.contributionBreakdown}</p>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm">
-                    <span className="text-[11px] font-bold text-slate-600">Kontribusi UAS ({settings.kontribusiUAS}%)</span>
-                    <span className="text-xs font-black text-slate-900 tabular-nums">{result.kontribusiUAS.toFixed(1)}</span>
+                  <div className="flex justify-between items-center bg-card p-2.5 rounded-xl border border-border shadow-sm">
+                    <span className="text-[11px] font-bold text-muted-foreground">{t.kuliah.uasContribution} ({settings.kontribusiUAS}%)</span>
+                    <span className="text-xs font-black text-foreground tabular-nums">{result.kontribusiUAS.toFixed(1)}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm">
-                    <span className="text-[11px] font-bold text-slate-600">Kontribusi Tuton ({settings.kontribusiTuton}%)</span>
-                    <span className="text-xs font-black text-slate-900 tabular-nums">{result.kontribusiTuton.toFixed(1)}</span>
+                  <div className="flex justify-between items-center bg-card p-2.5 rounded-xl border border-border shadow-sm">
+                    <span className="text-[11px] font-bold text-muted-foreground">{t.kuliah.tutonContribution} ({settings.kontribusiTuton}%)</span>
+                    <span className="text-xs font-black text-foreground tabular-nums">{result.kontribusiTuton.toFixed(1)}</span>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="space-y-6 flex-1">
-              <p className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+              <p className="text-[11px] font-black text-foreground uppercase tracking-widest flex items-center gap-2">
                 <Calculator size={14} className="text-primary" />
-                Kontribusi Praktik
+                {t.kuliah.practicalContribution}
               </p>
               <div className="space-y-3">
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                  <span className="text-[11px] font-bold text-slate-600">Diskusi ({settings.kontribusiDiskusiPraktik}%)</span>
-                  <span className="text-xs font-black text-slate-900 tabular-nums">{result.kontribusiUAS.toFixed(1)}</span>
+                <div className="flex justify-between items-center bg-card p-3 rounded-xl border border-border shadow-sm">
+                  <span className="text-[11px] font-bold text-muted-foreground">{t.kuliah.discussionLabel} ({settings.kontribusiDiskusiPraktik}%)</span>
+                  <span className="text-xs font-black text-foreground tabular-nums">{result.kontribusiUAS.toFixed(1)}</span>
                 </div>
-                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                  <span className="text-[11px] font-bold text-slate-600">Tugas ({settings.kontribusiTugasPraktik}%)</span>
-                  <span className="text-xs font-black text-slate-900 tabular-nums">{result.kontribusiTuton.toFixed(1)}</span>
+                <div className="flex justify-between items-center bg-card p-3 rounded-xl border border-border shadow-sm">
+                  <span className="text-[11px] font-bold text-muted-foreground">{t.kuliah.taskLabel} ({settings.kontribusiTugasPraktik}%)</span>
+                  <span className="text-xs font-black text-foreground tabular-nums">{result.kontribusiTuton.toFixed(1)}</span>
                 </div>
               </div>
               
               <div className="mt-auto p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-start gap-3">
                 <BookOpen size={16} className="text-primary shrink-0 mt-0.5" />
                 <p className="text-[11px] text-primary font-medium leading-relaxed italic">
-                  Mata kuliah praktik tidak menggunakan nilai UAS sebagai penentu nilai akhir.
+                  {t.kuliah.practicalNote}
                 </p>
               </div>
             </div>
@@ -358,30 +361,31 @@ function GradeCard({
   )
 }
 
-function MetricSection({ 
-  label, 
-  value, 
-  weighted, 
-  max 
-}: { 
-  label: string, 
-  value: number, 
-  weighted: number, 
+function MetricSection({
+  label,
+  value,
+  weighted,
+  max
+}: {
+  label: string,
+  value: number,
+  weighted: number,
   max: number
 }) {
+  const { t } = useLanguage()
   const percentage = max > 0 ? (weighted / max) * 100 : 0
   
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-black text-slate-900 uppercase tracking-wider">{label}</span>
+        <span className="text-[11px] font-black text-foreground uppercase tracking-wider">{label}</span>
         <div className="flex items-baseline gap-1">
-          <span className="text-xs font-black text-slate-900 tabular-nums">{weighted.toFixed(1)}</span>
-          <span className="text-[10px] font-bold text-slate-400">/ {max}</span>
+          <span className="text-xs font-black text-foreground tabular-nums">{weighted.toFixed(1)}</span>
+          <span className="text-[10px] font-bold text-muted-foreground">/ {max}</span>
         </div>
       </div>
       
-      <div className="relative h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+      <div className="relative h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <motion.div 
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
@@ -391,7 +395,7 @@ function MetricSection({
       </div>
       
       <div className="flex justify-between items-center">
-        <span className="text-[9px] font-bold text-slate-400 uppercase">Rata-rata: {value.toFixed(1)}%</span>
+        <span className="text-[9px] font-bold text-muted-foreground uppercase">{t.kuliah.averageLabel}: {value.toFixed(1)}%</span>
         <span className="text-[10px] font-black text-primary tabular-nums">{percentage.toFixed(0)}%</span>
       </div>
     </div>

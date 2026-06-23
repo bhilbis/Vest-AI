@@ -64,7 +64,7 @@ export function weeklyReportTemplate(data: {
 
         <!-- CTA -->
         <tr><td style="padding:0 32px 32px;">
-          <a href="${process.env.NEXTAUTH_URL ?? "https://vest-ai.vercel.app"}/financial-overview"
+          <a href="${process.env.NEXTAUTH_URL ?? "https://go-aoixsy.my.id"}/financial-overview"
              style="display:inline-block;padding:12px 24px;background:#6366f1;color:#ffffff;font-size:13px;font-weight:600;border-radius:8px;text-decoration:none;">
             Lihat Detail →
           </a>

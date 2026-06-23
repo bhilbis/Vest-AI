@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   Select,
   SelectContent,
@@ -298,12 +299,10 @@ export function TransactionFormDialog({
 
                     <div className="space-y-1.5">
                       <Label>{t.financial.labelDate} *</Label>
-                      <Input
+                      <DateTimePicker
                         className="h-11"
-                        type="datetime-local"
                         value={expenseFormData.date}
-                        onChange={(e) => onExpenseFormDataChange({ date: e.target.value })}
-                        required
+                        onChange={(date) => onExpenseFormDataChange({ date })}
                       />
                     </div>
 
@@ -415,12 +414,10 @@ export function TransactionFormDialog({
                     </div>
                     <div className="space-y-1.5">
                       <Label>{t.financial.labelDate}</Label>
-                      <Input
+                      <DateTimePicker
                         className="h-11"
-                        type="datetime-local"
                         value={incomeDate}
-                        onChange={(e) => setIncomeDate(e.target.value)}
-                        required
+                        onChange={setIncomeDate}
                       />
                     </div>
                     <div className="space-y-1.5">

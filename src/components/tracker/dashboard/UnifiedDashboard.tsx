@@ -24,6 +24,7 @@ import { usePortfolioAssets } from "@/components/tracker/dashboard/usePortfolioA
 import type { AssetProps } from "@/components/tracker/dashboard/types"
 import { formatCurrency } from "@/lib/expenseUtils"
 import Link from "next/link"
+import { useLanguage } from "@/lib/i18n/context"
 
 type AssetWithStats = AssetProps & {
   val: number
@@ -45,6 +46,7 @@ const item = {
 
 // ==================== COMPONENT ====================
 export function UnifiedDashboard() {
+  const { t } = useLanguage()
   const { assets, loading: assetsLoading, reload: reloadAssets } = usePortfolioAssets()
 
   const handleReloadAll = useCallback(() => {
@@ -114,19 +116,19 @@ export function UnifiedDashboard() {
             <BarChart3 className="h-3 w-3 text-primary" />
             <span>Portfolio Tracker</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">Investasi Saya</h1>
+          <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">{t.tracker.myInvestments}</h1>
           <p className="text-sm text-muted-foreground max-w-xl">
-            Pantau portofolio crypto, saham, dan aset investasi Anda secara real-time.
+            {t.tracker.investmentsDesc}
           </p>
         </div>
         <div className="flex items-center gap-2 self-start">
           <Button variant="outline" size="sm" className="gap-2" onClick={handleReloadAll} disabled={isLoading}>
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+            {t.tracker.refresh}
           </Button>
           <Link href="/tracker/assets" className="flex items-center">
             <Button size="sm" className="gap-2">
-              <Plus className="h-3.5 w-3.5" /> Tambah Aset
+              <Plus className="h-3.5 w-3.5" /> {t.tracker.addAsset}
             </Button>
           </Link>
         </div>
@@ -147,7 +149,7 @@ export function UnifiedDashboard() {
               <div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                   <BarChart3 className="h-4 w-4" />
-                  <span>Total Nilai Portofolio</span>
+                  <span>{t.tracker.totalPortfolioValue}</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight tabular-nums">
                   {isLoading ? (
@@ -160,7 +162,7 @@ export function UnifiedDashboard() {
                   <div className="flex flex-wrap items-center gap-3 mt-3">
                     <Badge variant="outline" className="gap-1 text-xs">
                       <BarChart3 className="h-3 w-3" />
-                      {assets.length} aset investasi
+                      {assets.length} {t.tracker.investmentAssets}
                     </Badge>
                   </div>
                 )}
@@ -168,7 +170,7 @@ export function UnifiedDashboard() {
               {!isLoading && portfolio.totalValue > 0 && portfolio.totalCost > 0 && (
                 <div className="mt-6 space-y-2">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Modal vs Profit</span>
+                    <span>{t.tracker.capitalVsProfit}</span>
                     <span>
                       {((portfolio.totalCost / portfolio.totalValue) * 100).toFixed(0)}% /{" "}
                       {((portfolio.totalProfit / portfolio.totalValue) * 100).toFixed(0)}%
@@ -218,7 +220,7 @@ export function UnifiedDashboard() {
           <Card className="h-full border-border/50 bg-card p-5 hover-lift">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
               <Layers className="h-4 w-4" />
-              <span>Total Aset</span>
+              <span>{t.tracker.totalAssets}</span>
             </div>
             {isLoading ? (
               <div className="animate-shimmer h-8 w-16 rounded" />
@@ -226,7 +228,7 @@ export function UnifiedDashboard() {
               <>
                 <p className="text-2xl font-bold tabular-nums">{assets.length}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {portfolio.categories.length} kategori
+                  {portfolio.categories.length} {t.tracker.categories}
                 </p>
               </>
             )}
@@ -243,7 +245,7 @@ export function UnifiedDashboard() {
             {isLoading ? (
               <div className="animate-shimmer h-8 w-32 rounded" />
             ) : !portfolio.bestPerformer ? (
-              <p className="text-sm text-muted-foreground">Belum ada aset</p>
+              <p className="text-sm text-muted-foreground">{t.tracker.noAssets}</p>
             ) : (
               <>
                 <p className="text-base font-bold truncate">{portfolio.bestPerformer.name}</p>
@@ -266,7 +268,7 @@ export function UnifiedDashboard() {
             {isLoading ? (
               <div className="animate-shimmer h-8 w-32 rounded" />
             ) : !portfolio.worstPerformer ? (
-              <p className="text-sm text-muted-foreground">Belum ada aset</p>
+              <p className="text-sm text-muted-foreground">{t.tracker.noAssets}</p>
             ) : (
               <>
                 <p className="text-base font-bold truncate">{portfolio.worstPerformer.name}</p>
@@ -285,11 +287,11 @@ export function UnifiedDashboard() {
             <div className="p-5 pb-3 flex items-center justify-between border-b border-border/30">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                Semua Holdings
+                {t.tracker.allHoldings}
               </h3>
               <Link href="/tracker/assets">
                 <Badge variant="outline" className="text-[10px] hover:bg-muted cursor-pointer gap-1">
-                  {assets.length} aset <ExternalLink className="h-2.5 w-2.5" />
+                  {assets.length} {t.tracker.investmentAssets} <ExternalLink className="h-2.5 w-2.5" />
                 </Badge>
               </Link>
             </div>
@@ -303,10 +305,10 @@ export function UnifiedDashboard() {
               ) : portfolio.allSorted.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground py-8">
                   <BarChart3 className="h-8 w-8 mb-2 opacity-20" />
-                  <p>Belum ada investasi</p>
+                  <p>{t.tracker.noInvestmentsYet}</p>
                   <Link href="/tracker/assets">
                     <Button variant="outline" size="sm" className="mt-3 gap-1.5 text-xs">
-                      <Plus className="h-3 w-3" /> Tambah Aset
+                      <Plus className="h-3 w-3" /> {t.tracker.addAsset}
                     </Button>
                   </Link>
                 </div>
@@ -347,7 +349,7 @@ export function UnifiedDashboard() {
             <div className="p-5 pb-3 border-b border-border/30">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <PieChart className="h-4 w-4 text-muted-foreground" />
-                Alokasi Aset
+                {t.tracker.assetAllocation}
               </h3>
             </div>
 
@@ -359,7 +361,7 @@ export function UnifiedDashboard() {
               ) : portfolio.categories.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground py-8">
                   <PieChart className="h-8 w-8 mb-2 opacity-20" />
-                  <p>Tidak ada data</p>
+                  <p>{t.tracker.noData}</p>
                 </div>
               ) : (
                 portfolio.categories.map((cat, idx) => (

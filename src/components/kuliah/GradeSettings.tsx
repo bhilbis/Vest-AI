@@ -21,8 +21,10 @@ import {
 } from "lucide-react"
 import { KuliahSettingsData, DEFAULT_SETTINGS } from "@/lib/kuliah-types"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n/context"
 
 export function GradeSettings() {
+  const { t } = useLanguage()
   const [settings, setSettings] = useState<KuliahSettingsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -110,7 +112,7 @@ export function GradeSettings() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground animate-pulse">Memuat pengaturan...</p>
+          <p className="text-sm text-muted-foreground animate-pulse">{t.kuliah.loadingSettings}</p>
         </div>
       </div>
     )
@@ -133,10 +135,10 @@ export function GradeSettings() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            Pengaturan Bobot Penilaian
+            {t.kuliah.gradeWeightSettings}
           </h2>
           <p className="text-sm text-muted-foreground mt-1 font-medium">
-            Sesuaikan parameter perhitungan nilai sesuai dengan standar akademik terbaru
+            {t.kuliah.gradeWeightSettingsDesc}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -145,7 +147,7 @@ export function GradeSettings() {
             size="sm"
             onClick={handleReset}
           >
-            <RotateCcw className="h-3.5 w-3.5" /> Reset Default
+            <RotateCcw className="h-3.5 w-3.5" /> {t.kuliah.resetDefault}
           </Button>
           <Button
             size="sm"
@@ -157,7 +159,7 @@ export function GradeSettings() {
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            Simpan Perubahan
+            {t.kuliah.saveChanges}
           </Button>
         </div>
       </div>
@@ -166,35 +168,34 @@ export function GradeSettings() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bobot Tuton */}
         <WeightCard
-          title="Bobot Komponen Tuton"
-          subtitle="Distribusi nilai pada tutorial online"
+          title={t.kuliah.tutonWeights}
+          subtitle={t.kuliah.tutonWeightsDesc}
           icon={Users}
           total={tutonTotal}
           isValid={tutonValid}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <SettingsField
-              label="Kehadiran"
+              label={t.kuliah.attendanceLabel}
               value={settings.bobotKehadiran}
               onChange={(v) => update("bobotKehadiran", v)}
             />
             <SettingsField
-              label="Diskusi"
+              label={t.kuliah.discussionLabel}
               value={settings.bobotDiskusi}
               onChange={(v) => update("bobotDiskusi", v)}
             />
             <SettingsField
-              label="Tugas"
+              label={t.kuliah.taskLabel}
               value={settings.bobotTugas}
               onChange={(v) => update("bobotTugas", v)}
             />
           </div>
         </WeightCard>
 
-        {/* Kontribusi Reguler */}
         <WeightCard
-          title="Mata Kuliah Reguler"
-          subtitle="Kontribusi UAS dan Tuton ke Nilai Akhir"
+          title={t.kuliah.regularCourse}
+          subtitle={t.kuliah.regularCourseDesc}
           icon={Monitor}
           total={regulerTotal}
           isValid={regulerValid}
@@ -213,22 +214,21 @@ export function GradeSettings() {
           </div>
         </WeightCard>
 
-        {/* Kontribusi Praktik */}
         <WeightCard
-          title="Mata Kuliah Praktik"
-          subtitle="Kontribusi komponen untuk mata kuliah non-Tuweb"
+          title={t.kuliah.practicalCourse}
+          subtitle={t.kuliah.practicalCourseDesc}
           icon={FileText}
           total={praktikTotal}
           isValid={praktikValid}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <SettingsField
-              label="Diskusi"
+              label={t.kuliah.discussionLabel}
               value={settings.kontribusiDiskusiPraktik}
               onChange={(v) => update("kontribusiDiskusiPraktik", v)}
             />
             <SettingsField
-              label="Tugas"
+              label={t.kuliah.taskLabel}
               value={settings.kontribusiTugasPraktik}
               onChange={(v) => update("kontribusiTugasPraktik", v)}
             />
@@ -244,7 +244,7 @@ export function GradeSettings() {
         <div className="fixed bottom-8 right-8 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300 z-50">
           <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
           <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
-            Perubahan belum disimpan
+            {t.kuliah.unsavedChangesLabel}
           </p>
         </div>
       )}
@@ -266,6 +266,7 @@ interface WeightCardProps {
 }
 
 function WeightCard({ title, subtitle, icon: Icon, total, isValid, children }: WeightCardProps) {
+  const { t } = useLanguage()
   return (
     <div className="bg-white dark:bg-card rounded-3xl border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-300 p-8 flex flex-col h-full">
       <div className="flex items-start justify-between mb-8">
@@ -305,7 +306,7 @@ function WeightCard({ title, subtitle, icon: Icon, total, isValid, children }: W
 
       <div className="space-y-3 mt-auto pt-6 border-t border-border/30">
         <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          <span>Total Akumulasi</span>
+          <span>{t.kuliah.totalAccumulation}</span>
           <span className={cn(isValid ? "text-emerald-600" : "text-red-600")}>
             {total.toFixed(0)}%
           </span>
@@ -354,13 +355,14 @@ function SettingsField({
   )
 }
 
-function GradeBoundariesCard({ 
-  settings, 
-  update 
-}: { 
-  settings: KuliahSettingsData, 
-  update: (field: keyof KuliahSettingsData, value: number) => void 
+function GradeBoundariesCard({
+  settings,
+  update
+}: {
+  settings: KuliahSettingsData,
+  update: (field: keyof KuliahSettingsData, value: number) => void
 }) {
+  const { t } = useLanguage()
   const grades = [
     { label: "A", field: "batasA" as const, color: "bg-emerald-500", text: "text-emerald-600", light: "bg-emerald-50" },
     { label: "B", field: "batasB" as const, color: "bg-blue-500", text: "text-blue-600", light: "bg-blue-50" },
@@ -375,8 +377,8 @@ function GradeBoundariesCard({
           <Scale className="h-6 w-6 text-foreground/70" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-foreground tracking-tight">Batas Nilai (Grade Boundaries)</h3>
-          <p className="text-xs text-muted-foreground mt-0.5 font-medium">Tentukan ambang batas minimum untuk setiap tingkatan nilai</p>
+          <h3 className="text-base font-bold text-foreground tracking-tight">{t.kuliah.gradeBoundaries}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 font-medium">{t.kuliah.gradeBoundariesDesc}</p>
         </div>
       </div>
 
@@ -451,7 +453,7 @@ function GradeBoundariesCard({
             <Info className="h-4 w-4 text-amber-600" />
           </div>
           <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-            Mahasiswa dengan nilai di bawah <span className="font-bold text-foreground">{settings.batasD}</span> akan secara otomatis mendapatkan <span className="font-bold text-red-600">Grade E</span>.
+            {t.kuliah.gradeBoundaryNote.replace("{n}", String(settings.batasD))}
           </p>
         </div>
       </div>

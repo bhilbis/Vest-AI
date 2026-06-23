@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useLanguage } from "@/lib/i18n/context"
 
 interface ExpenseSummaryCardsProps {
   totalExpenses: number
@@ -15,12 +16,13 @@ export function ExpenseSummaryCards({
   topCategory,
   formatCurrency,
 }: ExpenseSummaryCardsProps) {
+  const { t } = useLanguage()
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Card className="border border-border bg-card shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total Pengeluaran
+            {t.financial.totalExpensesLabel}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -28,7 +30,7 @@ export function ExpenseSummaryCards({
             {formatCurrency(totalExpenses)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {expensesCount} transaksi
+            {expensesCount} {t.common.transactions}
           </p>
         </CardContent>
       </Card>
@@ -36,7 +38,7 @@ export function ExpenseSummaryCards({
       <Card className="border border-border bg-card shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Rata-rata per Transaksi
+            {t.financial.avgPerTransaction}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -49,7 +51,7 @@ export function ExpenseSummaryCards({
       <Card className="border border-border bg-card shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Kategori Terbanyak
+            {t.financial.topCategory}
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -23,15 +23,5 @@ export default async function UASPrepPage() {
     createdAt: p.createdAt.toISOString(),
   }))
 
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold tracking-tight">UAS Prep</h2>
-        <p className="text-sm text-muted-foreground">
-          Upload kisi-kisi, ekstrak teks, lalu generate ringkasan & latihan soal otomatis dengan AI.
-        </p>
-      </div>
-      <UASPrepClient initialSaved={initialSaved} />
-    </div>
-  )
+  return <UASPrepClient initialSaved={initialSaved} />
 }

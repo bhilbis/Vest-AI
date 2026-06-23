@@ -45,3 +45,7 @@ docker-compose.yml
 next-env.d.ts
 
 /src/generated/prisma
+
+# claude code internal worktrees & downloaded skills
+.claude/worktrees/
+.claude/skills/

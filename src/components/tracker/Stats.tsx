@@ -1,3 +1,5 @@
+"use client"
+
 import { type ComponentType } from "react";
 import {
   Activity,
@@ -7,6 +9,7 @@ import {
   LineChartIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useLanguage } from "@/lib/i18n/context";
 
 type StatCard = {
   title: string;
@@ -38,6 +41,8 @@ export function StatsCards({
   successRate: number;
   successRateChange: number;
 }) {
+  const { t } = useLanguage()
+
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -67,15 +72,15 @@ export function StatsCards({
       title: "24h Change",
       value: `${dailyChangeValue >= 0 ? "+" : ""}${formatCurrency(dailyChangeValue)}`,
       delta: formatPercent(dailyChangePercent),
-      deltaLabel: "dalam 24 jam",
+      deltaLabel: t.tracker.in24h,
       tone: dailyChangeValue >= 0 ? "positive" : "negative",
       Icon: Activity,
     },
     {
       title: "AI Trades",
       value: aiTrades.toString(),
-      delta: `${aiTradesChange >= 0 ? "+" : ""}${aiTradesChange} transaksi`,
-      deltaLabel: "pekan ini",
+      delta: `${aiTradesChange >= 0 ? "+" : ""}${aiTradesChange} ${t.common.transactions}`,
+      deltaLabel: t.tracker.thisWeekDelta,
       tone: aiTradesChange >= 0 ? "positive" : "neutral",
       Icon: BitcoinIcon,
     },
@@ -83,7 +88,7 @@ export function StatsCards({
       title: "Win Rate",
       value: formatPercent(successRate),
       delta: successRateChange >= 0 ? `+${formatPercent(successRateChange)}` : formatPercent(successRateChange),
-      deltaLabel: "akurasi sinyal",
+      deltaLabel: t.tracker.signalAccuracy,
       tone: successRateChange >= 0 ? "positive" : "negative",
       Icon: LineChartIcon,
     },

@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { PlusIcon, XIcon } from "lucide-react";
 import Image from "next/image";
 import { Budget } from "@/types/types";
@@ -146,11 +147,9 @@ export function ExpenseFormDialog({
 
             <div className="space-y-2">
               <Label>{t.financial.labelDate} *</Label>
-              <Input
-                type="datetime-local"
+              <DateTimePicker
                 value={formData.date}
-                onChange={(e) => onFormDataChange({ date: e.target.value })}
-                required
+                onChange={(date) => onFormDataChange({ date })}
               />
             </div>
           </div>

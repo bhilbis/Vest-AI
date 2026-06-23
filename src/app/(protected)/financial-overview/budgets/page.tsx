@@ -8,6 +8,7 @@ import { Target, AlertCircle, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog";
+import { useLanguage } from "@/lib/i18n/context";
 
 type BudgetItem = {
   id: string;
@@ -28,6 +29,7 @@ function toMonthParam(d: Date) {
 export default function BudgetsPage() {
   const now = new Date();
   const currentMonth = toMonthParam(now);
+  const { t, dateLocale } = useLanguage();
 
   const [budgets, setBudgets] = useState<BudgetItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,11 +71,10 @@ export default function BudgetsPage() {
       <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Manajemen Budget
+            {t.financial.budgetManagement}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Bulan ini:{" "}
-            {now.toLocaleDateString("id-ID", {
+            {now.toLocaleDateString(dateLocale, {
               month: "long",
               year: "numeric",
             })}
@@ -81,14 +82,14 @@ export default function BudgetsPage() {
         </div>
         <Button onClick={() => setDialogOpen(true)} className="self-start sm:self-auto">
           <Plus size={16} className="mr-1.5" />
-          Tambah Budget
+          {t.financial.addBudget}
         </Button>
       </header>
 
       {!loading && budgetsWithUsage.length > 0 && (
         <div className="rounded-xl shadow-xs border border-border bg-card p-5">
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-semibold">
-            Total Penggunaan Budget
+            {t.financial.totalBudgetUsage}
           </p>
           <div className="flex items-end justify-between mb-2">
             <p
@@ -104,7 +105,7 @@ export default function BudgetsPage() {
               {totalUsage.toFixed(1)}%
             </p>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Terpakai</p>
+              <p className="text-xs text-muted-foreground">{t.financial.budgetSpentLabel}</p>
               <p className="text-sm font-semibold text-foreground">
                 {formatCurrency(totalSpent)}
               </p>
@@ -126,10 +127,10 @@ export default function BudgetsPage() {
           <div className="col-span-full rounded-xl shadow-xs border border-border bg-card p-12 text-center">
             <Target className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-50" />
             <p className="text-base font-medium text-foreground">
-              Belum ada budget bulan ini
+              {t.financial.noBudgetThisMonth}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Klik <strong>Tambah Budget</strong> untuk mulai mengatur pengeluaran.
+              {t.financial.addBudgetHint}
             </p>
           </div>
         ) : (
@@ -160,13 +161,13 @@ export default function BudgetsPage() {
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Terpakai</span>
+                    <span className="text-muted-foreground">{t.financial.budgetSpentLabel}</span>
                     <span className="font-semibold text-foreground">
                       {formatCurrency(budget.spent)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Limit</span>
+                    <span className="text-muted-foreground">{t.financial.budgetLimitDisplay}</span>
                     <span className="font-medium text-muted-foreground">
                       {formatCurrency(budget.limit)}
                     </span>
@@ -188,7 +189,7 @@ export default function BudgetsPage() {
                       {budget.usage.toFixed(1)}%
                     </span>
                     <span className="text-muted-foreground">
-                      Sisa:{" "}
+                      {t.financial.budgetRemainingLabel}{" "}
                       {formatCurrency(Math.max(budget.limit - budget.spent, 0))}
                     </span>
                   </div>

@@ -4,15 +4,17 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, ArrowLeftRight, Target, Wallet } from "lucide-react"
-
-const keuanganNav = [
-  { title: "Overview", url: "/financial-overview", icon: LayoutDashboard },
-  { title: "Transaksi", url: "/financial-overview/transactions", icon: ArrowLeftRight },
-  { title: "Budget", url: "/financial-overview/budgets", icon: Target },
-]
+import { useLanguage } from "@/lib/i18n/context"
 
 export default function KeuanganLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { t } = useLanguage()
+
+  const keuanganNav = [
+    { title: t.financial.overview, url: "/financial-overview", icon: LayoutDashboard },
+    { title: t.financial.transactionsTab, url: "/financial-overview/transactions", icon: ArrowLeftRight },
+    { title: t.financial.budget, url: "/financial-overview/budgets", icon: Target },
+  ]
 
   return (
     <div className="w-full">
@@ -25,8 +27,8 @@ export default function KeuanganLayout({ children }: { children: React.ReactNode
               <Wallet className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-foreground">Keuangan</h1>
-              <p className="text-[11px] text-muted-foreground">Kelola keuangan & anggaran Anda</p>
+              <h1 className="text-lg font-semibold tracking-tight text-foreground">{t.nav.finance}</h1>
+              <p className="text-[11px] text-muted-foreground">{t.financial.manageFinance}</p>
             </div>
           </div>
 

@@ -64,6 +64,8 @@ export interface SesiKuliahData {
   tugasNA: boolean        // true = tugas tidak relevan (dikecualikan dari rata-rata)
   hasTugas: boolean       // true = sesi ini adalah sesi tugas
   tugasDeadline?: string | null
+  hasZoom?: boolean       // true = sesi ini memiliki sesi Zoom (Tuweb)
+  zoomUrl?: string | null // opsional: link Zoom untuk sesi Tuweb
   mataKuliahId: string
 }
 

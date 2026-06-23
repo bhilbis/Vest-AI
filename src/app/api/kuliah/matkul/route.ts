@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     jumlahSesi: reqJumlahSesi,
     tugaSesiNumbers: reqTugaSesiNumbers,
     diskusiSesiNumbers: reqDiskusiSesiNumbers,
+    zoomSesiNumbers: reqZoomSesiNumbers,
     sesiTugasList: reqSesiTugasList,
     gradingPresetId,
     gradingOverride,
@@ -46,9 +47,8 @@ export async function POST(req: Request) {
   const sesiTugasList =
     reqSesiTugasList ?? tugaSesiNumbers.join(",") ?? defaultTugasList;
 
-  // diskusiSesiNumbers: explicit list of sessions with diskusi (tuweb only)
-  // If not provided for tuweb, all non-tugas sessions have diskusi by default
   const diskusiSesiNumbers: number[] | null = reqDiskusiSesiNumbers ?? null;
+  const zoomSesiNumbers: number[] | null = reqZoomSesiNumbers ?? null;
 
   const mataKuliah = await prisma.mataKuliah.create({
     data: {
@@ -70,7 +70,11 @@ export async function POST(req: Request) {
             resolvedJenis === "tuweb" && diskusiSesiNumbers !== null
               ? !hasTugas && !diskusiSesiNumbers.includes(sesiNumber)
               : false;
-          return { sesiNumber, hasTugas, diskusiNA };
+          const hasZoom =
+            resolvedJenis === "tuweb" && zoomSesiNumbers !== null
+              ? zoomSesiNumbers.includes(sesiNumber)
+              : false;
+          return { sesiNumber, hasTugas, diskusiNA, hasZoom };
         }),
       },
     },
