@@ -74,7 +74,7 @@ export const VestAISchemas = {
     name: "Vest AI",
     url: "https://go-aoixsy.my.id",
     description:
-      "Platform analisis saham berbasis AI yang membantu investor membuat keputusan investasi cerdas dengan teknologi machine learning dan real-time market data.",
+      "Aplikasi manajemen pribadi all-in-one: catat pengeluaran & pemasukan, pantau portofolio investasi, kelola jadwal kuliah, dan konsultasi dengan AI assistant.",
     applicationCategory: "FinanceApplication",
     operatingSystem: "Web Browser, iOS, Android",
     offers: {
@@ -89,13 +89,8 @@ export const VestAISchemas = {
     "@type": "Organization",
     name: "Vest AI",
     url: "https://go-aoixsy.my.id",
-    description: "AI-powered investment and stock analysis platform",
-    sameAs: [
-      // Add your social media profiles here
-      // 'https://twitter.com/vestai',
-      // 'https://facebook.com/vestai',
-      // 'https://linkedin.com/company/vestai',
-    ],
+    description: "Personal finance, investment portfolio, and academic management platform powered by AI",
+    sameAs: [],
   } as OrganizationSchema,
 
   createBreadcrumb: (items: Array<{ name: string; url?: string }>) =>

@@ -31,11 +31,13 @@ model User {
   accountBalances   AccountBalance[]
   accountTransfers  AccountTransfer[]
   budgets           Budget[]
+  savingsGoals      SavingsGoal[]
   expenseCategories ExpenseCategory[]
   semesters         Semester[]
   kuliahSettings    KuliahSettings?
   examPreps         ExamPrep[]
   pushSubscriptions PushSubscription[]
+  agentDrafts       AgentDraft[]
   createdAt         DateTime @default(now())
 }
 
@@ -210,6 +212,41 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ==================== SAVINGS GOALS ====================
+
+model SavingsGoal {
+  id                  String    @id @default(cuid())
+  name                String
+  targetAmount        Float
+  currentAmount       Float     @default(0)
+  monthlyContribution Float     @default(0)
+  deadline            DateTime?
+  icon                String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  contributions SavingsContribution[]
+
+  @@index([userId, createdAt])
+}
+
+model SavingsContribution {
+  id        String   @id @default(cuid())
+  amount    Float
+  note      String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  savingsGoalId String
+  savingsGoal   SavingsGoal @relation(fields: [savingsGoalId], references: [id], onDelete: Cascade)
+
+  @@index([savingsGoalId])
+}
+
 // ==================== KULIAH TRACKER ====================
 
 model Semester {
@@ -334,6 +371,23 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ==================== AI AGENT DRAFTS ====================
+
+model AgentDraft {
+  id        String   @id @default(cuid())
+  userId    String
+  kind      String   // "expense" | "income"
+  data      Json     // draft payload (PendingDraft shape)
+  status    String   @default("pending") // "pending" | "committed" | "rejected"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
 }
 
 // ==================== UAS PREP ====================

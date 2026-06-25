@@ -12,6 +12,11 @@ import {
   Maximize2,
   Info,
   Zap,
+  Check,
+  AlertTriangle,
+  Loader2,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -37,12 +42,52 @@ import { AI_MODELS } from '@/app/api/data'
 
 type Role = 'user' | 'assistant'
 
+type DraftStatus = 'pending' | 'committing' | 'done' | 'rejected' | 'error'
+
+interface ExpenseDraft {
+  kind: 'expense'
+  title: string
+  amount: number
+  category: string
+  accountId: string
+  accountName: string
+  date: string
+  currentBalance: number
+  sufficientBalance: boolean
+}
+
+interface IncomeDraft {
+  kind: 'income'
+  title: string
+  amount: number
+  accountId: string
+  accountName: string
+  date: string
+}
+
+type PendingDraft = ExpenseDraft | IncomeDraft
+
+type DraftWithState = PendingDraft & {
+  _id: string
+  _dbId?: string
+  _status: DraftStatus
+  _message?: string
+}
+
 interface Message {
   id: string
   role: Role
   content: string
   timestamp: Date
+  drafts?: DraftWithState[]
 }
+
+const idr = (v: number) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(v)
 
 interface UsageInfo {
   current: number
@@ -60,6 +105,7 @@ interface MessagesPanelProps {
 interface AIResponse {
   content?: string
   usage?: UsageInfo
+  pendingDrafts?: (PendingDraft & { _dbId?: string })[]
 }
 
 const DAILY_LIMIT = 20
@@ -166,16 +212,127 @@ function MessageBubble({ msg }: { msg: Message }) {
   )
 }
 
+function DraftCard({
+  draft,
+  onApprove,
+  onReject,
+}: {
+  draft: DraftWithState
+  onApprove: () => void
+  onReject: () => void
+}) {
+  const isExpense = draft.kind === 'expense'
+  const insufficient = draft.kind === 'expense' && !draft.sufficientBalance
+  const done = draft._status === 'done'
+  const rejected = draft._status === 'rejected'
+  const committing = draft._status === 'committing'
+  const errored = draft._status === 'error'
+
+  return (
+    <div
+      className={cn(
+        'mt-2 rounded-xl border px-3 py-2.5 text-[12px] max-w-[85%]',
+        done
+          ? 'border-emerald-500/30 bg-emerald-500/5'
+          : rejected
+            ? 'border-chat-border bg-chat-surface/40 opacity-60'
+            : 'border-chat-border bg-chat-surface/60',
+      )}
+    >
+      <div className="flex items-center gap-1.5 mb-1.5">
+        {isExpense ? (
+          <ArrowUpCircle size={13} className="text-red-400 shrink-0" />
+        ) : (
+          <ArrowDownCircle size={13} className="text-emerald-400 shrink-0" />
+        )}
+        <span className="font-semibold text-chat-fg">
+          {isExpense ? 'Draft Pengeluaran' : 'Draft Pemasukan'}
+        </span>
+      </div>
+
+      <div className="space-y-0.5 text-chat-fg-muted">
+        <div className="flex justify-between gap-2">
+          <span>{draft.title}</span>
+          <span className="font-semibold text-chat-fg tabular-nums">{idr(draft.amount)}</span>
+        </div>
+        <div className="flex justify-between gap-2">
+          <span>{isExpense ? 'Dari' : 'Ke'} akun</span>
+          <span>{draft.accountName}</span>
+        </div>
+        {isExpense && (
+          <div className="flex justify-between gap-2">
+            <span>Kategori</span>
+            <span>{draft.category}</span>
+          </div>
+        )}
+        <div className="flex justify-between gap-2">
+          <span>Tanggal</span>
+          <span className="tabular-nums">{draft.date}</span>
+        </div>
+      </div>
+
+      {insufficient && !done && (
+        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-400">
+          <AlertTriangle size={11} className="shrink-0" /> Saldo {draft.kind === 'expense' ? idr(draft.currentBalance) : ''} tidak mencukupi.
+        </p>
+      )}
+
+      {errored && (
+        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-red-400">
+          <AlertTriangle size={11} className="shrink-0" /> {draft._message}
+        </p>
+      )}
+
+      {done ? (
+        <p className="mt-2 flex items-center gap-1 text-[11px] text-emerald-400">
+          <Check size={12} className="shrink-0" /> {draft._message || 'Tercatat.'}
+        </p>
+      ) : rejected ? (
+        <p className="mt-2 text-[11px] text-chat-fg-dim">Dibatalkan.</p>
+      ) : (
+        <div className="mt-2 flex gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            onClick={onApprove}
+            disabled={committing}
+            className="h-7 px-3 text-[11px] bg-primary text-primary-foreground hover:bg-primary/80"
+          >
+            {committing ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : errored ? (
+              'Coba lagi'
+            ) : (
+              'Setujui & Catat'
+            )}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={onReject}
+            disabled={committing}
+            className="h-7 px-3 text-[11px] text-chat-fg-muted hover:text-chat-fg"
+          >
+            Batal
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: crypto.randomUUID(),
       role: 'assistant',
       content:
-        'Halo! Saya asisten AI Anda. Saya bisa membantu:\n\n• **Keuangan**: Analisis pengeluaran, saran budget, ringkasan keuangan, deteksi anomali spending.\n• **Kuliah/Akademik**: Review progress kuliah UT, analisis nilai tuton, saran perbaikan nilai, reminder deadline sesi.\n• **General**: Pertanyaan umum, tips produktivitas, perencanaan.\n\nApa yang ingin Anda ketahui?',
+        'Halo! Saya asisten AI Anda. Saya bisa membantu:\n\n• **Keuangan**: Analisis pengeluaran, saran budget, ringkasan keuangan, deteksi anomali spending.\n• **Catat transaksi**: mis. "catat pengeluaran kopi 25rb dari BCA" — saya buatkan draft, Anda konfirmasi sebelum tersimpan.\n• **Kuliah/Akademik**: Review progress kuliah UT, analisis nilai tuton, saran perbaikan nilai.\n\nApa yang ingin Anda ketahui?',
       timestamp: new Date(),
     },
   ])
+  const [restoredDrafts, setRestoredDrafts] = useState<DraftWithState[]>([])
 
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -202,6 +359,20 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
     fetch('/api/ai-context-chat')
       .then(r => r.json())
       .then(data => { if (data.usage) setUsage(data.usage) })
+      .catch(() => null)
+    fetch('/api/ai-context-chat/drafts')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data.drafts) && data.drafts.length > 0) {
+          setRestoredDrafts(
+            data.drafts.map((d: PendingDraft & { _dbId?: string }) => ({
+              ...d,
+              _id: crypto.randomUUID(),
+              _status: 'pending' as DraftStatus,
+            }))
+          )
+        }
+      })
       .catch(() => null)
   }, [isOpen])
 
@@ -244,6 +415,10 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
 
       if (data.usage) setUsage(data.usage)
 
+      const drafts: DraftWithState[] | undefined = data.pendingDrafts?.length
+        ? data.pendingDrafts.map((d) => ({ ...d, _id: crypto.randomUUID(), _status: 'pending' }))
+        : undefined
+
       setMessages((prev) => [
         ...prev,
         {
@@ -251,6 +426,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
           role: 'assistant',
           content: data.content ?? 'Tidak ada respon dari AI.',
           timestamp: new Date(),
+          drafts,
         },
       ])
     } catch (err) {
@@ -268,6 +444,67 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
     }
   }
 
+  function patchDraft(messageId: string, draftId: string, patch: Partial<DraftWithState>) {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id !== messageId
+          ? m
+          : {
+              ...m,
+              drafts: m.drafts?.map((d) =>
+                d._id !== draftId ? d : ({ ...d, ...patch } as DraftWithState),
+              ),
+            },
+      ),
+    )
+  }
+
+  async function handleApprove(messageId: string | null, draft: DraftWithState) {
+    if (draft._status === 'committing' || draft._status === 'done') return
+    const patch = (p: Partial<DraftWithState>) => {
+      if (messageId) {
+        patchDraft(messageId, draft._id, p)
+      } else {
+        setRestoredDrafts(prev =>
+          prev.map(d => (d._id === draft._id ? { ...d, ...p } as DraftWithState : d))
+        )
+      }
+    }
+    patch({ _status: 'committing', _message: undefined })
+    try {
+      const res = await fetch('/api/ai-context-chat/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: draft.kind, draft, draftId: draft._dbId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        patch({ _status: 'error', _message: data?.summary || data?.error || 'Gagal mencatat transaksi.' })
+        return
+      }
+      patch({ _status: 'done', _message: data?.summary })
+    } catch {
+      patch({ _status: 'error', _message: 'Kesalahan jaringan.' })
+    }
+  }
+
+  async function handleReject(messageId: string | null, draft: DraftWithState) {
+    if (messageId) {
+      patchDraft(messageId, draft._id, { _status: 'rejected' })
+    } else {
+      setRestoredDrafts(prev =>
+        prev.map(d => (d._id === draft._id ? { ...d, _status: 'rejected' as DraftStatus } : d))
+      )
+    }
+    if (draft._dbId) {
+      fetch('/api/ai-context-chat/drafts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: draft._dbId }),
+      }).catch(() => null)
+    }
+  }
+
   function startNewChat() {
     setMessages([
       {
@@ -277,6 +514,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
         timestamp: new Date(),
       },
     ])
+    setRestoredDrafts([])
   }
 
   return (
@@ -305,7 +543,7 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-chat-fg">Financial Assistant</p>
-                <p className="text-[10px] text-chat-fg-dim">AI-powered · Read-only</p>
+                <p className="text-[10px] text-chat-fg-dim">AI-powered · Analisis & catat (perlu konfirmasi)</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -363,7 +601,18 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <MessageBubble msg={msg} />
+                <div className="flex flex-col min-w-0">
+                  <MessageBubble msg={msg} />
+                  {msg.drafts?.map((d) => (
+                    <DraftCard
+                      key={d._id}
+                      draft={d}
+                      onApprove={() => handleApprove(msg.id, d)}
+                      onReject={() => handleReject(msg.id, d)}
+                    />
+                  ))}
+
+                </div>
                 {msg.role === 'user' && (
                   <Avatar className="h-7 w-7 mt-0.5 shrink-0">
                     <AvatarFallback className="bg-chat-surface text-chat-fg-muted">
@@ -390,6 +639,25 @@ export function MessagesPanel({ isOpen, onClose, position }: MessagesPanelProps)
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Draft tertunda dari sesi sebelumnya (dipulihkan dari DB) */}
+          {restoredDrafts.some(d => d._status !== 'done' && d._status !== 'rejected') && (
+            <div className="px-4 pb-2 shrink-0 space-y-1.5">
+              <p className="text-[10px] text-chat-fg-dim font-medium uppercase tracking-wide">
+                Draft tertunda
+              </p>
+              {restoredDrafts
+                .filter(d => d._status !== 'done' && d._status !== 'rejected')
+                .map(d => (
+                  <DraftCard
+                    key={d._id}
+                    draft={d}
+                    onApprove={() => handleApprove(null, d)}
+                    onReject={() => handleReject(null, d)}
+                  />
+                ))}
+            </div>
+          )}
 
           {/* Input */}
           <div className="p-3 border-t border-chat-border shrink-0">

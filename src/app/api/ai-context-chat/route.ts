@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma"
 import { GoogleGenAI } from "@google/genai"
 import Groq from "groq-sdk"
 import { GEMINI_API_KEY, GROQ_API_KEY } from "@/lib/env"
+import { buildSystemPrompt } from "@/lib/ai/prompt"
+import { getFinancialSummary } from "@/lib/services/financeSummary"
+import { runGroqAgent, runGeminiAgent, type ChatMessage, type AgentTrace, type TokenUsage } from "@/lib/ai/agent-loop"
+import { buildRunTrace, logRunTrace, type FinalStatus } from "@/lib/ai/trace"
 
 function getGoogleAi() {
   if (!GEMINI_API_KEY || GEMINI_API_KEY === "BUILD_DUMMY") {
@@ -35,15 +39,12 @@ const allowedModels = Object.keys(AI_MODELS)
 const limitNumber = (value: number, decimals = 2) =>
   Number.isFinite(value) ? Number(value.toFixed(decimals)) : 0
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value)
-
 async function buildUserContext(userId: string) {
-  const [assets, balances, expenses, incomes, budgets, transfers, semestersResult, kuliahSettings] = await Promise.all([
+  // financialSummary (agregat) menggantikan income/budget/expense mentah.
+  // Rincian expense diambil via tool `list_expenses`; budget via budgetUtilization.
+  // assets, balances, kuliah tetap di sini karena belum ada toolnya.
+  const [financialSummary, assets, balances, semestersResult, kuliahSettings] = await Promise.all([
+    getFinancialSummary(userId),
     prisma.asset.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
@@ -54,30 +55,6 @@ async function buildUserContext(userId: string) {
       where: { userId },
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, type: true, balance: true },
-    }),
-    prisma.expense.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 20,
-      select: { id: true, title: true, amount: true, category: true, date: true, accountId: true, budgetId: true },
-    }),
-    prisma.income.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 10,
-      select: { id: true, title: true, amount: true, date: true, accountId: true },
-    }),
-    prisma.budget.findMany({
-      where: { userId },
-      orderBy: { month: "desc" },
-      take: 6,
-      select: { id: true, name: true, category: true, limit: true, month: true, notes: true },
-    }),
-    prisma.accountTransfer.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 10,
-      select: { id: true, amount: true, note: true, date: true, fromAccountId: true, toAccountId: true },
     }),
     prisma.semester.findMany({
       where: { userId },
@@ -98,11 +75,6 @@ async function buildUserContext(userId: string) {
     ...sem,
     mataKuliah: sem.mataKuliah.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
   }))
-
-  const totalBalance = balances.reduce((sum, b) => sum + (b.balance ?? 0), 0)
-  const expenseMonth = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0)
-  const incomeMonth = incomes.reduce((sum, i) => sum + (i.amount ?? 0), 0)
-  const netCashFlow = incomeMonth - expenseMonth
 
   const kuliahSummary = semesters.map((sem) => ({
     semester: sem.nama,
@@ -130,48 +102,8 @@ async function buildUserContext(userId: string) {
     }),
   }))
 
-  // Pre-compute expense breakdown by category for delta analysis
-  const expenseByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
-    const cat = e.category || "Lainnya"
-    acc[cat] = (acc[cat] ?? 0) + (e.amount ?? 0)
-    return acc
-  }, {})
-
-  // Compute budget utilization
-  const budgetUtilization = budgets.map(b => {
-    const spent = expenses
-      .filter(e => e.budgetId === b.id)
-      .reduce((sum, e) => sum + (e.amount ?? 0), 0)
-    return {
-      name: b.name,
-      category: b.category,
-      limit: b.limit,
-      spent,
-      remaining: (b.limit ?? 0) - spent,
-      utilizationPct: b.limit ? limitNumber((spent / b.limit) * 100) : 0,
-      month: b.month.toISOString().slice(0, 7),
-    }
-  })
-
-  // Financial runway: how many months can user sustain at current burn rate
-  const financialRunway = netCashFlow < 0 && totalBalance > 0
-    ? limitNumber(totalBalance / Math.abs(netCashFlow))
-    : null
-
   return {
-    financialSummary: {
-      totalBalance: formatCurrency(totalBalance),
-      totalBalanceRaw: totalBalance,
-      expenseRecentTotal: formatCurrency(expenseMonth),
-      expenseRecentRaw: expenseMonth,
-      incomeRecentTotal: formatCurrency(incomeMonth),
-      incomeRecentRaw: incomeMonth,
-      netCashFlow: formatCurrency(netCashFlow),
-      netCashFlowRaw: netCashFlow,
-      financialRunwayMonths: financialRunway,
-      expenseByCategory,
-      budgetUtilization,
-    },
+    financialSummary,
     assets: assets.map((a) => ({
       id: a.id,
       name: a.name,
@@ -182,10 +114,6 @@ async function buildUserContext(userId: string) {
       category: a.category,
     })),
     balances,
-    expenses: expenses.map((e) => ({ ...e, date: e.date.toISOString().slice(0, 10) })),
-    incomes: incomes.map((i) => ({ ...i, date: i.date.toISOString().slice(0, 10) })),
-    budgets: budgets.map((b) => ({ ...b, month: b.month.toISOString().slice(0, 7) })),
-    transfers: transfers.map((t) => ({ ...t, date: t.date.toISOString() })),
     kuliahData: kuliahSummary,
     kuliahSettings: kuliahSettings ? {
       bobotKehadiran: kuliahSettings.bobotKehadiran,
@@ -216,38 +144,6 @@ function checkRateLimit(userId: string): boolean {
   }
   usageMap.set(userId, { count: 1, resetAt: now + WINDOW_MS })
   return true
-}
-
-function buildSystemPrompt(context: Awaited<ReturnType<typeof buildUserContext>>, isLowPower: boolean): string {
-  const { financialSummary } = context
-  const deficit = financialSummary.netCashFlowRaw < 0
-
-  const baseRole = `Anda adalah Financial Strategist & AI Assistant dengan akses read-only ke data keuangan dan akademik user.`
-
-  const financialProtocol = `
-## FINANCIAL ANALYSIS PROTOCOL
-**Precision First:** Jangan berikan saran generik (e.g., "kurangi pengeluaran"). Lakukan **delta analysis**: bandingkan income vs fixed costs vs discretionary spending secara spesifik.
-**Constraint Awareness:** Identifikasi budget gap yang spesifik. ${deficit ? "⚠️ USER SAAT INI DEFISIT — prioritaskan penyesuaian high-impact, bukan penghematan kecil." : ""}
-**Liquidity Assessment:** Evaluasi Total Balance vs Monthly Cash Flow untuk menentukan financial runway user secara aktual.
-**Format Output:** Gunakan tabel Markdown, bold headers, dan horizontal dividers (---) untuk memisahkan analisis data dari saran teknis.`
-
-  const capabilities = `
-## KEMAMPUAN:
-1. **Keuangan**: Delta analysis, budget gap detection, liquidity runway, anomali spending
-2. **Kuliah/Akademik**: Review progress kuliah UT, analisis nilai tuton, saran perbaikan nilai
-3. **General**: Pertanyaan umum, tips produktivitas, perencanaan`
-
-  const rules = isLowPower
-    ? `\n## MODE: LOW-POWER (>80% kuota harian)\nBerikan jawaban **sangat ringkas** — maksimal 3-4 bullet points. Prioritaskan insight tertinggi nilainya saja.`
-    : `\n## RULES:\n- Bahasa Indonesia ringkas dan mudah dipahami\n- Untuk analisis keuangan: sertakan angka spesifik, bukan persentase abstrak\n- Untuk konteks kuliah: pahami sistem UT (Tuton = Kehadiran + Diskusi + Tugas, Nilai Akhir = UAS + Tuton)\n- Berikan saran actionable dan spesifik berdasarkan data user`
-
-  return `${baseRole}
-${financialProtocol}
-${capabilities}
-${rules}
-
-## DATA USER:
-${JSON.stringify(context, null, 2)}`
 }
 
 export async function GET() {
@@ -300,34 +196,35 @@ export async function POST(req: NextRequest) {
     const isLowPower = usagePct >= LOW_POWER_THRESHOLD
 
     const context = await buildUserContext(session.user.id)
-    const systemPrompt = buildSystemPrompt(context, isLowPower)
+    const systemPrompt = buildSystemPrompt(context, { isLowPower })
 
+    const agentOpts = {
+      model: modelConfig.model,
+      systemPrompt,
+      history: history as ChatMessage[],
+      userMessage,
+      ctx: { userId: session.user.id },
+      temperature: 0.4,
+      maxTokens: isLowPower ? 512 : 1024,
+    }
+
+    const startedAt = Date.now()
     let content: string
+    let toolCalls: AgentTrace[] = []
+    let steps = 0
+    let tokens: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
+    let finalStatus: FinalStatus = "answer"
 
     if (modelConfig.provider === "gemini") {
       try {
-        // Build Gemini contents array with history
-        const historyContents = history.map(m => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }],
-        }))
-
-        const response = await getGoogleAi().models.generateContent({
-          model: modelConfig.model,
-          contents: [
-            { role: "user", parts: [{ text: systemPrompt }] },
-            { role: "model", parts: [{ text: "Saya siap membantu." }] },
-            ...historyContents,
-            { role: "user", parts: [{ text: userMessage }] },
-          ],
-          config: {
-            temperature: 0.4,
-            maxOutputTokens: isLowPower ? 512 : 1024,
-          }
-        })
-        content = response.text || "Tidak ada respon dari AI."
+        const result = await runGeminiAgent(getGoogleAi(), agentOpts)
+        content = result.content
+        toolCalls = result.toolCalls
+        steps = result.steps
+        tokens = result.usage
       } catch (err: any) {
         console.error("Gemini API Error:", err)
+        finalStatus = "error"
         if (err.message?.includes('quota')) {
           content = "Maaf, kuota Gemini telah habis. Silakan coba model lain seperti Groq."
         } else if (err.message?.includes('retry')) {
@@ -337,24 +234,58 @@ export async function POST(req: NextRequest) {
         }
       }
     } else if (modelConfig.provider === "groq") {
-      const chatCompletion = await getGroq().chat.completions.create({
-        model: modelConfig.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...history.map(m => ({ role: m.role, content: m.content })),
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.4,
-        max_tokens: isLowPower ? 512 : 1024,
-      })
-      content = chatCompletion.choices[0]?.message?.content || "Tidak ada respon dari AI."
+      const result = await runGroqAgent(getGroq(), agentOpts)
+      content = result.content
+      toolCalls = result.toolCalls
+      steps = result.steps
+      tokens = result.usage
     } else {
       content = "Provider tidak didukung."
+      finalStatus = "error"
     }
+
+    // Draft transaksi yang menunggu approval user (commit dilakukan terpisah).
+    const rawDrafts = toolCalls
+      .filter(t => t.result.status === "needs_approval")
+      .map(t => t.result.data as Record<string, unknown>)
+
+    // Persist setiap draft ke DB agar tidak hilang jika halaman di-refresh (blueprint §9).
+    const pendingDrafts = await Promise.all(
+      rawDrafts.map(async (draft) => {
+        const saved = await prisma.agentDraft.create({
+          data: {
+            userId: session.user.id,
+            kind: String(draft.kind ?? "expense"),
+            data: draft as Parameters<typeof prisma.agentDraft.create>[0]["data"]["data"],
+            status: "pending",
+          },
+        })
+        return { ...draft, _dbId: saved.id }
+      })
+    )
+
+    if (pendingDrafts.length > 0 && finalStatus === "answer") {
+      finalStatus = "pending_approval"
+    }
+
+    // Observability terstruktur (blueprint §13).
+    logRunTrace(
+      buildRunTrace({
+        userId: session.user.id,
+        model: modelKey,
+        steps,
+        toolCalls,
+        tokens,
+        pendingDrafts: pendingDrafts.length,
+        finalStatus,
+        durationMs: Date.now() - startedAt,
+      }),
+    )
 
     const updatedUsage = getUsageInfo(session.user.id)
     return NextResponse.json({
       content,
+      pendingDrafts,
       usage: {
         current: updatedUsage.count,
         limit: DAILY_LIMIT,

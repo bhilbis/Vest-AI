@@ -33,16 +33,16 @@ interface FeatureItem {
 }
 
 const features: FeatureItem[] = [
-  { icon: LayoutDashboard, label: "Lihat Dashboard & Overview", accessible: true, note: "Tampilan UI tersedia" },
-  { icon: Eye, label: "Jelajahi semua halaman", accessible: true, note: "Navigasi penuh" },
-  { icon: Settings, label: "Halaman Settings", accessible: true, note: "Tampilan saja" },
-  { icon: PlusCircle, label: "Tambah Pengeluaran / Pemasukan", accessible: false, note: "Perlu login" },
-  { icon: ArrowLeftRight, label: "Transfer Saldo", accessible: false, note: "Perlu login" },
-  { icon: PieChart, label: "Set & Kelola Budget", accessible: false, note: "Perlu login" },
-  { icon: TrendingUp, label: "Tambah & Kelola Aset Investasi", accessible: false, note: "Perlu login" },
-  { icon: Download, label: "Export Data", accessible: false, note: "Perlu login" },
-  { icon: MessageSquare, label: "AI Chat", accessible: false, note: "Perlu login" },
-  { icon: Shield, label: "Admin Panel", accessible: false, note: "Khusus admin" },
+  { icon: LayoutDashboard, label: "Dashboard & Overview", accessible: true, note: "Tersedia untuk tamu" },
+  { icon: Eye, label: "Jelajahi semua halaman", accessible: true, note: "Navigasi bebas" },
+  { icon: Settings, label: "Halaman Pengaturan", accessible: true, note: "Hanya tampilan" },
+  { icon: PlusCircle, label: "Catat Pengeluaran & Pemasukan", accessible: false, note: "Perlu akun" },
+  { icon: ArrowLeftRight, label: "Transfer Antar Akun", accessible: false, note: "Perlu akun" },
+  { icon: PieChart, label: "Kelola Budget", accessible: false, note: "Perlu akun" },
+  { icon: TrendingUp, label: "Kelola Aset Investasi", accessible: false, note: "Perlu akun" },
+  { icon: Download, label: "Ekspor Data", accessible: false, note: "Perlu akun" },
+  { icon: MessageSquare, label: "AI Assistant", accessible: false, note: "Perlu akun" },
+  { icon: Shield, label: "Panel Admin", accessible: false, note: "Khusus admin" },
 ]
 
 export function GuestWelcomeDialog() {
@@ -71,10 +71,10 @@ export function GuestWelcomeDialog() {
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-black flex items-center gap-2">
-            👋 Selamat Datang, Guest!
+            👋 Selamat Datang!
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Kamu masuk dalam mode Guest. Data tidak disimpan ke server — hanya tersimpan di browser ini.
+            Kamu sedang menjelajahi Vest AI sebagai tamu. Data hanya tersimpan di browser ini — tidak dikirim ke server.
           </DialogDescription>
         </DialogHeader>
 
@@ -83,7 +83,7 @@ export function GuestWelcomeDialog() {
           <div>
             <h3 className="text-sm font-bold text-chart-1 flex items-center gap-1.5 mb-2">
               <Eye className="h-4 w-4" />
-              Bisa Diakses
+              Tersedia sebagai Tamu
             </h3>
             <div className="space-y-1.5">
               {accessible.map((f) => (
@@ -105,7 +105,7 @@ export function GuestWelcomeDialog() {
           <div>
             <h3 className="text-sm font-bold text-destructive flex items-center gap-1.5 mb-2">
               <Lock className="h-4 w-4" />
-              Tidak Bisa Diakses (Perlu Login)
+              Memerlukan Akun
             </h3>
             <div className="space-y-1.5">
               {restricted.map((f) => (
@@ -125,14 +125,14 @@ export function GuestWelcomeDialog() {
 
           {/* CTA */}
           <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4 text-center space-y-2">
-            <p className="text-sm font-bold">Mau akses penuh? 🚀</p>
-            <p className="text-xs text-muted-foreground">Login atau daftar untuk menggunakan semua fitur tanpa batasan.</p>
+            <p className="text-sm font-bold">Ingin akses penuh?</p>
+            <p className="text-xs text-muted-foreground">Buat akun gratis atau login untuk menggunakan semua fitur tanpa batasan.</p>
           </div>
         </div>
 
         <div className="flex justify-end pt-2">
           <Button onClick={handleClose} className="font-bold">
-            Mengerti, Lanjutkan
+            Mengerti, Ayo Mulai
           </Button>
         </div>
       </DialogContent>

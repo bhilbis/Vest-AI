@@ -38,12 +38,16 @@ import {
   BarChart3,
   Trophy,
   Tags,
+  PiggyBank,
+  Plus,
 } from "lucide-react"
 import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog"
 import { TransactionFormDialog } from "@/components/expenses/TransactionFormDialog"
 import { useExpenseForm } from "@/hooks/useExpensesForm"
 import { AccountBalanceFormDialog } from "@/components/balance-type/BalanceTypeFormDialog"
 import { BudgetFormDialog } from "@/components/budgets/BudgetFormDialog"
+import { SavingsFormDialog, type SavingsGoal } from "@/components/savings/SavingsFormDialog"
+import { SavingsContributeDialog } from "@/components/savings/SavingsContributeDialog"
 import { CashflowChart } from "@/components/tracker/cashflow-chart"
 import { ExpensePieChart } from "@/components/tracker/expense-pie-chart"
 import { EXPENSE_CATEGORIES, getExpenseCategories, formatCurrency, calculateExpenseSummary, mergeExpenseCategories, type ExpenseCategoryOption } from "@/lib/expenseUtils"
@@ -116,6 +120,7 @@ export default function FinancialOverviewPage() {
     transfers: [] as any[],
     accounts: [] as AccountBalance[],
     budgets: [] as BudgetWithUsage[],
+    savings: [] as SavingsGoal[],
   })
   const [categories, setCategories] = useState<ExpenseCategoryOption[]>(EXPENSE_CATEGORIES)
   // Update built-in category labels when locale changes
@@ -129,9 +134,9 @@ export default function FinancialOverviewPage() {
   const [newCategoryLabel, setNewCategoryLabel] = useState("")
   const [analytics, setAnalytics] = useState<ExpenseAnalytics | null>(null)
   const [loading, setLoading] = useState({ expenses: true, accounts: true, budgets: true })
-  const [dialogs, setDialogs] = useState({ expense: false, transaction: false, transactionTab: "expense" as "expense" | "income" | "transfer", account: false, budget: false, category: false })
+  const [dialogs, setDialogs] = useState({ expense: false, transaction: false, transactionTab: "expense" as "expense" | "income" | "transfer", account: false, budget: false, category: false, savings: false, contribute: false })
   const currentMonthKey = useMemo(() => getMonthKey(), [])
-  const [editing, setEditing] = useState<{ account: AccountBalance | null; budget: BudgetWithUsage | null }>({ account: null, budget: null })
+  const [editing, setEditing] = useState<{ account: AccountBalance | null; budget: BudgetWithUsage | null; savings: SavingsGoal | null; contribute: SavingsGoal | null }>({ account: null, budget: null, savings: null, contribute: null })
   const [filters, setFilters] = useState({ category: "all", startDate: "", endDate: "", month: currentMonthKey })
 
   const { formData, editingExpense, removePhoto, updateFormData, handlePhotoChange, handleRemovePhoto, handleEdit, resetForm } = useExpenseForm()
@@ -196,7 +201,10 @@ export default function FinancialOverviewPage() {
   }, [categories, data.expenses])
 
   const currentMonthComparison = analytics?.monthlyComparison.at(-1)
-  const topExpense = analytics?.topExpenses[0]
+  const topExpense = useMemo(() => {
+    if (data.expenses.length === 0) return null
+    return data.expenses.reduce((max, e) => e.amount > max.amount ? e : max)
+  }, [data.expenses])
 
   // ==================== FETCH ====================
   const fetchCategories = useCallback(async () => {
@@ -280,8 +288,17 @@ export default function FinancialOverviewPage() {
     finally { setLoading((p) => ({ ...p, budgets: false })) }
   }, [filters.month])
 
-  useEffect(() => { fetchAccounts(); fetchCategories(); fetchExpenses(); fetchIncomes(); fetchTransfers(); fetchBudgets(); fetchAnalytics() },
-    [fetchAccounts, fetchCategories, fetchExpenses, fetchIncomes, fetchTransfers, fetchBudgets, fetchAnalytics])
+  const fetchSavings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/savings")
+      if (!res.ok) return
+      const savings = await res.json()
+      setData((p) => ({ ...p, savings }))
+    } catch (e) { console.error(e) }
+  }, [])
+
+  useEffect(() => { fetchAccounts(); fetchCategories(); fetchExpenses(); fetchIncomes(); fetchTransfers(); fetchBudgets(); fetchAnalytics(); fetchSavings() },
+    [fetchAccounts, fetchCategories, fetchExpenses, fetchIncomes, fetchTransfers, fetchBudgets, fetchAnalytics, fetchSavings])
 
   // ==================== HANDLERS ====================
   const handleSubmitExpense = useCallback(async (e: React.FormEvent) => {
@@ -378,6 +395,12 @@ export default function FinancialOverviewPage() {
     if (!ok) return
     try { await fetch(`/api/budgets/${id}`, { method: "DELETE" }); await fetchBudgets() } catch { /* ignore */ }
   }, [fetchBudgets, openConfirm])
+
+  const handleDeleteSavings = useCallback(async (id: string) => {
+    const ok = await openConfirm({ title: t.financial.savingsDeleteConfirm, confirmLabel: t.common.delete, variant: "destructive" })
+    if (!ok) return
+    try { await fetch(`/api/savings/${id}`, { method: "DELETE" }); await fetchSavings() } catch { /* ignore */ }
+  }, [fetchSavings, openConfirm])
 
   const isLoading = loading.expenses || loading.accounts || loading.budgets
 
@@ -512,9 +535,9 @@ export default function FinancialOverviewPage() {
         </div>
       </div>
 
-      {/* Main Grid */}
+      {/* Main Grid: Accounts + Budget (left) | Recent Activity (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left: Accounts + Budgets */}
+        {/* Left: Accounts + Budget */}
         <div className="lg:col-span-5 space-y-4">
           {/* Accounts */}
           <section>
@@ -580,7 +603,7 @@ export default function FinancialOverviewPage() {
                           <span className={cn("text-[11px] font-semibold tabular-nums", usage > 90 ? "text-destructive" : usage > 70 ? "text-yellow-500" : "text-muted-foreground")}>{usage.toFixed(0)}%</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button title="More Actions" type='button' className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
+                              <button title="More Actions" type="button" className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
                                 <MoreHorizontal size={14} />
                               </button>
                             </DropdownMenuTrigger>
@@ -604,8 +627,8 @@ export default function FinancialOverviewPage() {
           </section>
         </div>
 
-        {/* Right: Activity */}
-        <div className="lg:col-span-7">
+        {/* Right: Activity + Savings */}
+        <div className="lg:col-span-7 space-y-4">
           <section>
             <h2 className="text-sm font-medium text-foreground mb-3">{t.financial.recentActivity}</h2>
             <div className="rounded-xl shadow-xs border border-border bg-card overflow-hidden">
@@ -620,7 +643,7 @@ export default function FinancialOverviewPage() {
                 </div>
               ) : (
                 <ul className="divide-y divide-border">
-                  {mergedHistory.slice(0, 20).map((record) => {
+                  {mergedHistory.slice(0, 5).map((record) => {
                     const isIncome = record.type === "income"
                     const isTransfer = record.type === "transfer"
                     const Icon = isIncome ? ArrowUpRight : isTransfer ? ArrowLeftRight : ArrowDownRight
@@ -665,6 +688,78 @@ export default function FinancialOverviewPage() {
               )}
             </div>
           </section>
+
+          {/* Savings Goals */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
+                <PiggyBank size={14} className="text-muted-foreground" />
+                <h2 className="text-sm font-medium text-foreground">{t.financial.savingsGoals}</h2>
+              </div>
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground gap-1 min-h-0 min-w-0" onClick={() => { setEditing((p) => ({ ...p, savings: null })); setDialogs((p) => ({ ...p, savings: true })) }}>
+                <PlusIcon size={12} /> {t.common.add}
+              </Button>
+            </div>
+            {data.savings.length === 0 ? (
+              <EmptyState emoji="🐷" text={t.financial.savingsNoGoals} actionLabel={t.financial.savingsCreateFirst} onAction={() => { setEditing((p) => ({ ...p, savings: null })); setDialogs((p) => ({ ...p, savings: true })) }} />
+            ) : (
+              <div className="space-y-2">
+                {data.savings.map((goal) => {
+                  const pct = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0
+                  const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0)
+                  const monthsLeft = goal.monthlyContribution > 0 ? Math.ceil(remaining / goal.monthlyContribution) : null
+                  const isComplete = goal.currentAmount >= goal.targetAmount
+                  return (
+                    <div key={goal.id} className="group rounded-xl shadow-xs border border-border bg-card p-3 hover:border-primary/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-lg shrink-0">{goal.icon || "🎯"}</span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{goal.name}</p>
+                            <p className="text-[11px] text-muted-foreground tabular-nums">
+                              {formatCurrency(goal.currentAmount)} {t.financial.savingsOf} {formatCurrency(goal.targetAmount)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isComplete ? (
+                            <span className="text-[11px] font-semibold text-green-500">✓ {t.financial.savingsCompleted}</span>
+                          ) : (
+                            <span className="text-[11px] font-semibold tabular-nums text-muted-foreground">{pct.toFixed(0)}%</span>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button title="More Actions" type="button" className="h-6 w-6 min-h-0 min-w-0 rounded flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-foreground">
+                                <MoreHorizontal size={14} />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36">
+                              <DropdownMenuItem className="text-xs gap-2 cursor-pointer" onClick={() => { setEditing((p) => ({ ...p, contribute: goal })); setDialogs((p) => ({ ...p, contribute: true })) }}>
+                                <Plus size={12} /> {t.financial.savingsAddContribution}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-xs gap-2 cursor-pointer" onClick={() => { setEditing((p) => ({ ...p, savings: goal })); setDialogs((p) => ({ ...p, savings: true })) }}>
+                                <Edit size={12} /> {t.common.edit}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-xs gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDeleteSavings(goal.id)}>
+                                <Trash2 size={12} /> {t.common.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                      <Progress value={pct} className={cn("h-1.5 mb-1.5", isComplete ? "bg-green-500/20" : "bg-secondary")} />
+                      <div className="flex justify-between text-[10px] text-muted-foreground tabular-nums">
+                        <span>{goal.monthlyContribution > 0 ? `${formatCurrency(goal.monthlyContribution)}/bln` : ""}</span>
+                        <span>
+                          {isComplete ? "" : monthsLeft != null ? `${t.financial.savingsEstimated} ${monthsLeft} ${t.financial.savingsMonths}` : formatCurrency(remaining)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
         </div>
       </div>
 
@@ -702,6 +797,8 @@ export default function FinancialOverviewPage() {
       />
       <AccountBalanceFormDialog isOpen={dialogs.account} onOpenChange={(open) => { setDialogs((p) => ({ ...p, account: open })); if (!open) setEditing((p) => ({ ...p, account: null })) }} fetchData={fetchAccounts} editing={editing.account} />
       <BudgetFormDialog isOpen={dialogs.budget} onOpenChange={(open) => { setDialogs((p) => ({ ...p, budget: open })); if (!open) setEditing((p) => ({ ...p, budget: null })) }} defaultMonth={filters.month} onSuccess={fetchBudgets} editing={editing.budget} />
+      <SavingsFormDialog isOpen={dialogs.savings} onOpenChange={(open) => { setDialogs((p) => ({ ...p, savings: open })); if (!open) setEditing((p) => ({ ...p, savings: null })) }} onSuccess={fetchSavings} editing={editing.savings} />
+      <SavingsContributeDialog isOpen={dialogs.contribute} onOpenChange={(open) => { setDialogs((p) => ({ ...p, contribute: open })); if (!open) setEditing((p) => ({ ...p, contribute: null })) }} onSuccess={fetchSavings} goal={editing.contribute} />
 
       <Dialog open={dialogs.category} onOpenChange={(open) => setDialogs((p) => ({ ...p, category: open }))}>
         <DialogContent className="sm:max-w-md">

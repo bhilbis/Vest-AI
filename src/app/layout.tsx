@@ -28,31 +28,33 @@ const jakarta = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Financial Tracker — Minimalist Finance Management",
-    template: "%s | Financial Tracker",
+    default: "Vest AI — Catat Keuangan, Investasi & Kuliah",
+    template: "%s | Vest AI",
   },
   description:
-    "Aplikasi pencatat keuangan minimalis untuk melacak pengeluaran, pemasukan, transfer, dan budget. Dilengkapi AI assistant untuk saran keuangan.",
+    "Aplikasi manajemen pribadi all-in-one. Catat pengeluaran & pemasukan, pantau portofolio investasi, kelola jadwal kuliah, dan konsultasi dengan AI assistant. Gratis.",
   keywords: [
-    "financial tracker",
     "pencatat keuangan",
-    "expense tracker",
+    "aplikasi keuangan pribadi",
     "budget planner",
-    "pengelolaan keuangan",
-    "transfer saldo",
+    "portofolio investasi",
+    "tracker kuliah",
+    "expense tracker",
     "AI financial assistant",
-    "aplikasi keuangan",
+    "manajemen keuangan",
+    "academic tracker",
+    "vest ai",
   ],
-  authors: [{ name: "Financial Tracker" }],
-  creator: "Financial Tracker",
-  publisher: "Financial Tracker",
+  authors: [{ name: "Vest AI" }],
+  creator: "Vest AI",
+  publisher: "Vest AI",
   metadataBase: new URL("https://go-aoixsy.my.id"),
   appleWebApp: {
     capable: true,
     // black-translucent lets content extend under the status bar;
     // safe-area-inset-top in globals.css compensates for the notch.
     statusBarStyle: "black-translucent",
-    title: "Financial Tracker",
+    title: "Vest AI",
     startupImage: [
       // iPhone 15 Pro Max / 14 Pro Max (430×932 @3x)
       { url: "/vest.png", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" },
@@ -88,24 +90,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     url: "https://go-aoixsy.my.id",
-    siteName: "Financial Tracker",
-    title: "Financial Tracker — Minimalist Finance Management",
+    siteName: "Vest AI",
+    title: "Vest AI — Catat Keuangan, Investasi & Kuliah",
     description:
-      "Aplikasi pencatat keuangan minimalis untuk melacak pengeluaran, pemasukan, transfer, dan budget.",
+      "Manajemen keuangan, portofolio investasi, dan tracker kuliah dalam satu aplikasi. Dilengkapi AI assistant untuk konsultasi finansial.",
     images: [
       {
         url: "/vest.png",
         width: 1200,
         height: 630,
-        alt: "Financial Tracker",
+        alt: "Vest AI — Aplikasi Manajemen Keuangan & Kuliah",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Financial Tracker — Minimalist Finance Management",
+    title: "Vest AI — Catat Keuangan, Investasi & Kuliah",
     description:
-      "Pencatat keuangan minimalis dengan AI assistant.",
+      "All-in-one: catat keuangan, pantau investasi, kelola kuliah, dan chat dengan AI. Gratis.",
     images: ["/vest.png"],
   },
   robots: {

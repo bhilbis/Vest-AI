@@ -38,7 +38,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-100 fixed inset-0 z-50 bg-black/60",
         className
       )}
       {...props}
@@ -61,7 +61,7 @@ function DialogContent({
         data-slot="dialog-content"
         onCloseAutoFocus={(e) => e.preventDefault()}
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border-2 border-foreground p-4 shadow-[4px_4px_0_var(--foreground)] transition-[box-shadow,transform] duration-100 ease-out sm:p-6 sm:shadow-[8px_8px_0_var(--foreground)] sm:hover:shadow-[11px_11px_0_var(--foreground)] sm:hover:translate-x-[calc(-50%-2px)] sm:hover:translate-y-[calc(-50%-2px)] sm:max-w-lg",
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-100 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border-2 border-foreground p-4 shadow-[4px_4px_0_var(--foreground)] transition-[box-shadow,transform] ease-out sm:p-6 sm:shadow-[8px_8px_0_var(--foreground)] sm:hover:shadow-[11px_11px_0_var(--foreground)] sm:hover:translate-x-[calc(-50%-2px)] sm:hover:translate-y-[calc(-50%-2px)] sm:max-w-lg",
           className
         )}
         {...props}

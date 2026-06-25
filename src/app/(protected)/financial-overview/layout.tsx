@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, ArrowLeftRight, Target, Wallet } from "lucide-react"
+import { LayoutDashboard, ArrowLeftRight, Target, Wallet, PiggyBank } from "lucide-react"
 import { useLanguage } from "@/lib/i18n/context"
 
 export default function KeuanganLayout({ children }: { children: React.ReactNode }) {
@@ -14,6 +14,7 @@ export default function KeuanganLayout({ children }: { children: React.ReactNode
     { title: t.financial.overview, url: "/financial-overview", icon: LayoutDashboard },
     { title: t.financial.transactionsTab, url: "/financial-overview/transactions", icon: ArrowLeftRight },
     { title: t.financial.budget, url: "/financial-overview/budgets", icon: Target },
+    { title: t.financial.savingsGoals, url: "/financial-overview/savings", icon: PiggyBank },
   ]
 
   return (
