@@ -129,7 +129,6 @@ export default function FinancialOverviewPage() {
       prev.filter(c => !EXPENSE_CATEGORIES.some(b => b.value === c.value)),
       getExpenseCategories(t)
     ))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t])
   const [newCategoryLabel, setNewCategoryLabel] = useState("")
   const [analytics, setAnalytics] = useState<ExpenseAnalytics | null>(null)
@@ -187,7 +186,6 @@ export default function FinancialOverviewPage() {
   // Cashflow chart data (use current month)
   const cashflowData = useMemo(() => {
     return [{ month: formatMonth(filters.month, dateLocale).split(" ")[0] || filters.month, income: totalIncome, expense: summary.total }]
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.month, dateLocale, totalIncome, summary.total])
 
   // Expense pie chart data by category
@@ -198,7 +196,7 @@ export default function FinancialOverviewPage() {
       map.set(cat, (map.get(cat) || 0) + e.amount)
     })
     return Array.from(map.entries()).map(([name, value]) => ({ name: categories.find((c) => c.value === name)?.label || name, value })).sort((a, b) => b.value - a.value)
-  }, [categories, data.expenses])
+  }, [categories, data.expenses, t.financial.other])
 
   const currentMonthComparison = analytics?.monthlyComparison.at(-1)
   const topExpense = useMemo(() => {
@@ -214,7 +212,7 @@ export default function FinancialOverviewPage() {
       const body = await res.json()
       setCategories(mergeExpenseCategories(body.custom ?? [], getExpenseCategories(t)))
     } catch (e) { console.error(e) }
-  }, [])
+  }, [t])
 
   const fetchAnalytics = useCallback(async () => {
     try {
@@ -328,7 +326,7 @@ export default function FinancialOverviewPage() {
       if (!r.ok) throw new Error("Failed")
       await Promise.all([fetchExpenses(), fetchBudgets(), fetchAccounts(), fetchAnalytics()])
     } catch { /* ignore */ }
-  }, [fetchExpenses, fetchBudgets, fetchAccounts, fetchAnalytics, openConfirm])
+  }, [fetchExpenses, fetchBudgets, fetchAccounts, fetchAnalytics, openConfirm, t])
 
   const handleEditExpense = useCallback((expense: Expense) => { handleEdit(expense); setDialogs((p) => ({ ...p, expense: true })) }, [handleEdit])
 
@@ -343,7 +341,7 @@ export default function FinancialOverviewPage() {
       a.download = `${t.financial.exportFilename}-${filters.month}.xlsx`
       document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a)
     } catch { /* ignore */ }
-  }, [filters])
+  }, [filters, t])
 
   const handleCreateCategory = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -366,7 +364,7 @@ export default function FinancialOverviewPage() {
     } catch {
       toast.error(t.financial.categoryAddFailed)
     }
-  }, [fetchCategories, newCategoryLabel, updateFormData])
+  }, [fetchCategories, newCategoryLabel, updateFormData, t])
 
   const handleDeleteAccount = useCallback(async (id: string) => {
     const ok = await openConfirm({
@@ -388,19 +386,19 @@ export default function FinancialOverviewPage() {
     } catch {
       toast.error(t.financial.accountDeleteFailed)
     }
-  }, [fetchAccounts, openConfirm])
+  }, [fetchAccounts, openConfirm, t])
 
   const handleDeleteBudget = useCallback(async (id: string) => {
     const ok = await openConfirm({ title: t.financial.deleteBudgetConfirm, confirmLabel: t.common.delete, variant: "destructive" })
     if (!ok) return
     try { await fetch(`/api/budgets/${id}`, { method: "DELETE" }); await fetchBudgets() } catch { /* ignore */ }
-  }, [fetchBudgets, openConfirm])
+  }, [fetchBudgets, openConfirm, t])
 
   const handleDeleteSavings = useCallback(async (id: string) => {
     const ok = await openConfirm({ title: t.financial.savingsDeleteConfirm, confirmLabel: t.common.delete, variant: "destructive" })
     if (!ok) return
     try { await fetch(`/api/savings/${id}`, { method: "DELETE" }); await fetchSavings() } catch { /* ignore */ }
-  }, [fetchSavings, openConfirm])
+  }, [fetchSavings, openConfirm, t])
 
   const isLoading = loading.expenses || loading.accounts || loading.budgets
 

@@ -327,23 +327,6 @@ export function TrackerGrid() {
     }
   }
 
-  const handleToggleNA = async (sessionId: string, field: "diskusi" | "tugas", currentNA: boolean) => {
-    const newNA = !currentNA
-    const naField = field === "diskusi" ? "diskusiNA" : "tugasNA"
-    const clearValue = newNA ? { [field]: null } : {}
-    updateSessionLocal(sessionId, { [naField]: newNA, ...clearValue })
-    try {
-      await fetch(`/api/kuliah/session/${sessionId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [naField]: newNA, ...(newNA ? { [field]: null } : {}) }),
-      })
-    } catch {
-      updateSessionLocal(sessionId, { [naField]: currentNA })
-      toast.error(t.kuliah.updateSessionError)
-    }
-  }
-
   const handleUpdateSession = useCallback(
     (sessionId: string, field: "diskusi" | "tugas", value: string) => {
       const numVal = value === "" ? null : Number(value)
@@ -369,7 +352,7 @@ export function TrackerGrid() {
         }, 700)
       )
     },
-    [updateSessionLocal]
+    [updateSessionLocal, t]
   )
 
   const handleUpdateZoomUrl = useCallback(

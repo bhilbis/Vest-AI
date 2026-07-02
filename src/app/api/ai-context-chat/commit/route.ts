@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
     const draft = body?.draft
     const draftId = body?.draftId as string | undefined
 
-    if (kind !== "expense" && kind !== "income") {
-      return NextResponse.json({ error: "kind harus 'expense' atau 'income'" }, { status: 400 })
+    if (kind !== "expense" && kind !== "income" && kind !== "transfer") {
+      return NextResponse.json({ error: "kind harus 'expense', 'income', atau 'transfer'" }, { status: 400 })
     }
     if (!draft || typeof draft !== "object") {
       return NextResponse.json({ error: "draft diperlukan" }, { status: 400 })

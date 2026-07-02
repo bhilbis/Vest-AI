@@ -38,7 +38,7 @@ export function PortfolioDashboard() {
     } catch {
       toast.error(t.tracker.deleteAssetError);
     }
-  }, [setAssets, openConfirm]);
+  }, [setAssets, openConfirm, t]);
 
   const handleUpdate = useCallback(async (updatedAsset: AssetProps) => {
     try {

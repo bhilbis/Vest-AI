@@ -14,15 +14,40 @@ vi.mock("@/lib/ai/agent-loop", async (orig) => {
   return { ...actual, runGroqAgent: vi.fn(), runGeminiAgent: vi.fn() };
 });
 vi.mock("@/lib/services/financeSummary");
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
-    asset: { findMany: vi.fn().mockResolvedValue([]) },
-    accountBalance: { findMany: vi.fn().mockResolvedValue([]) },
-    semester: { findMany: vi.fn().mockResolvedValue([]) },
-    kuliahSettings: { findUnique: vi.fn().mockResolvedValue(null) },
-    agentDraft: { create: vi.fn().mockResolvedValue({ id: "draft-test-1" }) },
-  },
-}));
+vi.mock("@/lib/prisma", () => {
+  type UsageRow = { userId: string; count: number; resetAt: Date };
+  const aiUsageRows = new Map<string, UsageRow>();
+  return {
+    prisma: {
+      asset: { findMany: vi.fn().mockResolvedValue([]) },
+      accountBalance: { findMany: vi.fn().mockResolvedValue([]) },
+      semester: { findMany: vi.fn().mockResolvedValue([]) },
+      kuliahSettings: { findUnique: vi.fn().mockResolvedValue(null) },
+      agentDraft: { create: vi.fn().mockResolvedValue({ id: "draft-test-1" }) },
+      aiUsage: {
+        findUnique: vi.fn(async ({ where }: any) => aiUsageRows.get(where.userId) ?? null),
+        updateMany: vi.fn(async ({ where, data }: any) => {
+          const row = aiUsageRows.get(where.userId);
+          if (!row) return { count: 0 };
+          if (where.resetAt?.gt !== undefined && !(row.resetAt > where.resetAt.gt)) return { count: 0 };
+          if (where.count?.lt !== undefined && !(row.count < where.count.lt)) return { count: 0 };
+          row.count += data.count?.increment ?? 0;
+          return { count: 1 };
+        }),
+        upsert: vi.fn(async ({ where, create, update }: any) => {
+          const row = aiUsageRows.get(where.userId);
+          if (row) {
+            Object.assign(row, update);
+            return row;
+          }
+          const created: UsageRow = { userId: where.userId, ...create };
+          aiUsageRows.set(where.userId, created);
+          return created;
+        }),
+      },
+    },
+  };
+});
 
 function makeReq(body: any) {
   return { json: async () => body } as any;

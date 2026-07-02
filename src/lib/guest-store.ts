@@ -12,6 +12,15 @@ interface GuestState {
 
 const GUEST_KEY = "vest-ai-guest";
 
+// Cookie penanda untuk proxy (server tidak bisa membaca localStorage)
+function setGuestCookie() {
+  document.cookie = `${GUEST_KEY}=1; path=/; max-age=31536000; samesite=lax`;
+}
+
+function clearGuestCookie() {
+  document.cookie = `${GUEST_KEY}=; path=/; max-age=0; samesite=lax`;
+}
+
 function generateGuestId(): string {
   return `guest_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
@@ -28,6 +37,8 @@ export const useGuestStore = create<GuestState>((set) => ({
       const stored = localStorage.getItem(GUEST_KEY);
       if (stored) {
         const data = JSON.parse(stored);
+        // Guest lama (sebelum ada cookie) tetap dikenali proxy
+        if (data.isGuest) setGuestCookie();
         set({
           isGuest: data.isGuest ?? false,
           guestId: data.guestId ?? null,
@@ -46,11 +57,13 @@ export const useGuestStore = create<GuestState>((set) => ({
     const guestId = generateGuestId();
     const guestData = { isGuest: true, guestId, guestName: "Guest User" };
     localStorage.setItem(GUEST_KEY, JSON.stringify(guestData));
+    setGuestCookie();
     set({ ...guestData });
   },
 
   logoutGuest: () => {
     localStorage.removeItem(GUEST_KEY);
+    clearGuestCookie();
     set({ isGuest: false, guestId: null, guestName: "Guest User" });
   },
 }));

@@ -11,6 +11,7 @@ import { buildSystemPrompt } from "@/lib/ai/prompt"
 import { getFinancialSummary } from "@/lib/services/financeSummary"
 import { runGroqAgent, runGeminiAgent, type ChatMessage, type AgentTrace, type TokenUsage } from "@/lib/ai/agent-loop"
 import { buildRunTrace, logRunTrace, type FinalStatus } from "@/lib/ai/trace"
+import { getUsageInfo, consumeQuota, DAILY_LIMIT } from "@/lib/ai/usage"
 
 function getGoogleAi() {
   if (!GEMINI_API_KEY || GEMINI_API_KEY === "BUILD_DUMMY") {
@@ -26,12 +27,9 @@ function getGroq() {
   return new Groq({ apiKey: GROQ_API_KEY })
 }
 
-const DAILY_LIMIT = 20
-const WINDOW_MS = 24 * 60 * 60 * 1000
 const HISTORY_WINDOW = 10
 const LOW_POWER_THRESHOLD = 0.8
 
-const usageMap = new Map<string, { count: number; resetAt: number }>()
 
 import { AI_MODELS } from "../data"
 const allowedModels = Object.keys(AI_MODELS)
@@ -127,31 +125,13 @@ async function buildUserContext(userId: string) {
   }
 }
 
-function getUsageInfo(userId: string): { count: number; resetAt: number } {
-  const now = Date.now()
-  const current = usageMap.get(userId)
-  if (current && now < current.resetAt) return current
-  return { count: 0, resetAt: now + WINDOW_MS }
-}
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now()
-  const current = usageMap.get(userId)
-  if (current && now < current.resetAt) {
-    if (current.count >= DAILY_LIMIT) return false
-    usageMap.set(userId, { ...current, count: current.count + 1 })
-    return true
-  }
-  usageMap.set(userId, { count: 1, resetAt: now + WINDOW_MS })
-  return true
-}
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const info = getUsageInfo(session.user.id)
+    const info = await getUsageInfo(session.user.id)
     return NextResponse.json({
       usage: {
         current: info.count,
@@ -171,7 +151,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    if (!checkRateLimit(session.user.id)) {
+    if (!(await consumeQuota(session.user.id))) {
       return NextResponse.json({ error: "Daily AI quota reached. Coba lagi besok." }, { status: 429 })
     }
 
@@ -191,7 +171,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Model tidak diizinkan: ${modelKey}` }, { status: 400 })
     }
 
-    const usageInfo = getUsageInfo(session.user.id)
+    const usageInfo = await getUsageInfo(session.user.id)
     const usagePct = usageInfo.count / DAILY_LIMIT
     const isLowPower = usagePct >= LOW_POWER_THRESHOLD
 
@@ -282,7 +262,7 @@ export async function POST(req: NextRequest) {
       }),
     )
 
-    const updatedUsage = getUsageInfo(session.user.id)
+    const updatedUsage = await getUsageInfo(session.user.id)
     return NextResponse.json({
       content,
       pendingDrafts,

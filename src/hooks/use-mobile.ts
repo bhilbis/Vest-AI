@@ -1,6 +1,8 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+// Harus sinkron dengan breakpoint `lg` Tailwind yang dipakai AppSidebar (hidden lg:flex)
+// dan BottomNav (lg:hidden) — di bawah nilai ini app memakai navigasi mobile.
+const MOBILE_BREAKPOINT = 1024
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)

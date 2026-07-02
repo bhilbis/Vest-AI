@@ -70,7 +70,8 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-3 right-3 h-7 w-7 flex items-center justify-center rounded-sm opacity-60 transition-all hover:opacity-100 border-2 border-transparent hover:border-foreground hover:shadow-[2px_2px_0_var(--foreground)] focus:outline-2 focus:outline-ring disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5"
+            // h-10 w-10: tap target ~40px (standar mobile), tanpa mendorong konten header
+            className="absolute top-2 right-2 h-10 w-10 flex items-center justify-center rounded-sm opacity-60 transition-all hover:opacity-100 border-2 border-transparent hover:border-foreground hover:shadow-[2px_2px_0_var(--foreground)] focus:outline-2 focus:outline-ring disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5"
           >
             <XIcon />
             <span className="sr-only">Close</span>
@@ -85,7 +86,8 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      // pr-8: sisakan ruang agar judul panjang tidak tertutup tombol close
+      className={cn("flex flex-col gap-2 pr-8 text-center sm:text-left", className)}
       {...props}
     />
   )

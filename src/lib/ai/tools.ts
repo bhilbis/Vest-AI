@@ -285,7 +285,69 @@ const draftIncomeTool: ToolDefinition = {
   },
 };
 
-export const DRAFT_TOOLS: ToolDefinition[] = [draftExpenseTool, draftIncomeTool];
+const draftTransferSchema = z.object({
+  fromAccount: z.string().min(1),
+  toAccount: z.string().min(1),
+  amount: z.coerce.number().positive(),
+  note: z.string().max(200).optional(),
+});
+
+const draftTransferTool: ToolDefinition = {
+  name: "draft_transfer",
+  description:
+    "Buat DRAFT transfer saldo antar akun milik user untuk dikonfirmasi. TIDAK menulis ke database — hanya preview. Selalu minta konfirmasi user setelahnya; jangan klaim transfer sudah dilakukan. Param: fromAccount (nama akun asal, mis. 'BCA'), toAccount (nama akun tujuan), amount (angka), note (opsional).",
+  riskClass: "propose_write",
+  permission: "allow",
+  params: {
+    fromAccount: { type: "string", description: "Nama akun asal, mis. 'BCA'.", required: true },
+    toAccount: { type: "string", description: "Nama akun tujuan, mis. 'Dana'.", required: true },
+    amount: { type: "number", description: "Nominal transfer dalam rupiah (angka).", required: true },
+    note: { type: "string", description: "Catatan transfer (opsional)." },
+  },
+  schema: draftTransferSchema,
+  execute: async (args, ctx) => {
+    const parsed = draftTransferSchema.parse(args ?? {});
+    const { match: from, available } = await resolveAccount(ctx.userId, parsed.fromAccount);
+    if (!from) {
+      return {
+        status: "error",
+        summary: `Akun asal "${parsed.fromAccount}" tidak ditemukan. Akun tersedia: ${available.join(", ") || "(belum ada)"}.`,
+      };
+    }
+    const { match: to } = await resolveAccount(ctx.userId, parsed.toAccount);
+    if (!to) {
+      return {
+        status: "error",
+        summary: `Akun tujuan "${parsed.toAccount}" tidak ditemukan. Akun tersedia: ${available.join(", ") || "(belum ada)"}.`,
+      };
+    }
+    if (from.id === to.id) {
+      return { status: "error", summary: "Akun asal dan tujuan tidak boleh sama." };
+    }
+    const amount = Number(parsed.amount);
+    const sufficientBalance = from.balance >= amount;
+    return {
+      status: "needs_approval",
+      summary: sufficientBalance
+        ? `Draft transfer ${amount} dari ${from.name} ke ${to.name}. Tunggu konfirmasi user.`
+        : `Draft transfer ${amount} dari ${from.name} ke ${to.name}, tetapi SALDO TIDAK MENCUKUPI (saldo ${from.balance}). Beri tahu user.`,
+      data: {
+        kind: "transfer",
+        fromAccountId: from.id,
+        fromAccountName: from.name,
+        toAccountId: to.id,
+        toAccountName: to.name,
+        amount,
+        note: parsed.note || "",
+        date: todayISO(),
+        currentBalance: from.balance,
+        sufficientBalance,
+      },
+    };
+  },
+};
+
+export const DRAFT_TOOLS: ToolDefinition[] = [draftExpenseTool, draftIncomeTool, draftTransferTool];
 
 /** Registry aktif yang diekspos ke model. `commit_*` SENGAJA tidak ada di sini —
  * commit hanya bisa lewat aksi user eksplisit (approval-gated, blueprint §12). */

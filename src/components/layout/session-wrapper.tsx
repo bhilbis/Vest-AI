@@ -37,6 +37,13 @@ export function SessionWrapper({ children }: { children: ReactNode }) {
     }
   }, [status, session])
 
+  // Fallback client-side: proxy seharusnya sudah redirect, tapi jangan biarkan layar kosong
+  useEffect(() => {
+    if (_hydrated && status === "unauthenticated" && !isGuest) {
+      router.replace("/login")
+    }
+  }, [_hydrated, status, isGuest, router])
+
   if (!_hydrated || status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -64,6 +71,7 @@ export function SessionWrapper({ children }: { children: ReactNode }) {
           <div className="fixed top-0 left-0 right-0 z-60 bg-foreground text-background text-center py-1.5 px-4 text-xs font-medium flex items-center justify-center gap-3 border-b border-border">
             <span>🔓 Mode Guest — Data hanya tersimpan di browser</span>
             <button
+              type="button"
               onClick={handleLogoutGuest}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-9 rounded-md bg-background/20 hover:bg-background/30 text-background text-[11px] font-medium transition-colors cursor-pointer"
             >
@@ -91,16 +99,21 @@ export function SessionWrapper({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {/* Floating AI Chat Toggle (Desktop only, right side) */}
-      {!isMobile && !isMessagesOpen && (
+      {/* Floating AI Chat Toggle — desktop: bottom-right corner; mobile: sits above BottomNav
+          (sebelumnya tombol ini hanya dirender di desktop, sehingga di mobile tidak ada cara
+          sama sekali untuk membuka panel AI chat). */}
+      {!isMessagesOpen && (
         <Button
+          type="button"
           onClick={() => setIsMessagesOpen(true)}
           size="icon"
           className={cn(
-            "fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full",
-            "shadow-lg shadow-black/20",
-            "transition-all duration-200 hover:scale-105"
+            "fixed z-50 rounded-full shadow-lg shadow-black/20 transition-all duration-200 hover:scale-105",
+            isMobile
+              ? "h-12 w-12 right-4"
+              : "h-12 w-12 bottom-6 right-6"
           )}
+          style={isMobile ? { bottom: "calc(88px + env(safe-area-inset-bottom))" } : undefined}
         >
           <MessageSquare size={20} />
         </Button>

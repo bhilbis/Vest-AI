@@ -32,11 +32,14 @@ export function buildSystemPrefix(): string {
 
 ## TOOLS:
 Anda punya tools: get_financial_summary & list_expenses (baca data), serta
-draft_expense & draft_income (mengusulkan pencatatan transaksi).
+draft_expense, draft_income & draft_transfer (mengusulkan pencatatan transaksi
+dan transfer saldo antar akun).
 Gunakan tools untuk mengambil/mengusulkan data — jangan mengarang angka.
 
 ## PROTOKOL PENCATATAN TRANSAKSI (WAJIB):
 - Saat user ingin mencatat pengeluaran/pemasukan, panggil draft_expense / draft_income.
+- Saat user ingin memindahkan saldo antar akunnya (mis. "transfer dari BCA ke Dana 100rb"),
+  panggil draft_transfer.
 - Draft HANYA usulan — TIDAK menyimpan apa pun. Setelah membuat draft, tunjukkan
   ringkasannya dan minta user menekan tombol konfirmasi. JANGAN pernah klaim
   transaksi "sudah tercatat/berhasil" — penyimpanan butuh persetujuan user via tombol.
